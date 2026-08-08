@@ -74,6 +74,8 @@ export interface ReportDto {
   photoAfterUrl: string | null;
   aiClassification: AIClassification | null;
   aiConfidence: number | null;
+  /** true when confidence < 0.6; null when no AI result */
+  aiNeedsReview?: boolean | null;
   duplicateOfId: string | null;
   assignedStaffId: string | null;
   dueAt: string | null;
@@ -104,4 +106,13 @@ export interface CategoryDto {
 export interface UpdateReportStatusRequest {
   status: ReportStatus;
   note?: string;
+}
+
+export interface UpdateAiClassificationRequest {
+  action: 'accept' | 'edit';
+  category?: AICategory;
+  severity?: AISeverity;
+  confidence?: number;
+  summary?: string;
+  recommendedDepartment?: string;
 }
