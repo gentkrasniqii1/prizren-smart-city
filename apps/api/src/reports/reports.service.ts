@@ -70,7 +70,108 @@ export class ReportsService {
       },
     });
 
+    await this.syncReportLocation(report.id, fields.lat, fields.lng);
+
     return this.toDto(report, { includeUserId: true });
+  }
+
+  async findNearby(
+    lat: number,
+    lng: number,
+    radiusKm: number,
+    viewer: AuthUser | null,
+  ): Promise<ReportDto[]> {
+    const radiusMeters = radiusKm * 1000;
+
+    type NearbyRow = {
+      id: string;
+      userId: string;
+      categoryId: string | null;
+      departmentId: string | null;
+      description: string;
+      status: ReportStatus;
+      priority: Report['priority'];
+      lat: number;
+      lng: number;
+      address: string | null;
+      photoUrl: string | null;
+      photoAfterUrl: string | null;
+      aiClassification: Prisma.JsonValue | null;
+      aiConfidence: number | null;
+      duplicateOfId: string | null;
+      assignedStaffId: string | null;
+      dueAt: Date | null;
+      createdAt: Date;
+      updatedAt: Date;
+      categoryName: string | null;
+      departmentName: string | null;
+      voteCount: number;
+    };
+
+    const rows = await this.prisma.$queryRaw<NearbyRow[]>`
+      SELECT
+        r.id,
+        r."userId",
+        r."categoryId",
+        r."departmentId",
+        r.description,
+        r.status,
+        r.priority,
+        r.lat,
+        r.lng,
+        r.address,
+        r."photoUrl",
+        r."photoAfterUrl",
+        r."aiClassification",
+        r."aiConfidence",
+        r."duplicateOfId",
+        r."assignedStaffId",
+        r."dueAt",
+        r."createdAt",
+        r."updatedAt",
+        c.name AS "categoryName",
+        d.name AS "departmentName",
+        COALESCE(v.cnt, 0)::int AS "voteCount"
+      FROM "Report" r
+      LEFT JOIN "Category" c ON c.id = r."categoryId"
+      LEFT JOIN "Department" d ON d.id = r."departmentId"
+      LEFT JOIN (
+        SELECT "reportId", COUNT(*)::int AS cnt
+        FROM "Vote"
+        GROUP BY "reportId"
+      ) v ON v."reportId" = r.id
+      WHERE r.location IS NOT NULL
+        AND ST_DWithin(
+          r.location,
+          ST_SetSRID(ST_MakePoint(${lng}, ${lat}), 4326)::geography,
+          ${radiusMeters}
+        )
+      ORDER BY ST_Distance(
+        r.location,
+        ST_SetSRID(ST_MakePoint(${lng}, ${lat}), 4326)::geography
+      ) ASC
+      LIMIT 200
+    `;
+
+    return rows.map((row) =>
+      this.toDto(
+        {
+          ...row,
+          category: row.categoryName ? { name: row.categoryName } : null,
+          department: row.departmentName ? { name: row.departmentName } : null,
+          _count: { votes: row.voteCount },
+        },
+        { includeUserId: this.canSeeUserId(viewer, row.userId) },
+      ),
+    );
+  }
+
+  private async syncReportLocation(id: string, lat: number, lng: number): Promise<void> {
+    await this.prisma.$executeRaw`
+      UPDATE "Report"
+      SET location = ST_SetSRID(ST_MakePoint(${lng}, ${lat}), 4326)::geography
+      WHERE id = ${id}
+    `;
   }
 
   async list(query: ListReportsQueryDto, viewer: AuthUser | null): Promise<PaginatedReports> {

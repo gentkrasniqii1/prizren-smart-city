@@ -26,6 +26,7 @@ import {
   ParseCreateReportFieldsPipe,
 } from './dto/create-report.dto';
 import { ListReportsQueryDto } from './dto/list-reports-query.dto';
+import { NearbyReportsQueryDto } from './dto/nearby-reports-query.dto';
 import { UpdateReportStatusDto } from './dto/update-report-status.dto';
 import { ReportsService } from './reports.service';
 
@@ -59,6 +60,12 @@ export class ReportsController {
   @UseGuards(OptionalJwtAuthGuard)
   list(@Query() query: ListReportsQueryDto, @CurrentUser() user: AuthUser | null) {
     return this.reportsService.list(query, user ?? null);
+  }
+
+  @Get('nearby')
+  @UseGuards(OptionalJwtAuthGuard)
+  nearby(@Query() query: NearbyReportsQueryDto, @CurrentUser() user: AuthUser | null) {
+    return this.reportsService.findNearby(query.lat, query.lng, query.radiusKm, user ?? null);
   }
 
   @Get('mine')

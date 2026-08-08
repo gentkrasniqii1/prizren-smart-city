@@ -72,6 +72,8 @@ model Report {
   priority         Priority?
   lat              Float
   lng              Float
+  /// PostGIS point — kept in sync from lat/lng (raw SQL)
+  location         Unsupported("geography(Point,4326)")?
   address          String?
   photoUrl         String?
   photoAfterUrl    String?
