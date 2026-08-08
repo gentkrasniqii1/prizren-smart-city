@@ -27,6 +27,7 @@ import {
 } from './dto/create-report.dto';
 import { ListReportsQueryDto } from './dto/list-reports-query.dto';
 import { NearbyReportsQueryDto } from './dto/nearby-reports-query.dto';
+import { UpdateAiClassificationDto } from './dto/update-ai-classification.dto';
 import { UpdateReportStatusDto } from './dto/update-report-status.dto';
 import { ReportsService } from './reports.service';
 
@@ -96,5 +97,19 @@ export class ReportsController {
       throw new BadRequestException('status is required');
     }
     return this.reportsService.updateStatus(id, user, dto);
+  }
+
+  @Patch(':id/ai-classification')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.DEPARTMENT_ADMIN, Role.SUPER_ADMIN)
+  updateAiClassification(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() user: AuthUser,
+    @Body() dto: UpdateAiClassificationDto,
+  ) {
+    if (!user) {
+      throw new BadRequestException('Unauthorized');
+    }
+    return this.reportsService.updateAiClassification(id, user, dto);
   }
 }
