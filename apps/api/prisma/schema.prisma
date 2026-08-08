@@ -8,18 +8,31 @@ datasource db {
 }
 
 model User {
-  id           String         @id @default(uuid())
-  email        String         @unique
-  passwordHash String
-  name         String
-  role         Role           @default(CITIZEN)
-  createdAt    DateTime       @default(now())
-  reports      Report[]
-  votes        Vote[]
-  comments     Comment[]
+  id            String         @id @default(uuid())
+  email         String         @unique
+  passwordHash  String
+  name          String
+  role          Role           @default(CITIZEN)
+  createdAt     DateTime       @default(now())
+  reports       Report[]
+  votes         Vote[]
+  comments      Comment[]
   notifications Notification[]
-  auditLogs    AuditLog[]
-  departments  Department[]   @relation("DepartmentStaff")
+  auditLogs     AuditLog[]
+  departments   Department[]   @relation("DepartmentStaff")
+  refreshTokens RefreshToken[]
+}
+
+model RefreshToken {
+  id        String    @id @default(uuid())
+  tokenHash String    @unique
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  revokedAt DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId])
 }
 
 enum Role {
