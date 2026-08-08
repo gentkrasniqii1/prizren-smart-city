@@ -1,0 +1,31 @@
+{
+  "name": "prizren-smart-city",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev:web": "npm run dev -w @prizren/web",
+    "dev:api": "npm run start:dev -w @prizren/api",
+    "build": "npm run build -w @prizren/shared-types && npm run build -w @prizren/api && npm run build -w @prizren/web",
+    "build:api": "npm run build -w @prizren/api",
+    "build:web": "npm run build -w @prizren/web",
+    "lint": "npm run lint -w @prizren/api && npm run lint -w @prizren/web",
+    "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md}\"",
+    "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,md}\""
+  },
+  "devDependencies": {
+    "@typescript-eslint/eslint-plugin": "^7.18.0",
+    "@typescript-eslint/parser": "^7.18.0",
+    "cross-env": "^10.1.0",
+    "eslint": "^8.57.1",
+    "eslint-config-prettier": "^9.1.0",
+    "eslint-plugin-prettier": "^5.2.1",
+    "prettier": "^3.4.2",
+    "typescript": "^5.7.2"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

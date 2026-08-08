@@ -1,0 +1,146 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String         @id @default(uuid())
+  email        String         @unique
+  passwordHash String
+  name         String
+  role         Role           @default(CITIZEN)
+  createdAt    DateTime       @default(now())
+  reports      Report[]
+  votes        Vote[]
+  comments     Comment[]
+  notifications Notification[]
+  auditLogs    AuditLog[]
+  departments  Department[]   @relation("DepartmentStaff")
+}
+
+enum Role {
+  CITIZEN
+  DEPARTMENT_STAFF
+  DEPARTMENT_ADMIN
+  SUPER_ADMIN
+}
+
+model Department {
+  id         String     @id @default(uuid())
+  name       String
+  contact    String?
+  categories Category[]
+  reports    Report[]
+  staff      User[]     @relation("DepartmentStaff")
+}
+
+model Category {
+  id           String     @id @default(uuid())
+  name         String
+  departmentId String
+  department   Department @relation(fields: [departmentId], references: [id])
+  reports      Report[]
+}
+
+model Report {
+  id               String         @id @default(uuid())
+  userId           String
+  user             User           @relation(fields: [userId], references: [id])
+  categoryId       String?
+  category         Category?      @relation(fields: [categoryId], references: [id])
+  departmentId     String?
+  department       Department?    @relation(fields: [departmentId], references: [id])
+  description      String
+  status           ReportStatus   @default(PENDING)
+  priority         Priority?
+  lat              Float
+  lng              Float
+  address          String?
+  photoUrl         String?
+  photoAfterUrl    String?
+  aiClassification Json?
+  aiConfidence     Float?
+  duplicateOfId    String?
+  duplicateOf      Report?        @relation("ReportDuplicates", fields: [duplicateOfId], references: [id])
+  duplicates       Report[]       @relation("ReportDuplicates")
+  assignedStaffId  String?
+  dueAt            DateTime?
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+  statusHistory    StatusHistory[]
+  votes            Vote[]
+  comments         Comment[]
+}
+
+enum ReportStatus {
+  PENDING
+  IN_REVIEW
+  ASSIGNED
+  IN_PROGRESS
+  RESOLVED
+  REJECTED
+}
+
+enum Priority {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+model StatusHistory {
+  id        String       @id @default(uuid())
+  reportId  String
+  report    Report       @relation(fields: [reportId], references: [id])
+  oldStatus ReportStatus
+  newStatus ReportStatus
+  changedBy String
+  changedAt DateTime     @default(now())
+}
+
+model Vote {
+  id       String @id @default(uuid())
+  reportId String
+  userId   String
+  report   Report @relation(fields: [reportId], references: [id])
+  user     User   @relation(fields: [userId], references: [id])
+
+  @@unique([reportId, userId])
+}
+
+model Comment {
+  id        String   @id @default(uuid())
+  reportId  String
+  userId    String
+  text      String
+  createdAt DateTime @default(now())
+  report    Report   @relation(fields: [reportId], references: [id])
+  user      User     @relation(fields: [userId], references: [id])
+}
+
+model Notification {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  reportId  String?
+  type      String
+  channel   String
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+}
+
+model AuditLog {
+  id         String   @id @default(uuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id])
+  action     String
+  entityType String
+  entityId   String
+  metadata   Json?
+  ipAddress  String?
+  createdAt  DateTime @default(now())
+}
