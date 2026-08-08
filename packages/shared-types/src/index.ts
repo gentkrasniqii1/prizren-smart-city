@@ -39,3 +39,80 @@ export interface PublicUser {
   role: Role;
   createdAt: string;
 }
+
+export interface AuthTokensResponse {
+  accessToken: string;
+}
+
+export interface AuthResponse extends AuthTokensResponse {
+  user: PublicUser;
+}
+
+export interface RegisterRequest {
+  email: string;
+  password: string;
+  name: string;
+}
+
+export interface LoginRequest {
+  email: string;
+  password: string;
+}
+
+export interface ReportDto {
+  id: string;
+  userId?: string;
+  categoryId: string | null;
+  departmentId: string | null;
+  description: string;
+  status: ReportStatus;
+  priority: Priority | null;
+  lat: number;
+  lng: number;
+  address: string | null;
+  photoUrl: string | null;
+  photoAfterUrl: string | null;
+  aiClassification: AIClassification | null;
+  aiConfidence: number | null;
+  /** true when confidence < 0.6; null when no AI result */
+  aiNeedsReview?: boolean | null;
+  duplicateOfId: string | null;
+  assignedStaffId: string | null;
+  dueAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+  categoryName?: string | null;
+  departmentName?: string | null;
+  voteCount?: number;
+}
+
+export interface PaginatedReports {
+  data: ReportDto[];
+  meta: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
+}
+
+export interface CategoryDto {
+  id: string;
+  name: string;
+  departmentId: string;
+  departmentName: string;
+}
+
+export interface UpdateReportStatusRequest {
+  status: ReportStatus;
+  note?: string;
+}
+
+export interface UpdateAiClassificationRequest {
+  action: 'accept' | 'edit';
+  category?: AICategory;
+  severity?: AISeverity;
+  confidence?: number;
+  summary?: string;
+  recommendedDepartment?: string;
+}

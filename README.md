@@ -51,6 +51,8 @@ npm run dev:web
 
 - Web: http://localhost:3000  
 - API health: http://localhost:3001/health  
+- Auth: `/login`, `/register`, `/account` · API `POST /auth/*`, `GET /users/me`
+- Reports: `/report` (create), `/reports` (map + list), `/reports/[id]` (AI panel) · API `POST/GET /reports`, `GET /reports/nearby`, `PATCH .../status`, `PATCH .../ai-classification`
 
 Optional Redis: `docker compose --profile redis up -d redis`  
 Full stack API container: `docker compose --profile full up --build`
