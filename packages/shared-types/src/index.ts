@@ -116,3 +116,36 @@ export interface UpdateAiClassificationRequest {
   summary?: string;
   recommendedDepartment?: string;
 }
+
+export interface DepartmentDto {
+  id: string;
+  name: string;
+  contact: string | null;
+}
+
+export interface AnalyticsSummary {
+  total: number;
+  pending: number;
+  resolved: number;
+  rejected: number;
+  inReview: number;
+  assigned: number;
+  inProgress: number;
+  avgResolutionHours: number | null;
+}
+
+export interface AnalyticsByCategoryItem {
+  categoryId: string | null;
+  category: string;
+  count: number;
+}
+
+export interface AnalyticsByStatusItem {
+  status: ReportStatus;
+  count: number;
+}
+
+export interface AssignReportRequest {
+  departmentId?: string | null;
+  assignedStaffId?: string | null;
+}

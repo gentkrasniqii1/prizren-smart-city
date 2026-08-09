@@ -19,6 +19,7 @@ import {
 import { ALLOWED_IMAGE_MIME, CreateReportFields, MAX_IMAGE_BYTES } from './dto/create-report.dto';
 import { ListReportsQueryDto } from './dto/list-reports-query.dto';
 import { UpdateAiClassificationDto } from './dto/update-ai-classification.dto';
+import { AssignReportDto } from './dto/assign-report.dto';
 import { UpdateReportStatusDto } from './dto/update-report-status.dto';
 
 const STAFF_ROLES: Role[] = [Role.DEPARTMENT_STAFF, Role.DEPARTMENT_ADMIN, Role.SUPER_ADMIN];
@@ -315,6 +316,86 @@ export class ReportsService {
             newStatus: dto.status,
             note: dto.note ?? null,
           },
+        },
+      });
+
+      return report;
+    });
+
+    return this.toDto(updated, { includeUserId: true });
+  }
+
+  async assign(id: string, user: AuthUser, dto: AssignReportDto): Promise<ReportDto> {
+    if (!AI_ADMIN_ROLES.includes(user.role as Role)) {
+      throw new ForbiddenException('Only department admin or super admin can assign reports');
+    }
+
+    const existing = await this.prisma.report.findUnique({ where: { id } });
+    if (!existing) {
+      throw new NotFoundException('Report not found');
+    }
+
+    let departmentId =
+      dto.departmentId === undefined ? existing.departmentId : dto.departmentId;
+    if (dto.departmentId) {
+      const dept = await this.prisma.department.findUnique({ where: { id: dto.departmentId } });
+      if (!dept) {
+        throw new BadRequestException('Invalid departmentId');
+      }
+    }
+
+    if (dto.assignedStaffId) {
+      const staff = await this.prisma.user.findUnique({ where: { id: dto.assignedStaffId } });
+      if (!staff || !STAFF_ROLES.includes(staff.role)) {
+        throw new BadRequestException('assignedStaffId must be a staff/admin user');
+      }
+    }
+
+    const nextStatus =
+      existing.status === ReportStatus.PENDING || existing.status === ReportStatus.IN_REVIEW
+        ? ReportStatus.ASSIGNED
+        : existing.status;
+
+    const updated = await this.prisma.$transaction(async (tx) => {
+      const report = await tx.report.update({
+        where: { id },
+        data: {
+          departmentId: departmentId ?? null,
+          assignedStaffId:
+            dto.assignedStaffId === undefined ? existing.assignedStaffId : dto.assignedStaffId,
+          status: nextStatus,
+        },
+        include: {
+          category: { select: { name: true } },
+          department: { select: { name: true } },
+          _count: { select: { votes: true } },
+        },
+      });
+
+      if (nextStatus !== existing.status) {
+        await tx.statusHistory.create({
+          data: {
+            reportId: id,
+            oldStatus: existing.status,
+            newStatus: nextStatus,
+            changedBy: user.id,
+          },
+        });
+      }
+
+      await tx.auditLog.create({
+        data: {
+          userId: user.id,
+          action: 'report.assign',
+          entityType: 'Report',
+          entityId: id,
+          metadata: JSON.parse(
+            JSON.stringify({
+              departmentId: report.departmentId,
+              assignedStaffId: report.assignedStaffId,
+              status: report.status,
+            }),
+          ) as Prisma.InputJsonValue,
         },
       });
 

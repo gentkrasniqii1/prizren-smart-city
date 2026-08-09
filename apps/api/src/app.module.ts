@@ -7,6 +7,8 @@ import { AdminModule } from './admin/admin.module';
 import { ReportsModule } from './reports/reports.module';
 import { CategoriesModule } from './categories/categories.module';
 import { UploadsModule } from './uploads/uploads.module';
+import { AnalyticsModule } from './analytics/analytics.module';
+import { DepartmentsModule } from './departments/departments.module';
 
 @Module({
   imports: [
@@ -17,6 +19,8 @@ import { UploadsModule } from './uploads/uploads.module';
     ReportsModule,
     CategoriesModule,
     UploadsModule,
+    AnalyticsModule,
+    DepartmentsModule,
   ],
   controllers: [HealthController],
 })
