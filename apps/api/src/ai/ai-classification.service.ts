@@ -103,9 +103,10 @@ export class AiClassificationService {
     }
   }
 
-  private async fetchImageAsBase64(
-    url: string,
-  ): Promise<{ data: string; mediaType: 'image/jpeg' | 'image/png' | 'image/webp' | 'image/gif' } | null> {
+  private async fetchImageAsBase64(url: string): Promise<{
+    data: string;
+    mediaType: 'image/jpeg' | 'image/png' | 'image/webp' | 'image/gif';
+  } | null> {
     const res = await fetch(url);
     if (!res.ok) {
       this.logger.warn(`Failed to download report photo: HTTP ${res.status}`);
