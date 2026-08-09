@@ -21,6 +21,7 @@ import { ListReportsQueryDto } from './dto/list-reports-query.dto';
 import { UpdateAiClassificationDto } from './dto/update-ai-classification.dto';
 import { AssignReportDto } from './dto/assign-report.dto';
 import { UpdateReportStatusDto } from './dto/update-report-status.dto';
+import { computeDueAt } from './sla';
 
 const STAFF_ROLES: Role[] = [Role.DEPARTMENT_STAFF, Role.DEPARTMENT_ADMIN, Role.SUPER_ADMIN];
 const AI_ADMIN_ROLES: Role[] = [Role.DEPARTMENT_ADMIN, Role.SUPER_ADMIN];
@@ -285,10 +286,24 @@ export class ReportsService {
       throw new BadRequestException('Status is already set to this value');
     }
 
+    if (dto.status === ReportStatus.RESOLVED && !existing.photoAfterUrl) {
+      throw new BadRequestException(
+        'photoAfterUrl is required before resolving. Upload via POST /reports/:id/photo-after',
+      );
+    }
+
+    const nextDueAt =
+      dto.status === ReportStatus.ASSIGNED && !existing.dueAt
+        ? computeDueAt(existing.priority)
+        : undefined;
+
     const updated = await this.prisma.$transaction(async (tx) => {
       const report = await tx.report.update({
         where: { id },
-        data: { status: dto.status },
+        data: {
+          status: dto.status,
+          ...(nextDueAt ? { dueAt: nextDueAt } : {}),
+        },
         include: {
           category: { select: { name: true } },
           department: { select: { name: true } },
@@ -315,6 +330,7 @@ export class ReportsService {
             oldStatus: existing.status,
             newStatus: dto.status,
             note: dto.note ?? null,
+            dueAt: report.dueAt?.toISOString() ?? null,
           },
         },
       });
@@ -356,6 +372,8 @@ export class ReportsService {
         ? ReportStatus.ASSIGNED
         : existing.status;
 
+    const dueAt = existing.dueAt ?? computeDueAt(existing.priority);
+
     const updated = await this.prisma.$transaction(async (tx) => {
       const report = await tx.report.update({
         where: { id },
@@ -364,6 +382,7 @@ export class ReportsService {
           assignedStaffId:
             dto.assignedStaffId === undefined ? existing.assignedStaffId : dto.assignedStaffId,
           status: nextStatus,
+          dueAt,
         },
         include: {
           category: { select: { name: true } },
@@ -394,8 +413,54 @@ export class ReportsService {
               departmentId: report.departmentId,
               assignedStaffId: report.assignedStaffId,
               status: report.status,
+              dueAt: report.dueAt?.toISOString() ?? null,
             }),
           ) as Prisma.InputJsonValue,
+        },
+      });
+
+      return report;
+    });
+
+    return this.toDto(updated, { includeUserId: true });
+  }
+
+  async uploadPhotoAfter(
+    id: string,
+    user: AuthUser,
+    file: Express.Multer.File,
+  ): Promise<ReportDto> {
+    if (!STAFF_ROLES.includes(user.role as Role)) {
+      throw new ForbiddenException('Only staff/admin can upload after photos');
+    }
+
+    const existing = await this.prisma.report.findUnique({ where: { id } });
+    if (!existing) {
+      throw new NotFoundException('Report not found');
+    }
+
+    this.assertValidImage(file);
+    const publicId = `report-${id}-after-${Date.now()}`;
+    const photoAfterUrl = await this.cloudinary.uploadImage(file.buffer, publicId);
+
+    const updated = await this.prisma.$transaction(async (tx) => {
+      const report = await tx.report.update({
+        where: { id },
+        data: { photoAfterUrl },
+        include: {
+          category: { select: { name: true } },
+          department: { select: { name: true } },
+          _count: { select: { votes: true } },
+        },
+      });
+
+      await tx.auditLog.create({
+        data: {
+          userId: user.id,
+          action: 'report.photo_after_upload',
+          entityType: 'Report',
+          entityId: id,
+          metadata: { photoAfterUrl },
         },
       });
 
