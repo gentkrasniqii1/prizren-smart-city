@@ -1,0 +1,23 @@
+---
+description: Never auto git add/commit/push; propose grouped commit commands instead
+alwaysApply: true
+---
+
+# Git — manual commits only
+
+- **Never** run `git add`, `git commit`, `git push`, or amend/rebase that creates commits unless the user explicitly asks in that message.
+- **Never** use author/committer identity `Cursor Agent` (or any Cursor bot identity). Local repo identity must remain the user's GitHub identity.
+- At the end of work that leaves file changes, do **not** stage anything. Instead propose **logical commit groups** the user can run themselves, in this exact format:
+
+```
+Grupi 1 — <përshkrim>:
+git add <file1> <file2>
+git commit -m "<mesazh>"
+
+Grupi 2 — <përshkrim>:
+git add <file3>
+git commit -m "<mesazh>"
+```
+
+- Prefer small, focused groups (feature vs lint/format vs tooling). Never suggest a single `git add .` dump unless the user asks for that.
+- After proposing groups, remind the user they own `git push`.
