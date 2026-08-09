@@ -1,22 +1,11 @@
 export type Role = 'CITIZEN' | 'DEPARTMENT_STAFF' | 'DEPARTMENT_ADMIN' | 'SUPER_ADMIN';
 
 export type ReportStatus =
-  | 'PENDING'
-  | 'IN_REVIEW'
-  | 'ASSIGNED'
-  | 'IN_PROGRESS'
-  | 'RESOLVED'
-  | 'REJECTED';
+  'PENDING' | 'IN_REVIEW' | 'ASSIGNED' | 'IN_PROGRESS' | 'RESOLVED' | 'REJECTED';
 
 export type Priority = 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
 
-export type AICategory =
-  | 'road_damage'
-  | 'lighting'
-  | 'waste'
-  | 'water'
-  | 'public_space'
-  | 'other';
+export type AICategory = 'road_damage' | 'lighting' | 'waste' | 'water' | 'public_space' | 'other';
 
 export type AISeverity = 'low' | 'medium' | 'high' | 'critical';
 
@@ -84,6 +73,8 @@ export interface ReportDto {
   categoryName?: string | null;
   departmentName?: string | null;
   voteCount?: number;
+  /** Present when authenticated viewer context is available */
+  votedByMe?: boolean;
 }
 
 export interface PaginatedReports {
@@ -157,3 +148,62 @@ export interface AnalyticsSla {
 }
 
 export type SlaBucket = 'overdue' | 'due_soon' | 'on_time';
+
+export interface VoteCountResponse {
+  voteCount: number;
+  votedByMe: boolean;
+}
+
+export interface CommentDto {
+  id: string;
+  reportId: string;
+  text: string;
+  authorName: string;
+  createdAt: string;
+}
+
+export interface CreateCommentRequest {
+  text: string;
+}
+
+export interface PaginatedComments {
+  data: CommentDto[];
+  meta: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
+}
+
+export interface NotificationDto {
+  id: string;
+  reportId: string | null;
+  type: string;
+  channel: string;
+  read: boolean;
+  createdAt: string;
+  message?: string;
+}
+
+export interface PaginatedNotifications {
+  data: NotificationDto[];
+  meta: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+    unreadCount: number;
+  };
+}
+
+export interface TransparencyStats {
+  total: number;
+  resolved: number;
+  pendingOpen: number;
+  rejected: number;
+  resolutionRate: number | null;
+  byStatus: AnalyticsByStatusItem[];
+  byCategory: AnalyticsByCategoryItem[];
+  avgResolutionHours: number | null;
+}
