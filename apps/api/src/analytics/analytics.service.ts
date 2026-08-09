@@ -3,9 +3,11 @@ import { Prisma, ReportStatus } from '@prisma/client';
 import type {
   AnalyticsByCategoryItem,
   AnalyticsByStatusItem,
+  AnalyticsSla,
   AnalyticsSummary,
 } from '@prizren/shared-types';
 import { PrismaService } from '../prisma/prisma.service';
+import { DUE_SOON_MS, OPEN_REPORT_STATUSES } from '../reports/sla';
 import { AnalyticsQueryDto } from './dto/analytics-query.dto';
 
 @Injectable()
@@ -88,6 +90,38 @@ export class AnalyticsService {
       const row = grouped.find((g) => g.status === status);
       return { status, count: row?._count._all ?? 0 };
     });
+  }
+
+  async sla(query: AnalyticsQueryDto): Promise<AnalyticsSla> {
+    const where = this.buildWhere(query);
+    const now = new Date();
+    const dueSoonUntil = new Date(now.getTime() + DUE_SOON_MS);
+
+    const openWithDue: Prisma.ReportWhereInput = {
+      ...where,
+      status: { in: OPEN_REPORT_STATUSES },
+      dueAt: { not: null },
+    };
+
+    const [overdue, dueSoon, onTime] = await Promise.all([
+      this.prisma.report.count({
+        where: { ...openWithDue, dueAt: { lt: now } },
+      }),
+      this.prisma.report.count({
+        where: {
+          ...openWithDue,
+          dueAt: { gte: now, lte: dueSoonUntil },
+        },
+      }),
+      this.prisma.report.count({
+        where: {
+          ...openWithDue,
+          dueAt: { gt: dueSoonUntil },
+        },
+      }),
+    ]);
+
+    return { overdue, dueSoon, onTime };
   }
 
   private buildWhere(query: AnalyticsQueryDto): Prisma.ReportWhereInput {

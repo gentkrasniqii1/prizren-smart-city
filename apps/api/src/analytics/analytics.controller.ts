@@ -26,4 +26,9 @@ export class AnalyticsController {
   byStatus(@Query() query: AnalyticsQueryDto) {
     return this.analyticsService.byStatus(query);
   }
+
+  @Get('sla')
+  sla(@Query() query: AnalyticsQueryDto) {
+    return this.analyticsService.sla(query);
+  }
 }
