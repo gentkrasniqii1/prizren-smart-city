@@ -17,16 +17,15 @@ export class AnalyticsService {
   async summary(query: AnalyticsQueryDto): Promise<AnalyticsSummary> {
     const where = this.buildWhere(query);
 
-    const [total, pending, resolved, rejected, inReview, assigned, inProgress] =
-      await Promise.all([
-        this.prisma.report.count({ where }),
-        this.prisma.report.count({ where: { ...where, status: ReportStatus.PENDING } }),
-        this.prisma.report.count({ where: { ...where, status: ReportStatus.RESOLVED } }),
-        this.prisma.report.count({ where: { ...where, status: ReportStatus.REJECTED } }),
-        this.prisma.report.count({ where: { ...where, status: ReportStatus.IN_REVIEW } }),
-        this.prisma.report.count({ where: { ...where, status: ReportStatus.ASSIGNED } }),
-        this.prisma.report.count({ where: { ...where, status: ReportStatus.IN_PROGRESS } }),
-      ]);
+    const [total, pending, resolved, rejected, inReview, assigned, inProgress] = await Promise.all([
+      this.prisma.report.count({ where }),
+      this.prisma.report.count({ where: { ...where, status: ReportStatus.PENDING } }),
+      this.prisma.report.count({ where: { ...where, status: ReportStatus.RESOLVED } }),
+      this.prisma.report.count({ where: { ...where, status: ReportStatus.REJECTED } }),
+      this.prisma.report.count({ where: { ...where, status: ReportStatus.IN_REVIEW } }),
+      this.prisma.report.count({ where: { ...where, status: ReportStatus.ASSIGNED } }),
+      this.prisma.report.count({ where: { ...where, status: ReportStatus.IN_PROGRESS } }),
+    ]);
 
     const avgResolutionHours = await this.avgResolutionHours(where);
 
@@ -51,9 +50,7 @@ export class AnalyticsService {
       orderBy: { _count: { categoryId: 'desc' } },
     });
 
-    const categoryIds = grouped
-      .map((g) => g.categoryId)
-      .filter((id): id is string => Boolean(id));
+    const categoryIds = grouped.map((g) => g.categoryId).filter((id): id is string => Boolean(id));
     const categories = categoryIds.length
       ? await this.prisma.category.findMany({
           where: { id: { in: categoryIds } },

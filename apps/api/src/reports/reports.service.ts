@@ -351,8 +351,7 @@ export class ReportsService {
       throw new NotFoundException('Report not found');
     }
 
-    let departmentId =
-      dto.departmentId === undefined ? existing.departmentId : dto.departmentId;
+    let departmentId = dto.departmentId === undefined ? existing.departmentId : dto.departmentId;
     if (dto.departmentId) {
       const dept = await this.prisma.department.findUnique({ where: { id: dto.departmentId } });
       if (!dept) {
@@ -476,7 +475,9 @@ export class ReportsService {
     dto: UpdateAiClassificationDto,
   ): Promise<ReportDto> {
     if (!AI_ADMIN_ROLES.includes(user.role as Role)) {
-      throw new ForbiddenException('Only department admin or super admin can manage AI classification');
+      throw new ForbiddenException(
+        'Only department admin or super admin can manage AI classification',
+      );
     }
 
     const existing = await this.prisma.report.findUnique({ where: { id } });
@@ -494,8 +495,7 @@ export class ReportsService {
         severity: dto.severity ?? classification?.severity,
         confidence: dto.confidence ?? classification?.confidence ?? 1,
         summary: dto.summary ?? classification?.summary,
-        recommendedDepartment:
-          dto.recommendedDepartment ?? classification?.recommendedDepartment,
+        recommendedDepartment: dto.recommendedDepartment ?? classification?.recommendedDepartment,
       };
       classification = parseAIClassification(merged);
       if (!classification) {
@@ -531,7 +531,9 @@ export class ReportsService {
         data: {
           userId: user.id,
           action:
-            dto.action === 'accept' ? 'report.ai_classification_accept' : 'report.ai_classification_edit',
+            dto.action === 'accept'
+              ? 'report.ai_classification_accept'
+              : 'report.ai_classification_edit',
           entityType: 'Report',
           entityId: id,
           metadata: JSON.parse(JSON.stringify({ classification })) as Prisma.InputJsonValue,
