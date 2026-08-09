@@ -19,6 +19,15 @@ export function SiteHeader() {
           <Link href="/report" className="hover:text-stone-900">
             Raporto
           </Link>
+          {!loading &&
+            user &&
+            (user.role === 'DEPARTMENT_STAFF' ||
+              user.role === 'DEPARTMENT_ADMIN' ||
+              user.role === 'SUPER_ADMIN') && (
+              <Link href="/admin" className="hover:text-stone-900">
+                Admin
+              </Link>
+            )}
           {!loading && user ? (
             <>
               <Link href="/account" className="hover:text-stone-900">
