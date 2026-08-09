@@ -25,6 +25,7 @@ import {
   MAX_IMAGE_BYTES,
   ParseCreateReportFieldsPipe,
 } from './dto/create-report.dto';
+import { AssignReportDto } from './dto/assign-report.dto';
 import { ListReportsQueryDto } from './dto/list-reports-query.dto';
 import { NearbyReportsQueryDto } from './dto/nearby-reports-query.dto';
 import { UpdateAiClassificationDto } from './dto/update-ai-classification.dto';
@@ -93,10 +94,27 @@ export class ReportsController {
     @CurrentUser() user: AuthUser,
     @Body() dto: UpdateReportStatusDto,
   ) {
+    if (!user) {
+      throw new BadRequestException('Unauthorized');
+    }
     if (!dto?.status) {
       throw new BadRequestException('status is required');
     }
     return this.reportsService.updateStatus(id, user, dto);
+  }
+
+  @Patch(':id/assign')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.DEPARTMENT_ADMIN, Role.SUPER_ADMIN)
+  assign(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() user: AuthUser,
+    @Body() dto: AssignReportDto,
+  ) {
+    if (!user) {
+      throw new BadRequestException('Unauthorized');
+    }
+    return this.reportsService.assign(id, user, dto);
   }
 
   @Patch(':id/ai-classification')
