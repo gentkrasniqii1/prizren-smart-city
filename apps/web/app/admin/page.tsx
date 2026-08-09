@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type {
   AnalyticsByCategoryItem,
+  AnalyticsSla,
   AnalyticsSummary,
   AssignReportRequest,
   CategoryDto,
@@ -17,6 +18,7 @@ import type {
 } from '@prizren/shared-types';
 import { ApiError, apiFetch } from '@/lib/api';
 import { useAuth } from '@/components/auth-provider';
+import { slaBucket, slaClass, slaLabel } from '@/lib/sla';
 
 const CategoryBarChart = dynamic(
   () => import('@/components/category-bar-chart').then((m) => m.CategoryBarChart),
@@ -58,6 +60,7 @@ export default function AdminPage() {
   const [departments, setDepartments] = useState<DepartmentDto[]>([]);
   const [staff, setStaff] = useState<PublicUser[]>([]);
   const [summary, setSummary] = useState<AnalyticsSummary | null>(null);
+  const [sla, setSla] = useState<AnalyticsSla | null>(null);
   const [byCategory, setByCategory] = useState<AnalyticsByCategoryItem[]>([]);
   const [status, setStatus] = useState('');
   const [categoryId, setCategoryId] = useState('');
@@ -95,23 +98,38 @@ export default function AdminPage() {
     setLoading(true);
     setError(null);
     try {
-      const [list, sum, cats] = await Promise.all([
+      const [list, sum, cats, slaRes] = await Promise.all([
         apiFetch<PaginatedReports>(`/reports?${reportQuery}`, { auth: true }),
         apiFetch<AnalyticsSummary>(`/analytics/summary${analyticsQuery}`, { auth: true }),
         apiFetch<AnalyticsByCategoryItem[]>(`/analytics/by-category${analyticsQuery}`, {
           auth: true,
         }),
+        apiFetch<AnalyticsSla>(`/analytics/sla${analyticsQuery}`, { auth: true }),
       ]);
       setReports(list.data);
       setMetaTotal(list.meta.total);
       setSummary(sum);
       setByCategory(cats);
+      setSla(slaRes);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Nuk u ngarkua dashboard');
     } finally {
       setLoading(false);
     }
   }, [reportQuery, analyticsQuery]);
+
+  async function refreshAnalytics() {
+    const [sum, cats, slaRes] = await Promise.all([
+      apiFetch<AnalyticsSummary>(`/analytics/summary${analyticsQuery}`, { auth: true }),
+      apiFetch<AnalyticsByCategoryItem[]>(`/analytics/by-category${analyticsQuery}`, {
+        auth: true,
+      }),
+      apiFetch<AnalyticsSla>(`/analytics/sla${analyticsQuery}`, { auth: true }),
+    ]);
+    setSummary(sum);
+    setByCategory(cats);
+    setSla(slaRes);
+  }
 
   useEffect(() => {
     if (authLoading || !isStaff(user?.role)) return;
@@ -151,14 +169,7 @@ export default function AdminPage() {
       });
       setReports((prev) => prev.map((r) => (r.id === updated.id ? updated : r)));
       setMessage(`Statusi i ${updated.id.slice(0, 8)} → ${updated.status}`);
-      const [sum, cats] = await Promise.all([
-        apiFetch<AnalyticsSummary>(`/analytics/summary${analyticsQuery}`, { auth: true }),
-        apiFetch<AnalyticsByCategoryItem[]>(`/analytics/by-category${analyticsQuery}`, {
-          auth: true,
-        }),
-      ]);
-      setSummary(sum);
-      setByCategory(cats);
+      await refreshAnalytics();
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Ndryshimi i statusit deshtoi');
     } finally {
@@ -186,11 +197,12 @@ export default function AdminPage() {
         body,
       });
       setReports((prev) => prev.map((r) => (r.id === updated.id ? updated : r)));
-      setMessage(`Caktimi u ruajt për ${updated.id.slice(0, 8)}`);
-      const sum = await apiFetch<AnalyticsSummary>(`/analytics/summary${analyticsQuery}`, {
-        auth: true,
-      });
-      setSummary(sum);
+      setMessage(
+        `Caktimi u ruajt për ${updated.id.slice(0, 8)}${
+          updated.dueAt ? ` · due ${new Date(updated.dueAt).toLocaleString('sq-AL')}` : ''
+        }`,
+      );
+      await refreshAnalytics();
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Caktimi deshtoi');
     } finally {
@@ -243,6 +255,12 @@ export default function AdminPage() {
         <StatCard label="Pending" value={summary?.pending ?? '—'} />
         <StatCard label="Resolved" value={summary?.resolved ?? '—'} />
         <StatCard label="Avg. zgjidhje" value={formatHours(summary?.avgResolutionHours ?? null)} />
+      </section>
+
+      <section className="mt-4 grid gap-3 sm:grid-cols-3">
+        <StatCard label="SLA overdue" value={sla?.overdue ?? '—'} />
+        <StatCard label="SLA due soon" value={sla?.dueSoon ?? '—'} />
+        <StatCard label="SLA on time" value={sla?.onTime ?? '—'} />
       </section>
 
       <section className="mt-8">
@@ -321,6 +339,7 @@ export default function AdminPage() {
                 <th className="px-3 py-2 font-medium">Status</th>
                 <th className="px-3 py-2 font-medium">Departament</th>
                 {canAssign && <th className="px-3 py-2 font-medium">Staf</th>}
+                <th className="px-3 py-2 font-medium">SLA</th>
                 <th className="px-3 py-2 font-medium">Data</th>
                 <th className="px-3 py-2 font-medium">Detaj</th>
               </tr>
@@ -328,13 +347,14 @@ export default function AdminPage() {
             <tbody>
               {reports.length === 0 ? (
                 <tr>
-                  <td colSpan={canAssign ? 7 : 6} className="px-3 py-8 text-center text-stone-500">
+                  <td colSpan={canAssign ? 8 : 7} className="px-3 py-8 text-center text-stone-500">
                     Nuk ka raporte për këto filtra.
                   </td>
                 </tr>
               ) : (
                 reports.map((report) => {
                   const busy = rowBusy === report.id;
+                  const bucket = slaBucket(report.dueAt);
                   return (
                     <tr key={report.id} className="border-b border-stone-100 align-top">
                       <td className="px-3 py-2 font-mono text-xs text-stone-600">
@@ -397,6 +417,18 @@ export default function AdminPage() {
                           </select>
                         </td>
                       )}
+                      <td className="px-3 py-2">
+                        <span
+                          className={`inline-block rounded px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide ${slaClass(bucket)}`}
+                        >
+                          {slaLabel(bucket)}
+                        </span>
+                        {report.dueAt ? (
+                          <div className="mt-1 text-[10px] text-stone-500">
+                            {new Date(report.dueAt).toLocaleString('sq-AL')}
+                          </div>
+                        ) : null}
+                      </td>
                       <td className="px-3 py-2 whitespace-nowrap text-xs text-stone-600">
                         {new Date(report.createdAt).toLocaleDateString('sq-AL')}
                       </td>

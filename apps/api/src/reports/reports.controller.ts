@@ -117,6 +117,29 @@ export class ReportsController {
     return this.reportsService.assign(id, user, dto);
   }
 
+  @Post(':id/photo-after')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.DEPARTMENT_STAFF, Role.DEPARTMENT_ADMIN, Role.SUPER_ADMIN)
+  @UseInterceptors(
+    FileInterceptor('photo', {
+      storage: memoryStorage(),
+      limits: { fileSize: MAX_IMAGE_BYTES },
+    }),
+  )
+  uploadPhotoAfter(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() user: AuthUser,
+    @UploadedFile() file?: Express.Multer.File,
+  ) {
+    if (!user) {
+      throw new BadRequestException('Unauthorized');
+    }
+    if (!file) {
+      throw new BadRequestException('photo is required');
+    }
+    return this.reportsService.uploadPhotoAfter(id, user, file);
+  }
+
   @Patch(':id/ai-classification')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.DEPARTMENT_ADMIN, Role.SUPER_ADMIN)

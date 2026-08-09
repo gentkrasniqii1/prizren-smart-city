@@ -149,3 +149,11 @@ export interface AssignReportRequest {
   departmentId?: string | null;
   assignedStaffId?: string | null;
 }
+
+export interface AnalyticsSla {
+  overdue: number;
+  dueSoon: number;
+  onTime: number;
+}
+
+export type SlaBucket = 'overdue' | 'due_soon' | 'on_time';
