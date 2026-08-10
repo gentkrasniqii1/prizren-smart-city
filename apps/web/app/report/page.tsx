@@ -28,6 +28,7 @@ export default function ReportPage() {
   const [lng, setLng] = useState<number | null>(null);
   const [photo, setPhoto] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
+  const [website, setWebsite] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [geoBusy, setGeoBusy] = useState(false);
@@ -99,6 +100,7 @@ export default function ReportPage() {
     form.append('lng', String(lng));
     if (address.trim()) form.append('address', address.trim());
     if (categoryId) form.append('categoryId', categoryId);
+    form.append('website', website);
 
     setSubmitting(true);
     try {
@@ -180,8 +182,26 @@ export default function ReportPage() {
           </label>
           {preview ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={preview} alt="Parapamje e fotos" className="max-h-48 rounded-md border object-cover" />
+            <img
+              src={preview}
+              alt="Parapamje e fotos"
+              className="max-h-48 rounded-md border object-cover"
+            />
           ) : null}
+
+          <div aria-hidden="true" className="absolute -left-[9999px] h-0 w-0 overflow-hidden">
+            <label>
+              Website
+              <input
+                type="text"
+                name="website"
+                tabIndex={-1}
+                autoComplete="off"
+                value={website}
+                onChange={(e) => setWebsite(e.target.value)}
+              />
+            </label>
+          </div>
         </div>
 
         <div className="space-y-3">

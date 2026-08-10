@@ -24,13 +24,14 @@ import {
   AI_SEVERITY_TO_PRIORITY,
   parseAIClassification,
 } from '../ai/ai-classification.schema';
-import { ALLOWED_IMAGE_MIME, CreateReportFields, MAX_IMAGE_BYTES } from './dto/create-report.dto';
+import { CreateReportFields } from './dto/create-report.dto';
 import { ListReportsQueryDto } from './dto/list-reports-query.dto';
 import { UpdateAiClassificationDto } from './dto/update-ai-classification.dto';
 import { AssignReportDto } from './dto/assign-report.dto';
 import { UpdateReportStatusDto } from './dto/update-report-status.dto';
 import { computeDueAt } from './sla';
 import { REPORT_STATUS_CHANGED_EVENT, StatusChangedEvent } from '../events/status-changed.event';
+import { assertValidImageUpload } from '../uploads/image-validation';
 
 const STAFF_ROLES: Role[] = [Role.DEPARTMENT_STAFF, Role.DEPARTMENT_ADMIN, Role.SUPER_ADMIN];
 const AI_ADMIN_ROLES: Role[] = [Role.DEPARTMENT_ADMIN, Role.SUPER_ADMIN];
@@ -57,7 +58,7 @@ export class ReportsService {
   ): Promise<ReportDto> {
     let photoUrl: string | undefined;
     if (file) {
-      this.assertValidImage(file);
+      await assertValidImageUpload(file);
       const publicId = `report-${user.id}-${Date.now()}`;
       photoUrl = await this.cloudinary.uploadImage(file.buffer, publicId);
     }
@@ -294,7 +295,12 @@ export class ReportsService {
     };
   }
 
-  async updateStatus(id: string, user: AuthUser, dto: UpdateReportStatusDto): Promise<ReportDto> {
+  async updateStatus(
+    id: string,
+    user: AuthUser,
+    dto: UpdateReportStatusDto,
+    ipAddress?: string | null,
+  ): Promise<ReportDto> {
     if (!STAFF_ROLES.includes(user.role as Role)) {
       throw new ForbiddenException('Only staff/admin can update status');
     }
@@ -347,6 +353,7 @@ export class ReportsService {
           action: 'report.status_update',
           entityType: 'Report',
           entityId: id,
+          ipAddress: ipAddress ?? undefined,
           metadata: {
             oldStatus: existing.status,
             newStatus: dto.status,
@@ -367,7 +374,12 @@ export class ReportsService {
     return this.toDto(updated, { includeUserId: true });
   }
 
-  async assign(id: string, user: AuthUser, dto: AssignReportDto): Promise<ReportDto> {
+  async assign(
+    id: string,
+    user: AuthUser,
+    dto: AssignReportDto,
+    ipAddress?: string | null,
+  ): Promise<ReportDto> {
     if (!AI_ADMIN_ROLES.includes(user.role as Role)) {
       throw new ForbiddenException('Only department admin or super admin can assign reports');
     }
@@ -433,6 +445,7 @@ export class ReportsService {
           action: 'report.assign',
           entityType: 'Report',
           entityId: id,
+          ipAddress: ipAddress ?? undefined,
           metadata: JSON.parse(
             JSON.stringify({
               departmentId: report.departmentId,
@@ -461,6 +474,7 @@ export class ReportsService {
     id: string,
     user: AuthUser,
     file: Express.Multer.File,
+    ipAddress?: string | null,
   ): Promise<ReportDto> {
     if (!STAFF_ROLES.includes(user.role as Role)) {
       throw new ForbiddenException('Only staff/admin can upload after photos');
@@ -471,7 +485,7 @@ export class ReportsService {
       throw new NotFoundException('Report not found');
     }
 
-    this.assertValidImage(file);
+    await assertValidImageUpload(file);
     const publicId = `report-${id}-after-${Date.now()}`;
     const photoAfterUrl = await this.cloudinary.uploadImage(file.buffer, publicId);
 
@@ -492,6 +506,7 @@ export class ReportsService {
           action: 'report.photo_after_upload',
           entityType: 'Report',
           entityId: id,
+          ipAddress: ipAddress ?? undefined,
           metadata: { photoAfterUrl },
         },
       });
@@ -596,6 +611,7 @@ export class ReportsService {
     id: string,
     user: AuthUser,
     dto: UpdateAiClassificationDto,
+    ipAddress?: string | null,
   ): Promise<ReportDto> {
     if (!AI_ADMIN_ROLES.includes(user.role as Role)) {
       throw new ForbiddenException(
@@ -659,6 +675,7 @@ export class ReportsService {
               : 'report.ai_classification_edit',
           entityType: 'Report',
           entityId: id,
+          ipAddress: ipAddress ?? undefined,
           metadata: JSON.parse(JSON.stringify({ classification })) as Prisma.InputJsonValue,
         },
       });
@@ -812,15 +829,6 @@ export class ReportsService {
     }
 
     return where;
-  }
-
-  private assertValidImage(file: Express.Multer.File) {
-    if (!ALLOWED_IMAGE_MIME.has(file.mimetype)) {
-      throw new BadRequestException('photo must be image/jpeg, image/png, or image/webp');
-    }
-    if (file.size > MAX_IMAGE_BYTES) {
-      throw new BadRequestException('photo must be at most 5MB');
-    }
   }
 
   private canSeeUserId(viewer: AuthUser | null, ownerId: string): boolean {

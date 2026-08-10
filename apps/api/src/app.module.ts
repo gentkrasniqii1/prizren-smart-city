@@ -1,5 +1,7 @@
 import { Module } from '@nestjs/common';
+import { APP_GUARD } from '@nestjs/core';
 import { EventEmitterModule } from '@nestjs/event-emitter';
+import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { HealthController } from './health.controller';
 import { PrismaModule } from './prisma/prisma.module';
 import { AuthModule } from './auth/auth.module';
@@ -12,10 +14,20 @@ import { AnalyticsModule } from './analytics/analytics.module';
 import { DepartmentsModule } from './departments/departments.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { TransparencyModule } from './transparency/transparency.module';
+import { AuditModule } from './audit/audit.module';
 
 @Module({
   imports: [
     EventEmitterModule.forRoot(),
+    ThrottlerModule.forRoot({
+      throttlers: [
+        {
+          name: 'default',
+          ttl: 60_000,
+          limit: 100,
+        },
+      ],
+    }),
     PrismaModule,
     AuthModule,
     UsersModule,
@@ -27,7 +39,14 @@ import { TransparencyModule } from './transparency/transparency.module';
     DepartmentsModule,
     NotificationsModule,
     TransparencyModule,
+    AuditModule,
   ],
   controllers: [HealthController],
+  providers: [
+    {
+      provide: APP_GUARD,
+      useClass: ThrottlerGuard,
+    },
+  ],
 })
 export class AppModule {}

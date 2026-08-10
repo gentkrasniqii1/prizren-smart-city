@@ -1,10 +1,12 @@
 import { Controller, HttpCode, HttpStatus, Post, Req, Res, Body, UseGuards } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 import { Request, Response } from 'express';
 import { AuthService } from './auth.service';
 import { ConfigService } from './config.service';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
+import { rejectIfHoneypotFilled } from '../common/honeypot';
 
 @Controller('auth')
 export class AuthController {
@@ -14,7 +16,9 @@ export class AuthController {
   ) {}
 
   @Post('register')
+  @Throttle({ default: { limit: 5, ttl: 60_000 } })
   async register(@Body() dto: RegisterDto, @Res({ passthrough: true }) res: Response) {
+    rejectIfHoneypotFilled(dto.website);
     const { auth, refreshToken } = await this.authService.register(dto);
     this.setRefreshCookie(res, refreshToken);
     return auth;
@@ -22,7 +26,9 @@ export class AuthController {
 
   @Post('login')
   @HttpCode(HttpStatus.OK)
+  @Throttle({ default: { limit: 5, ttl: 60_000 } })
   async login(@Body() dto: LoginDto, @Res({ passthrough: true }) res: Response) {
+    rejectIfHoneypotFilled(dto.website);
     const { auth, refreshToken } = await this.authService.login(dto);
     this.setRefreshCookie(res, refreshToken);
     return auth;
