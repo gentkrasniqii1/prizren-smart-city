@@ -34,6 +34,10 @@ Thumbs.db
 # Test / coverage
 coverage/
 .nyc_output/
+test-results/
+playwright-report/
+blob-report/
+playwright/.cache/
 
 # Prisma
 apps/api/prisma/*.db

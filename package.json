@@ -12,6 +12,8 @@
     "build:api": "npm run build -w @prizren/api",
     "build:web": "npm run build -w @prizren/web",
     "lint": "npm run lint -w @prizren/api && npm run lint -w @prizren/web",
+    "test": "npm run test -w @prizren/api",
+    "test:e2e": "npm run test:e2e -w @prizren/web",
     "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md}\"",
     "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,md}\"",
     "prepare": "husky"
