@@ -25,6 +25,12 @@ export default function Home() {
           >
             Shiko raportet
           </Link>
+          <Link
+            href="/transparency"
+            className="rounded-md border border-stone-400 bg-white/70 px-5 py-2.5 text-stone-900 hover:bg-white"
+          >
+            Transparenca
+          </Link>
         </div>
       </div>
     </main>
