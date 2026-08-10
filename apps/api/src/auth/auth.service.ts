@@ -42,13 +42,45 @@ export class AuthService {
   async login(dto: LoginDto): Promise<{ auth: AuthResponse; refreshToken: string }> {
     const email = dto.email.toLowerCase().trim();
     const user = await this.prisma.user.findUnique({ where: { email } });
-    if (!user) {
+    if (!user?.passwordHash) {
       throw new UnauthorizedException('Invalid email or password');
     }
 
     const valid = await bcrypt.compare(dto.password, user.passwordHash);
     if (!valid) {
       throw new UnauthorizedException('Invalid email or password');
+    }
+
+    return this.issueAuth(user);
+  }
+
+  /** Find-or-create citizen from Google profile, then issue the same JWT session as password login. */
+  async loginWithGoogleProfile(profile: {
+    googleId: string;
+    email: string;
+    name: string;
+  }): Promise<{ auth: AuthResponse; refreshToken: string }> {
+    const email = profile.email.toLowerCase().trim();
+    let user = await this.prisma.user.findFirst({
+      where: {
+        OR: [{ googleId: profile.googleId }, { email }],
+      },
+    });
+
+    if (!user) {
+      user = await this.prisma.user.create({
+        data: {
+          email,
+          name: profile.name.trim() || email.split('@')[0],
+          googleId: profile.googleId,
+          role: Role.CITIZEN,
+        },
+      });
+    } else if (!user.googleId) {
+      user = await this.prisma.user.update({
+        where: { id: user.id },
+        data: { googleId: profile.googleId },
+      });
     }
 
     return this.issueAuth(user);
