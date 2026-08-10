@@ -19,6 +19,7 @@ import type {
 import { ApiError, apiFetch } from '@/lib/api';
 import { useAuth } from '@/components/auth-provider';
 import { EmptyState, ErrorBanner, Skeleton, Spinner } from '@/components/ui';
+import { Breadcrumbs } from '@/components/breadcrumbs';
 import { slaBucket, slaClass, slaLabel } from '@/lib/sla';
 
 const CategoryBarChart = dynamic(
@@ -241,6 +242,7 @@ export default function AdminPage() {
 
   return (
     <main className="mx-auto max-w-6xl px-4 py-8">
+      <Breadcrumbs items={[{ href: '/', label: 'Home' }, { label: 'Admin' }]} />
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight text-stone-900">Admin dashboard</h1>

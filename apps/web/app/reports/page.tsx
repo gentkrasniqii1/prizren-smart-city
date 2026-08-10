@@ -21,6 +21,10 @@ export default function ReportsPage() {
   const [reports, setReports] = useState<ReportDto[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [status, setStatus] = useState('');
+  const [categoryId, setCategoryId] = useState('');
+  const [from, setFrom] = useState('');
+  const [to, setTo] = useState('');
+  const [categories, setCategories] = useState<{ id: string; name: string }[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [nearbyKm, setNearbyKm] = useState('');
@@ -31,8 +35,13 @@ export default function ReportsPage() {
       setLoading(true);
       setError(null);
       try {
-        const qs = status ? `?limit=100&status=${encodeURIComponent(status)}` : '?limit=100';
-        const res = await apiFetch<PaginatedReports>(`/reports${qs}`);
+        const params = new URLSearchParams();
+        params.set('limit', '100');
+        if (status) params.set('status', status);
+        if (categoryId) params.set('categoryId', categoryId);
+        if (from) params.set('from', new Date(from).toISOString());
+        if (to) params.set('to', new Date(`${to}T23:59:59.999`).toISOString());
+        const res = await apiFetch<PaginatedReports>(`/reports?${params.toString()}`);
         setReports(res.data);
       } catch {
         setError('Nuk u ngarkuan raportet. Kontrollo lidhjen me API.');
@@ -43,9 +52,15 @@ export default function ReportsPage() {
   }
 
   useEffect(() => {
+    void apiFetch<{ id: string; name: string }[]>('/categories')
+      .then(setCategories)
+      .catch(() => setCategories([]));
+  }, []);
+
+  useEffect(() => {
     loadReports();
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- reload when status filter changes
-  }, [status]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- reload when filters change
+  }, [status, categoryId, from, to]);
 
   const selected = useMemo(
     () => reports.find((r) => r.id === selectedId) ?? null,
@@ -120,6 +135,42 @@ export default function ReportsPage() {
             <option value="RESOLVED">RESOLVED</option>
             <option value="REJECTED">REJECTED</option>
           </select>
+        </label>
+
+        <label className="flex flex-col gap-1 text-sm sm:flex-row sm:items-center sm:gap-2">
+          <span className="text-stone-700">Kategori</span>
+          <select
+            value={categoryId}
+            onChange={(e) => setCategoryId(e.target.value)}
+            className="rounded-md border border-stone-300 px-2 py-1.5"
+          >
+            <option value="">Të gjitha</option>
+            {categories.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        <label className="flex flex-col gap-1 text-sm sm:flex-row sm:items-center sm:gap-2">
+          <span className="text-stone-700">Nga</span>
+          <input
+            type="date"
+            value={from}
+            onChange={(e) => setFrom(e.target.value)}
+            className="rounded-md border border-stone-300 px-2 py-1.5"
+          />
+        </label>
+
+        <label className="flex flex-col gap-1 text-sm sm:flex-row sm:items-center sm:gap-2">
+          <span className="text-stone-700">Deri</span>
+          <input
+            type="date"
+            value={to}
+            onChange={(e) => setTo(e.target.value)}
+            className="rounded-md border border-stone-300 px-2 py-1.5"
+          />
         </label>
 
         <label className="flex flex-col gap-1 text-sm sm:flex-row sm:items-center sm:gap-2">
