@@ -41,11 +41,15 @@ export interface RegisterRequest {
   email: string;
   password: string;
   name: string;
+  /** Honeypot — leave empty */
+  website?: string;
 }
 
 export interface LoginRequest {
   email: string;
   password: string;
+  /** Honeypot — leave empty */
+  website?: string;
 }
 
 export interface ReportDto {
