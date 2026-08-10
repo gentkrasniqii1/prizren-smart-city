@@ -4,8 +4,10 @@ import { ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import cookieParser = require('cookie-parser');
 import { AppModule } from './app.module';
+import { initSentry } from './monitoring/sentry';
 
 config({ path: resolve(__dirname, '../.env') });
+initSentry();
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
