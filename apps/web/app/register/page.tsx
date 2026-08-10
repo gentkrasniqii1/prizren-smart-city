@@ -12,6 +12,7 @@ export default function RegisterPage() {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [website, setWebsite] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
@@ -20,7 +21,7 @@ export default function RegisterPage() {
     setError(null);
     setSubmitting(true);
     try {
-      await register({ name, email, password });
+      await register({ name, email, password, website });
       router.push('/account');
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Registration failed');
@@ -34,7 +35,7 @@ export default function RegisterPage() {
       <h1 className="text-3xl font-semibold tracking-tight text-stone-900">Regjistrohu</h1>
       <p className="mt-2 text-stone-600">Krijo llogari qytetari për të raportuar probleme.</p>
 
-      <form onSubmit={onSubmit} className="mt-8 space-y-4">
+      <form onSubmit={onSubmit} className="mt-8 space-y-4" autoComplete="on">
         <label className="block text-sm">
           <span className="text-stone-700">Emri</span>
           <input
@@ -67,6 +68,21 @@ export default function RegisterPage() {
             className="mt-1 w-full rounded-md border border-stone-300 px-3 py-2 outline-none focus:border-stone-500"
           />
         </label>
+
+        {/* Honeypot for bots — hidden from humans */}
+        <div aria-hidden="true" className="absolute -left-[9999px] h-0 w-0 overflow-hidden">
+          <label>
+            Website
+            <input
+              type="text"
+              name="website"
+              tabIndex={-1}
+              autoComplete="off"
+              value={website}
+              onChange={(e) => setWebsite(e.target.value)}
+            />
+          </label>
+        </div>
 
         {error ? <p className="text-sm text-red-600">{error}</p> : null}
 
