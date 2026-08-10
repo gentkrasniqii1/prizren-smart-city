@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import localFont from 'next/font/local';
 import { AuthProvider } from '@/components/auth-provider';
 import { SiteHeader } from '@/components/site-header';
+import { SentryInit } from '@/components/sentry-init';
 import './globals.css';
 
 const geistSans = localFont({
@@ -27,8 +28,11 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="sq">
-      <body className={`${geistSans.variable} ${geistMono.variable} min-h-screen bg-stone-50 antialiased`}>
+      <body
+        className={`${geistSans.variable} ${geistMono.variable} min-h-screen bg-stone-50 antialiased`}
+      >
         <AuthProvider>
+          <SentryInit />
           <SiteHeader />
           {children}
         </AuthProvider>

@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@prizren/shared-types": "*",
+    "@sentry/react": "^10.69.0",
     "leaflet": "^1.9.4",
     "mapbox-gl": "^3.28.1",
     "next": "14.2.18",
