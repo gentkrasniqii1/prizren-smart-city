@@ -19,6 +19,9 @@ export function SiteHeader() {
           <Link href="/report" className="hover:text-stone-900">
             Raporto
           </Link>
+          <Link href="/transparency" className="hover:text-stone-900">
+            Transparenca
+          </Link>
           {!loading &&
             user &&
             (user.role === 'DEPARTMENT_STAFF' ||
@@ -30,6 +33,9 @@ export function SiteHeader() {
             )}
           {!loading && user ? (
             <>
+              <Link href="/notifications" className="hover:text-stone-900">
+                Njoftime
+              </Link>
               <Link href="/account" className="hover:text-stone-900">
                 {user.name}
               </Link>

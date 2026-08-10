@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { EventEmitterModule } from '@nestjs/event-emitter';
 import { HealthController } from './health.controller';
 import { PrismaModule } from './prisma/prisma.module';
 import { AuthModule } from './auth/auth.module';
@@ -9,9 +10,12 @@ import { CategoriesModule } from './categories/categories.module';
 import { UploadsModule } from './uploads/uploads.module';
 import { AnalyticsModule } from './analytics/analytics.module';
 import { DepartmentsModule } from './departments/departments.module';
+import { NotificationsModule } from './notifications/notifications.module';
+import { TransparencyModule } from './transparency/transparency.module';
 
 @Module({
   imports: [
+    EventEmitterModule.forRoot(),
     PrismaModule,
     AuthModule,
     UsersModule,
@@ -21,6 +25,8 @@ import { DepartmentsModule } from './departments/departments.module';
     UploadsModule,
     AnalyticsModule,
     DepartmentsModule,
+    NotificationsModule,
+    TransparencyModule,
   ],
   controllers: [HealthController],
 })

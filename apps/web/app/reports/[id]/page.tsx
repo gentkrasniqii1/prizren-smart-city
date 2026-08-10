@@ -5,9 +5,12 @@ import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import type {
   AIClassification,
+  CommentDto,
+  PaginatedComments,
   ReportDto,
   UpdateAiClassificationRequest,
   UpdateReportStatusRequest,
+  VoteCountResponse,
 } from '@prizren/shared-types';
 import { ApiError, apiFetch } from '@/lib/api';
 import { useAuth } from '@/components/auth-provider';
@@ -34,9 +37,12 @@ export default function ReportDetailPage() {
   const [aiMessage, setAiMessage] = useState<string | null>(null);
   const [workflowBusy, setWorkflowBusy] = useState(false);
   const [workflowMessage, setWorkflowMessage] = useState<string | null>(null);
+  const [comments, setComments] = useState<CommentDto[]>([]);
+  const [commentText, setCommentText] = useState('');
+  const [voteBusy, setVoteBusy] = useState(false);
+  const [citizenMessage, setCitizenMessage] = useState<string | null>(null);
 
-  const canManageAi =
-    user?.role === 'DEPARTMENT_ADMIN' || user?.role === 'SUPER_ADMIN';
+  const canManageAi = user?.role === 'DEPARTMENT_ADMIN' || user?.role === 'SUPER_ADMIN';
   const canStaff =
     user?.role === 'DEPARTMENT_STAFF' ||
     user?.role === 'DEPARTMENT_ADMIN' ||
@@ -54,6 +60,61 @@ export default function ReportDetailPage() {
       }
     })();
   }, [params.id]);
+
+  useEffect(() => {
+    if (!params.id) return;
+    void (async () => {
+      try {
+        const res = await apiFetch<PaginatedComments>(`/reports/${params.id}/comments?limit=50`);
+        setComments(res.data);
+      } catch {
+        // comments optional
+      }
+    })();
+  }, [params.id]);
+
+  async function toggleVote() {
+    if (!report || !user) {
+      setCitizenMessage('Duhet të hysh për të votuar.');
+      return;
+    }
+    setVoteBusy(true);
+    setCitizenMessage(null);
+    try {
+      const path = `/reports/${report.id}/votes`;
+      const res = report.votedByMe
+        ? await apiFetch<VoteCountResponse>(path, { method: 'DELETE', auth: true })
+        : await apiFetch<VoteCountResponse>(path, { method: 'POST', auth: true });
+      setReport((prev) =>
+        prev ? { ...prev, voteCount: res.voteCount, votedByMe: res.votedByMe } : prev,
+      );
+    } catch (err) {
+      setCitizenMessage(err instanceof ApiError ? err.message : 'Votimi deshtoi');
+    } finally {
+      setVoteBusy(false);
+    }
+  }
+
+  async function submitComment() {
+    if (!report || !user) {
+      setCitizenMessage('Duhet të hysh për të komentuar.');
+      return;
+    }
+    const text = commentText.trim();
+    if (!text) return;
+    setCitizenMessage(null);
+    try {
+      const created = await apiFetch<CommentDto>(`/reports/${report.id}/comments`, {
+        method: 'POST',
+        auth: true,
+        body: { text },
+      });
+      setComments((prev) => [...prev, created]);
+      setCommentText('');
+    } catch (err) {
+      setCitizenMessage(err instanceof ApiError ? err.message : 'Komenti deshtoi');
+    }
+  }
 
   async function submitAi(action: 'accept' | 'edit') {
     if (!report) return;
@@ -165,11 +226,27 @@ export default function ReportDetailPage() {
           <span className="rounded bg-amber-100 px-2 py-0.5 text-amber-900">needs review</span>
         ) : null}
         {report.duplicateOfId ? (
-          <span className="rounded bg-orange-100 px-2 py-0.5 text-orange-900">possible duplicate</span>
+          <span className="rounded bg-orange-100 px-2 py-0.5 text-orange-900">
+            possible duplicate
+          </span>
         ) : null}
       </div>
-      <h1 className="mt-3 text-3xl font-semibold tracking-tight text-stone-900">Detajet e raportit</h1>
+      <h1 className="mt-3 text-3xl font-semibold tracking-tight text-stone-900">
+        Detajet e raportit
+      </h1>
       <p className="mt-4 whitespace-pre-wrap text-stone-800">{report.description}</p>
+
+      <div className="mt-4 flex flex-wrap items-center gap-3">
+        <button
+          type="button"
+          disabled={voteBusy}
+          onClick={() => void toggleVote()}
+          className="rounded-md border border-stone-300 bg-white px-3 py-1.5 text-sm hover:bg-stone-50 disabled:opacity-60"
+        >
+          {report.votedByMe ? 'Hiq votën' : 'Voto'} · {report.voteCount ?? 0}
+        </button>
+        {citizenMessage ? <p className="text-sm text-stone-600">{citizenMessage}</p> : null}
+      </div>
 
       <div className="mt-6 grid gap-4 sm:grid-cols-2">
         <div>
@@ -220,6 +297,51 @@ export default function ReportDetailPage() {
         ) : null}
       </dl>
 
+      <section className="mt-8 border-t border-stone-200 pt-6">
+        <h2 className="text-lg font-semibold text-stone-900">Komente</h2>
+        <ul className="mt-3 space-y-3">
+          {comments.length === 0 ? (
+            <li className="text-sm text-stone-500">Ende pa komente.</li>
+          ) : (
+            comments.map((c) => (
+              <li key={c.id} className="text-sm">
+                <p className="font-medium text-stone-800">{c.authorName}</p>
+                <p className="whitespace-pre-wrap text-stone-700">{c.text}</p>
+                <p className="mt-1 text-xs text-stone-500">
+                  {new Date(c.createdAt).toLocaleString()}
+                </p>
+              </li>
+            ))
+          )}
+        </ul>
+        {user ? (
+          <div className="mt-4 space-y-2">
+            <textarea
+              className="w-full rounded-md border border-stone-300 px-3 py-2 text-sm"
+              rows={3}
+              maxLength={2000}
+              placeholder="Shkruaj një koment..."
+              value={commentText}
+              onChange={(e) => setCommentText(e.target.value)}
+            />
+            <button
+              type="button"
+              onClick={() => void submitComment()}
+              className="rounded-md bg-stone-900 px-3 py-1.5 text-sm text-white"
+            >
+              Dërgo komentin
+            </button>
+          </div>
+        ) : (
+          <p className="mt-3 text-sm text-stone-600">
+            <Link href="/login" className="underline">
+              Hyr
+            </Link>{' '}
+            për të komentuar.
+          </p>
+        )}
+      </section>
+
       {canStaff ? (
         <section className="mt-8 rounded-md border border-stone-300 bg-white p-4">
           <h2 className="text-lg font-semibold text-stone-900">Workflow departamenti</h2>
@@ -244,7 +366,9 @@ export default function ReportDetailPage() {
           >
             Shenoe RESOLVED
           </button>
-          {workflowMessage ? <p className="mt-3 text-sm text-stone-700">{workflowMessage}</p> : null}
+          {workflowMessage ? (
+            <p className="mt-3 text-sm text-stone-700">{workflowMessage}</p>
+          ) : null}
         </section>
       ) : null}
 
