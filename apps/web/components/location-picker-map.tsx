@@ -66,5 +66,10 @@ export function LocationPickerMap({ lat, lng, onPick }: Props) {
     map.panTo(position);
   }, [lat, lng]);
 
-  return <div ref={containerRef} className="h-64 w-full overflow-hidden rounded-md border border-stone-300" />;
+  return (
+    <div
+      ref={containerRef}
+      className="h-64 w-full overflow-hidden rounded-md border border-stone-300 sm:h-72"
+    />
+  );
 }

@@ -16,9 +16,27 @@ const geistMono = localFont({
   weight: '100 900',
 });
 
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000';
+
 export const metadata: Metadata = {
-  title: 'Prizren Smart City',
-  description: 'Raporto dhe ndiq problemet urbane në Prizren',
+  metadataBase: new URL(siteUrl),
+  title: {
+    default: 'Prizren Smart City',
+    template: '%s · Prizren Smart City',
+  },
+  description: 'Raporto dhe ndiq problemet urbane në Prizren — transparencë për qytetin.',
+  openGraph: {
+    type: 'website',
+    locale: 'sq_AL',
+    siteName: 'Prizren Smart City',
+    title: 'Prizren Smart City',
+    description: 'Raporto dhe ndiq problemet urbane në Prizren — transparencë për qytetin.',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Prizren Smart City',
+    description: 'Raporto dhe ndiq problemet urbane në Prizren.',
+  },
 };
 
 export default function RootLayout({
@@ -34,7 +52,7 @@ export default function RootLayout({
         <AuthProvider>
           <SentryInit />
           <SiteHeader />
-          {children}
+          <div id="main-content">{children}</div>
         </AuthProvider>
       </body>
     </html>

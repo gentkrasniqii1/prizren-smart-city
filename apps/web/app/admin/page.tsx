@@ -18,6 +18,7 @@ import type {
 } from '@prizren/shared-types';
 import { ApiError, apiFetch } from '@/lib/api';
 import { useAuth } from '@/components/auth-provider';
+import { EmptyState, ErrorBanner, Skeleton, Spinner } from '@/components/ui';
 import { slaBucket, slaClass, slaLabel } from '@/lib/sla';
 
 const CategoryBarChart = dynamic(
@@ -213,7 +214,13 @@ export default function AdminPage() {
   if (authLoading) {
     return (
       <main className="mx-auto max-w-6xl px-4 py-16">
-        <p className="text-stone-600">Duke ngarkuar...</p>
+        <Spinner />
+        <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <Skeleton className="h-20" />
+          <Skeleton className="h-20" />
+          <Skeleton className="h-20" />
+          <Skeleton className="h-20" />
+        </div>
       </main>
     );
   }
@@ -325,13 +332,16 @@ export default function AdminPage() {
           />
         </div>
 
-        {error && <p className="text-sm text-red-600">{error}</p>}
-        {message && <p className="text-sm text-emerald-700">{message}</p>}
-        {loading && <p className="text-sm text-stone-500">Duke filtruar...</p>}
+        {error && <ErrorBanner message={error} onRetry={() => void loadDashboard()} />}
+        {message && <p className="text-sm text-emerald-800">{message}</p>}
+        {loading && <Spinner label="Duke filtruar…" />}
         <p className="text-xs text-stone-500">{metaTotal} raporte (max 50 në tabelë)</p>
+        <p className="text-xs text-stone-500 md:hidden">
+          Në celular, rrëshqit tabelën majtas/djathtas për të parë të gjitha kolonat.
+        </p>
 
-        <div className="overflow-x-auto border border-stone-200 bg-white">
-          <table className="min-w-full text-left text-sm">
+        <div className="-mx-4 overflow-x-auto border-y border-stone-200 bg-white sm:mx-0 sm:border sm:border-stone-200">
+          <table className="min-w-[720px] w-full text-left text-sm md:min-w-full">
             <thead className="border-b border-stone-200 bg-stone-50 text-xs uppercase tracking-wide text-stone-500">
               <tr>
                 <th className="px-3 py-2 font-medium">ID</th>
@@ -345,10 +355,13 @@ export default function AdminPage() {
               </tr>
             </thead>
             <tbody>
-              {reports.length === 0 ? (
+              {!loading && reports.length === 0 ? (
                 <tr>
-                  <td colSpan={canAssign ? 8 : 7} className="px-3 py-8 text-center text-stone-500">
-                    Nuk ka raporte për këto filtra.
+                  <td colSpan={canAssign ? 8 : 7} className="px-3 py-6">
+                    <EmptyState
+                      title="Nuk ka raporte për këto filtra"
+                      description="Ndrysho filtrat ose rifresko dashboard-in."
+                    />
                   </td>
                 </tr>
               ) : (
@@ -395,7 +408,7 @@ export default function AdminPage() {
                             ))}
                           </select>
                         ) : (
-                          report.departmentName ?? '—'
+                          (report.departmentName ?? '—')
                         )}
                       </td>
                       {canAssign && (
