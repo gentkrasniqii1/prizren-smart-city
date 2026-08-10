@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   Controller,
+  Delete,
   Get,
   Param,
   ParseUUIDPipe,
@@ -26,6 +27,7 @@ import {
   ParseCreateReportFieldsPipe,
 } from './dto/create-report.dto';
 import { AssignReportDto } from './dto/assign-report.dto';
+import { CreateCommentDto } from './dto/create-comment.dto';
 import { ListReportsQueryDto } from './dto/list-reports-query.dto';
 import { NearbyReportsQueryDto } from './dto/nearby-reports-query.dto';
 import { UpdateAiClassificationDto } from './dto/update-ai-classification.dto';
@@ -84,6 +86,50 @@ export class ReportsController {
   @UseGuards(OptionalJwtAuthGuard)
   findOne(@Param('id', ParseUUIDPipe) id: string, @CurrentUser() user: AuthUser | null) {
     return this.reportsService.findOne(id, user ?? null);
+  }
+
+  @Post(':id/votes')
+  @UseGuards(JwtAuthGuard)
+  addVote(@Param('id', ParseUUIDPipe) id: string, @CurrentUser() user: AuthUser) {
+    if (!user) {
+      throw new BadRequestException('Unauthorized');
+    }
+    return this.reportsService.addVote(id, user);
+  }
+
+  @Delete(':id/votes')
+  @UseGuards(JwtAuthGuard)
+  removeVote(@Param('id', ParseUUIDPipe) id: string, @CurrentUser() user: AuthUser) {
+    if (!user) {
+      throw new BadRequestException('Unauthorized');
+    }
+    return this.reportsService.removeVote(id, user);
+  }
+
+  @Get(':id/comments')
+  listComments(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+  ) {
+    return this.reportsService.listComments(
+      id,
+      page ? Number(page) : 1,
+      limit ? Number(limit) : 20,
+    );
+  }
+
+  @Post(':id/comments')
+  @UseGuards(JwtAuthGuard)
+  addComment(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() user: AuthUser,
+    @Body() dto: CreateCommentDto,
+  ) {
+    if (!user) {
+      throw new BadRequestException('Unauthorized');
+    }
+    return this.reportsService.addComment(id, user, dto.text);
   }
 
   @Patch(':id/status')

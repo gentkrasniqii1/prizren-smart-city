@@ -4,8 +4,16 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { Prisma, Priority, Report, ReportStatus, Role } from '@prisma/client';
-import type { AIClassification, PaginatedReports, ReportDto } from '@prizren/shared-types';
+import type {
+  AIClassification,
+  CommentDto,
+  PaginatedComments,
+  PaginatedReports,
+  ReportDto,
+  VoteCountResponse,
+} from '@prizren/shared-types';
 import { AuthUser } from '../auth/decorators/current-user.decorator';
 import { PrismaService } from '../prisma/prisma.service';
 import { CloudinaryService } from '../uploads/cloudinary.service';
@@ -22,6 +30,7 @@ import { UpdateAiClassificationDto } from './dto/update-ai-classification.dto';
 import { AssignReportDto } from './dto/assign-report.dto';
 import { UpdateReportStatusDto } from './dto/update-report-status.dto';
 import { computeDueAt } from './sla';
+import { REPORT_STATUS_CHANGED_EVENT, StatusChangedEvent } from '../events/status-changed.event';
 
 const STAFF_ROLES: Role[] = [Role.DEPARTMENT_STAFF, Role.DEPARTMENT_ADMIN, Role.SUPER_ADMIN];
 const AI_ADMIN_ROLES: Role[] = [Role.DEPARTMENT_ADMIN, Role.SUPER_ADMIN];
@@ -38,6 +47,7 @@ export class ReportsService {
     private readonly prisma: PrismaService,
     private readonly cloudinary: CloudinaryService,
     private readonly aiClassification: AiClassificationService,
+    private readonly events: EventEmitter2,
   ) {}
 
   async create(
@@ -240,8 +250,19 @@ export class ReportsService {
       throw new NotFoundException('Report not found');
     }
 
+    let votedByMe: boolean | undefined;
+    if (viewer) {
+      const vote = await this.prisma.vote.findUnique({
+        where: {
+          reportId_userId: { reportId: id, userId: viewer.id },
+        },
+      });
+      votedByMe = Boolean(vote);
+    }
+
     return this.toDto(report, {
       includeUserId: this.canSeeUserId(viewer, report.userId),
+      votedByMe,
     });
   }
 
@@ -338,6 +359,11 @@ export class ReportsService {
       return report;
     });
 
+    this.events.emit(
+      REPORT_STATUS_CHANGED_EVENT,
+      new StatusChangedEvent(updated.id, existing.userId, existing.status, dto.status, user.id),
+    );
+
     return this.toDto(updated, { includeUserId: true });
   }
 
@@ -421,6 +447,13 @@ export class ReportsService {
       return report;
     });
 
+    if (nextStatus !== existing.status) {
+      this.events.emit(
+        REPORT_STATUS_CHANGED_EVENT,
+        new StatusChangedEvent(updated.id, existing.userId, existing.status, nextStatus, user.id),
+      );
+    }
+
     return this.toDto(updated, { includeUserId: true });
   }
 
@@ -467,6 +500,96 @@ export class ReportsService {
     });
 
     return this.toDto(updated, { includeUserId: true });
+  }
+
+  async addVote(id: string, user: AuthUser): Promise<VoteCountResponse> {
+    const report = await this.prisma.report.findUnique({ where: { id } });
+    if (!report) {
+      throw new NotFoundException('Report not found');
+    }
+
+    try {
+      await this.prisma.vote.create({
+        data: { reportId: id, userId: user.id },
+      });
+    } catch (err) {
+      if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002') {
+        // already voted — idempotent
+      } else {
+        throw err;
+      }
+    }
+
+    const voteCount = await this.prisma.vote.count({ where: { reportId: id } });
+    return { voteCount, votedByMe: true };
+  }
+
+  async removeVote(id: string, user: AuthUser): Promise<VoteCountResponse> {
+    const report = await this.prisma.report.findUnique({ where: { id } });
+    if (!report) {
+      throw new NotFoundException('Report not found');
+    }
+
+    await this.prisma.vote.deleteMany({
+      where: { reportId: id, userId: user.id },
+    });
+
+    const voteCount = await this.prisma.vote.count({ where: { reportId: id } });
+    return { voteCount, votedByMe: false };
+  }
+
+  async listComments(id: string, page = 1, limit = 20): Promise<PaginatedComments> {
+    const report = await this.prisma.report.findUnique({ where: { id } });
+    if (!report) {
+      throw new NotFoundException('Report not found');
+    }
+
+    const safePage = page > 0 ? page : 1;
+    const safeLimit = limit > 0 ? Math.min(limit, 50) : 20;
+
+    const [total, rows] = await this.prisma.$transaction([
+      this.prisma.comment.count({ where: { reportId: id } }),
+      this.prisma.comment.findMany({
+        where: { reportId: id },
+        include: { user: { select: { name: true } } },
+        orderBy: { createdAt: 'asc' },
+        skip: (safePage - 1) * safeLimit,
+        take: safeLimit,
+      }),
+    ]);
+
+    return {
+      data: rows.map((row) => this.toCommentDto(row)),
+      meta: {
+        page: safePage,
+        limit: safeLimit,
+        total,
+        totalPages: Math.max(1, Math.ceil(total / safeLimit)),
+      },
+    };
+  }
+
+  async addComment(id: string, user: AuthUser, text: string): Promise<CommentDto> {
+    const trimmed = text?.trim();
+    if (!trimmed) {
+      throw new BadRequestException('text is required');
+    }
+
+    const report = await this.prisma.report.findUnique({ where: { id } });
+    if (!report) {
+      throw new NotFoundException('Report not found');
+    }
+
+    const created = await this.prisma.comment.create({
+      data: {
+        reportId: id,
+        userId: user.id,
+        text: trimmed,
+      },
+      include: { user: { select: { name: true } } },
+    });
+
+    return this.toCommentDto(created);
   }
 
   async updateAiClassification(
@@ -706,7 +829,10 @@ export class ReportsService {
     return STAFF_ROLES.includes(viewer.role as Role);
   }
 
-  private toDto(report: ReportWithRelations, opts: { includeUserId: boolean }): ReportDto {
+  private toDto(
+    report: ReportWithRelations,
+    opts: { includeUserId: boolean; votedByMe?: boolean },
+  ): ReportDto {
     const dto: ReportDto = {
       id: report.id,
       categoryId: report.categoryId,
@@ -740,7 +866,26 @@ export class ReportsService {
     if (opts.includeUserId) {
       dto.userId = report.userId;
     }
+    if (opts.votedByMe !== undefined) {
+      dto.votedByMe = opts.votedByMe;
+    }
 
     return dto;
+  }
+
+  private toCommentDto(row: {
+    id: string;
+    reportId: string;
+    text: string;
+    createdAt: Date;
+    user: { name: string };
+  }): CommentDto {
+    return {
+      id: row.id,
+      reportId: row.reportId,
+      text: row.text,
+      authorName: row.user.name,
+      createdAt: row.createdAt.toISOString(),
+    };
   }
 }
