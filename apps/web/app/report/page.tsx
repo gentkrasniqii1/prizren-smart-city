@@ -6,16 +6,24 @@ import { useRouter } from 'next/navigation';
 import type { CategoryDto, ReportDto } from '@prizren/shared-types';
 import { ApiError, apiFetch } from '@/lib/api';
 import { useAuth } from '@/components/auth-provider';
+import { FieldError, Spinner } from '@/components/ui';
+import { RemoteImage } from '@/components/remote-image';
 
 const LocationPickerMap = dynamic(
   () => import('@/components/location-picker-map').then((m) => m.LocationPickerMap),
   {
     ssr: false,
     loading: function MapLoading() {
-      return <div className="h-64 animate-pulse rounded-md bg-stone-200" />;
+      return <div className="h-64 animate-pulse rounded-md bg-stone-200 sm:h-72" />;
     },
   },
 );
+
+type FieldErrors = {
+  description?: string;
+  photo?: string;
+  location?: string;
+};
 
 export default function ReportPage() {
   const router = useRouter();
@@ -29,7 +37,8 @@ export default function ReportPage() {
   const [photo, setPhoto] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
   const [website, setWebsite] = useState('');
-  const [error, setError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
+  const [formError, setFormError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [geoBusy, setGeoBusy] = useState(false);
 
@@ -57,44 +66,47 @@ export default function ReportPage() {
 
   function requestGeolocation() {
     if (!navigator.geolocation) {
-      setError('Geolocation nuk mbështetet në këtë shfletues');
+      setFormError('Geolocation nuk mbështetet në këtë shfletues');
       return;
     }
     setGeoBusy(true);
-    setError(null);
+    setFormError(null);
     navigator.geolocation.getCurrentPosition(
       (pos) => {
         setLat(pos.coords.latitude);
         setLng(pos.coords.longitude);
+        setFieldErrors((f) => ({ ...f, location: undefined }));
         setGeoBusy(false);
       },
       () => {
-        setError('Nuk u mor lokacioni. Lejo aksesin ose kliko në hartë.');
+        setFormError('Nuk u mor lokacioni. Lejo aksesin ose kliko në hartë.');
         setGeoBusy(false);
       },
       { enableHighAccuracy: true, timeout: 10000 },
     );
   }
 
+  function validate(): FieldErrors {
+    const next: FieldErrors = {};
+    if (description.trim().length < 10) {
+      next.description = 'Përshkrimi duhet të ketë të paktën 10 karaktere';
+    }
+    if (!photo) next.photo = 'Fotoja është e detyrueshme';
+    if (lat === null || lng === null) {
+      next.location = 'Zgjidh lokacionin (GPS ose klik në hartë)';
+    }
+    return next;
+  }
+
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
-    setError(null);
-
-    if (!photo) {
-      setError('Fotoja është e detyrueshme');
-      return;
-    }
-    if (lat === null || lng === null) {
-      setError('Zgjidh lokacionin (GPS ose klik në hartë)');
-      return;
-    }
-    if (description.trim().length < 10) {
-      setError('Përshkrimi duhet të ketë të paktën 10 karaktere');
-      return;
-    }
+    setFormError(null);
+    const next = validate();
+    setFieldErrors(next);
+    if (Object.keys(next).length > 0) return;
 
     const form = new FormData();
-    form.append('photo', photo);
+    form.append('photo', photo!);
     form.append('description', description.trim());
     form.append('lat', String(lat));
     form.append('lng', String(lng));
@@ -111,7 +123,7 @@ export default function ReportPage() {
       });
       router.push(`/reports/${report.id}`);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Dërgimi dështoi');
+      setFormError(err instanceof ApiError ? err.message : 'Dërgimi dështoi');
     } finally {
       setSubmitting(false);
     }
@@ -120,34 +132,47 @@ export default function ReportPage() {
   if (authLoading || !user) {
     return (
       <main className="mx-auto max-w-3xl px-4 py-16">
-        <p className="text-stone-600">Duke ngarkuar...</p>
+        <Spinner />
       </main>
     );
   }
 
   return (
-    <main className="mx-auto max-w-3xl px-4 py-10">
-      <h1 className="text-3xl font-semibold tracking-tight text-stone-900">Raporto një problem</h1>
+    <main className="mx-auto max-w-3xl px-4 py-8 sm:py-10">
+      <h1 className="text-2xl font-semibold tracking-tight text-stone-900 sm:text-3xl">
+        Raporto një problem
+      </h1>
       <p className="mt-2 text-stone-600">Shto foto, lokacion dhe një përshkrim të shkurtër.</p>
 
-      <form onSubmit={onSubmit} className="mt-8 grid gap-8 md:grid-cols-2">
+      <form onSubmit={onSubmit} className="mt-8 grid gap-8 md:grid-cols-2" noValidate>
         <div className="space-y-4">
-          <label className="block text-sm">
-            <span className="text-stone-700">Përshkrimi</span>
+          <div>
+            <label htmlFor="report-description" className="block text-sm text-stone-700">
+              Përshkrimi
+            </label>
             <textarea
-              required
+              id="report-description"
               minLength={10}
               rows={5}
               value={description}
-              onChange={(e) => setDescription(e.target.value)}
+              onChange={(e) => {
+                setDescription(e.target.value);
+                setFieldErrors((f) => ({ ...f, description: undefined }));
+              }}
+              aria-invalid={Boolean(fieldErrors.description)}
+              aria-describedby={fieldErrors.description ? 'report-description-error' : undefined}
               className="mt-1 w-full rounded-md border border-stone-300 px-3 py-2 outline-none focus:border-stone-500"
               placeholder="P.sh. gropë e madhe në rrugë..."
             />
-          </label>
+            <FieldError id="report-description-error" message={fieldErrors.description} />
+          </div>
 
-          <label className="block text-sm">
-            <span className="text-stone-700">Kategoria (opsionale)</span>
+          <div>
+            <label htmlFor="report-category" className="block text-sm text-stone-700">
+              Kategoria (opsionale)
+            </label>
             <select
+              id="report-category"
               value={categoryId}
               onChange={(e) => setCategoryId(e.target.value)}
               className="mt-1 w-full rounded-md border border-stone-300 px-3 py-2 outline-none focus:border-stone-500"
@@ -159,33 +184,43 @@ export default function ReportPage() {
                 </option>
               ))}
             </select>
-          </label>
+          </div>
 
-          <label className="block text-sm">
-            <span className="text-stone-700">Adresa (opsionale)</span>
+          <div>
+            <label htmlFor="report-address" className="block text-sm text-stone-700">
+              Adresa (opsionale)
+            </label>
             <input
+              id="report-address"
               value={address}
               onChange={(e) => setAddress(e.target.value)}
               className="mt-1 w-full rounded-md border border-stone-300 px-3 py-2 outline-none focus:border-stone-500"
             />
-          </label>
+          </div>
 
-          <label className="block text-sm">
-            <span className="text-stone-700">Foto (JPEG/PNG/WebP, max 5MB)</span>
+          <div>
+            <label htmlFor="report-photo" className="block text-sm text-stone-700">
+              Foto (JPEG/PNG/WebP, max 5MB)
+            </label>
             <input
+              id="report-photo"
               type="file"
               accept="image/jpeg,image/png,image/webp"
-              required
-              onChange={(e) => setPhoto(e.target.files?.[0] ?? null)}
+              onChange={(e) => {
+                setPhoto(e.target.files?.[0] ?? null);
+                setFieldErrors((f) => ({ ...f, photo: undefined }));
+              }}
+              aria-invalid={Boolean(fieldErrors.photo)}
+              aria-describedby={fieldErrors.photo ? 'report-photo-error' : undefined}
               className="mt-1 block w-full text-sm"
             />
-          </label>
+            <FieldError id="report-photo-error" message={fieldErrors.photo} />
+          </div>
           {preview ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
+            <RemoteImage
               src={preview}
-              alt="Parapamje e fotos"
-              className="max-h-48 rounded-md border object-cover"
+              alt="Parapamje e fotos së raportit"
+              className="max-h-48 w-full rounded-md border object-cover"
             />
           ) : null}
 
@@ -205,8 +240,10 @@ export default function ReportPage() {
         </div>
 
         <div className="space-y-3">
-          <div className="flex items-center justify-between gap-2">
-            <p className="text-sm text-stone-700">Lokacioni</p>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <p id="report-location-label" className="text-sm text-stone-700">
+              Lokacioni
+            </p>
             <button
               type="button"
               onClick={requestGeolocation}
@@ -216,14 +253,18 @@ export default function ReportPage() {
               {geoBusy ? 'Duke gjetur...' : 'Përdor GPS'}
             </button>
           </div>
-          <LocationPickerMap
-            lat={lat}
-            lng={lng}
-            onPick={(nextLat, nextLng) => {
-              setLat(nextLat);
-              setLng(nextLng);
-            }}
-          />
+          <div aria-labelledby="report-location-label">
+            <LocationPickerMap
+              lat={lat}
+              lng={lng}
+              onPick={(nextLat, nextLng) => {
+                setLat(nextLat);
+                setLng(nextLng);
+                setFieldErrors((f) => ({ ...f, location: undefined }));
+              }}
+            />
+          </div>
+          <FieldError id="report-location-error" message={fieldErrors.location} />
           <p className="text-xs text-stone-500">
             {lat !== null && lng !== null
               ? `${lat.toFixed(5)}, ${lng.toFixed(5)}`
@@ -231,12 +272,16 @@ export default function ReportPage() {
           </p>
         </div>
 
-        <div className="md:col-span-2 space-y-3">
-          {error ? <p className="text-sm text-red-600">{error}</p> : null}
+        <div className="space-y-3 md:col-span-2">
+          {formError ? (
+            <p className="text-sm text-red-700" role="alert">
+              {formError}
+            </p>
+          ) : null}
           <button
             type="submit"
             disabled={submitting}
-            className="rounded-md bg-stone-900 px-5 py-2.5 text-white hover:bg-stone-800 disabled:opacity-60"
+            className="w-full rounded-md bg-stone-900 px-5 py-2.5 text-white hover:bg-stone-800 disabled:opacity-60 sm:w-auto"
           >
             {submitting ? 'Duke dërguar...' : 'Dërgo raportin'}
           </button>

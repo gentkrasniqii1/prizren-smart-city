@@ -14,6 +14,8 @@ import type {
 } from '@prizren/shared-types';
 import { ApiError, apiFetch } from '@/lib/api';
 import { useAuth } from '@/components/auth-provider';
+import { RemoteImage } from '@/components/remote-image';
+import { PriorityBadge, Skeleton, Spinner, StatusBadge } from '@/components/ui';
 import { slaBucket, slaClass, slaLabel } from '@/lib/sla';
 
 const AI_CATEGORIES = [
@@ -203,7 +205,12 @@ export default function ReportDetailPage() {
   if (!report) {
     return (
       <main className="mx-auto max-w-2xl px-4 py-16">
-        <p className="text-stone-600">Duke ngarkuar...</p>
+        <Spinner />
+        <div className="mt-6 space-y-3">
+          <Skeleton className="h-6 w-40" />
+          <Skeleton className="h-8 w-3/4 max-w-md" />
+          <Skeleton className="h-48 w-full" />
+        </div>
       </main>
     );
   }
@@ -211,27 +218,31 @@ export default function ReportDetailPage() {
   const bucket = slaBucket(report.dueAt);
 
   return (
-    <main className="mx-auto max-w-2xl px-4 py-10">
+    <main className="mx-auto max-w-2xl px-4 py-8 sm:py-10">
       <Link href="/reports" className="text-sm text-stone-600 hover:text-stone-900">
         ← Kthehu
       </Link>
       <div className="mt-4 flex flex-wrap items-center gap-2 text-xs uppercase tracking-wide text-stone-500">
-        <span className="rounded bg-stone-200 px-2 py-0.5 text-stone-800">{report.status}</span>
+        <StatusBadge status={report.status} />
         {report.categoryName ? <span>{report.categoryName}</span> : null}
-        {report.priority ? <span>{report.priority}</span> : null}
+        {report.priority ? <PriorityBadge priority={report.priority} /> : null}
         {bucket ? (
-          <span className={`rounded px-2 py-0.5 ${slaClass(bucket)}`}>{slaLabel(bucket)}</span>
+          <span className={`rounded px-2 py-0.5 font-semibold ${slaClass(bucket)}`}>
+            {slaLabel(bucket)}
+          </span>
         ) : null}
         {report.aiNeedsReview ? (
-          <span className="rounded bg-amber-100 px-2 py-0.5 text-amber-900">needs review</span>
+          <span className="rounded bg-amber-200 px-2 py-0.5 font-semibold text-amber-950">
+            needs review
+          </span>
         ) : null}
         {report.duplicateOfId ? (
-          <span className="rounded bg-orange-100 px-2 py-0.5 text-orange-900">
+          <span className="rounded bg-orange-200 px-2 py-0.5 font-semibold text-orange-950">
             possible duplicate
           </span>
         ) : null}
       </div>
-      <h1 className="mt-3 text-3xl font-semibold tracking-tight text-stone-900">
+      <h1 className="mt-3 text-2xl font-semibold tracking-tight text-stone-900 sm:text-3xl">
         Detajet e raportit
       </h1>
       <p className="mt-4 whitespace-pre-wrap text-stone-800">{report.description}</p>
@@ -252,10 +263,9 @@ export default function ReportDetailPage() {
         <div>
           <p className="text-xs uppercase tracking-wide text-stone-500">Before</p>
           {report.photoUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
+            <RemoteImage
               src={report.photoUrl}
-              alt="Foto para zgjidhjes"
+              alt="Foto e problemit para zgjidhjes"
               className="mt-2 max-h-72 w-full rounded-md border object-cover"
             />
           ) : (
@@ -265,10 +275,9 @@ export default function ReportDetailPage() {
         <div>
           <p className="text-xs uppercase tracking-wide text-stone-500">After</p>
           {report.photoAfterUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
+            <RemoteImage
               src={report.photoAfterUrl}
-              alt="Foto pas zgjidhjes"
+              alt="Foto e problemit pas zgjidhjes"
               className="mt-2 max-h-72 w-full rounded-md border object-cover"
             />
           ) : (
@@ -316,8 +325,12 @@ export default function ReportDetailPage() {
         </ul>
         {user ? (
           <div className="mt-4 space-y-2">
+            <label htmlFor="report-comment" className="block text-sm text-stone-700">
+              Komenti yt
+            </label>
             <textarea
-              className="w-full rounded-md border border-stone-300 px-3 py-2 text-sm"
+              id="report-comment"
+              className="mt-1 w-full rounded-md border border-stone-300 px-3 py-2 text-sm"
               rows={3}
               maxLength={2000}
               placeholder="Shkruaj një koment..."
