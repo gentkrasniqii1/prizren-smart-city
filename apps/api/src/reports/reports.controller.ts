@@ -8,19 +8,24 @@ import {
   Patch,
   Post,
   Query,
+  Req,
   UploadedFile,
   UseGuards,
   UseInterceptors,
   Body,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
+import { Throttle } from '@nestjs/throttler';
 import { memoryStorage } from 'multer';
+import { Request } from 'express';
 import { Role } from '@prisma/client';
 import { CurrentUser, AuthUser } from '../auth/decorators/current-user.decorator';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { OptionalJwtAuthGuard } from '../auth/guards/optional-jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
+import { getClientIp } from '../common/client-ip';
+import { rejectIfHoneypotFilled } from '../common/honeypot';
 import {
   CreateReportFields,
   MAX_IMAGE_BYTES,
@@ -40,6 +45,7 @@ export class ReportsController {
 
   @Post()
   @UseGuards(JwtAuthGuard)
+  @Throttle({ default: { limit: 10, ttl: 3_600_000 } })
   @UseInterceptors(
     FileInterceptor('photo', {
       storage: memoryStorage(),
@@ -54,6 +60,7 @@ export class ReportsController {
     if (!user) {
       throw new BadRequestException('Unauthorized');
     }
+    rejectIfHoneypotFilled(fields.website);
     if (!file) {
       throw new BadRequestException('photo is required');
     }
@@ -90,6 +97,7 @@ export class ReportsController {
 
   @Post(':id/votes')
   @UseGuards(JwtAuthGuard)
+  @Throttle({ default: { limit: 30, ttl: 60_000 } })
   addVote(@Param('id', ParseUUIDPipe) id: string, @CurrentUser() user: AuthUser) {
     if (!user) {
       throw new BadRequestException('Unauthorized');
@@ -99,6 +107,7 @@ export class ReportsController {
 
   @Delete(':id/votes')
   @UseGuards(JwtAuthGuard)
+  @Throttle({ default: { limit: 30, ttl: 60_000 } })
   removeVote(@Param('id', ParseUUIDPipe) id: string, @CurrentUser() user: AuthUser) {
     if (!user) {
       throw new BadRequestException('Unauthorized');
@@ -139,6 +148,7 @@ export class ReportsController {
     @Param('id', ParseUUIDPipe) id: string,
     @CurrentUser() user: AuthUser,
     @Body() dto: UpdateReportStatusDto,
+    @Req() req: Request,
   ) {
     if (!user) {
       throw new BadRequestException('Unauthorized');
@@ -146,7 +156,7 @@ export class ReportsController {
     if (!dto?.status) {
       throw new BadRequestException('status is required');
     }
-    return this.reportsService.updateStatus(id, user, dto);
+    return this.reportsService.updateStatus(id, user, dto, getClientIp(req));
   }
 
   @Patch(':id/assign')
@@ -156,11 +166,12 @@ export class ReportsController {
     @Param('id', ParseUUIDPipe) id: string,
     @CurrentUser() user: AuthUser,
     @Body() dto: AssignReportDto,
+    @Req() req: Request,
   ) {
     if (!user) {
       throw new BadRequestException('Unauthorized');
     }
-    return this.reportsService.assign(id, user, dto);
+    return this.reportsService.assign(id, user, dto, getClientIp(req));
   }
 
   @Post(':id/photo-after')
@@ -176,6 +187,7 @@ export class ReportsController {
     @Param('id', ParseUUIDPipe) id: string,
     @CurrentUser() user: AuthUser,
     @UploadedFile() file?: Express.Multer.File,
+    @Req() req?: Request,
   ) {
     if (!user) {
       throw new BadRequestException('Unauthorized');
@@ -183,7 +195,7 @@ export class ReportsController {
     if (!file) {
       throw new BadRequestException('photo is required');
     }
-    return this.reportsService.uploadPhotoAfter(id, user, file);
+    return this.reportsService.uploadPhotoAfter(id, user, file, req ? getClientIp(req) : null);
   }
 
   @Patch(':id/ai-classification')
@@ -193,10 +205,11 @@ export class ReportsController {
     @Param('id', ParseUUIDPipe) id: string,
     @CurrentUser() user: AuthUser,
     @Body() dto: UpdateAiClassificationDto,
+    @Req() req: Request,
   ) {
     if (!user) {
       throw new BadRequestException('Unauthorized');
     }
-    return this.reportsService.updateAiClassification(id, user, dto);
+    return this.reportsService.updateAiClassification(id, user, dto, getClientIp(req));
   }
 }

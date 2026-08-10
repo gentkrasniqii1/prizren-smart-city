@@ -11,6 +11,7 @@ export class ParseCreateReportFieldsPipe implements PipeTransform {
     const lng = Number(value.lng);
     const address = value.address ? String(value.address).trim() : undefined;
     const categoryId = value.categoryId ? String(value.categoryId).trim() : undefined;
+    const website = value.website != null ? String(value.website) : undefined;
 
     if (!description || description.length < 10) {
       throw new BadRequestException('description must be at least 10 characters');
@@ -28,6 +29,7 @@ export class ParseCreateReportFieldsPipe implements PipeTransform {
       lng,
       address: address || undefined,
       categoryId: categoryId || undefined,
+      website,
     };
   }
 }
@@ -38,4 +40,6 @@ export type CreateReportFields = {
   lng: number;
   address?: string;
   categoryId?: string;
+  /** Honeypot — must stay empty. */
+  website?: string;
 };

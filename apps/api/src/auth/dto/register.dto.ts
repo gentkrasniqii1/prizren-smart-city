@@ -1,4 +1,4 @@
-import { IsEmail, IsString, MinLength, MaxLength } from 'class-validator';
+import { IsEmail, IsOptional, IsString, MinLength, MaxLength } from 'class-validator';
 
 export class RegisterDto {
   @IsEmail()
@@ -13,4 +13,10 @@ export class RegisterDto {
   @MinLength(2)
   @MaxLength(120)
   name!: string;
+
+  /** Honeypot — must stay empty. */
+  @IsOptional()
+  @IsString()
+  @MaxLength(200)
+  website?: string;
 }
