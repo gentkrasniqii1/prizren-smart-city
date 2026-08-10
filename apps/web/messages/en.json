@@ -1,0 +1,87 @@
+{
+  "Brand": {
+    "name": "Prizren Smart City",
+    "tagline": "Civic reporting"
+  },
+  "Nav": {
+    "reports": "Reports",
+    "report": "Report",
+    "transparency": "Transparency",
+    "admin": "Admin",
+    "notifications": "Notifications",
+    "login": "Sign in",
+    "register": "Sign up",
+    "logout": "Sign out",
+    "openMenu": "Open menu",
+    "closeMenu": "Close menu",
+    "skipToContent": "Skip to content"
+  },
+  "Home": {
+    "eyebrow": "Prizren · Heritage city",
+    "title": "Report. Track. Resolve.",
+    "subtitle": "A civic platform for urban issues — maps, transparency, and institutional response.",
+    "ctaReport": "Report a problem",
+    "ctaBrowse": "Browse reports",
+    "ctaTransparency": "Transparency",
+    "heroAlt": "View of Prizren city"
+  },
+  "Auth": {
+    "loginTitle": "Sign in",
+    "loginSubtitle": "Sign in to your Prizren Smart City account.",
+    "registerTitle": "Create account",
+    "registerSubtitle": "Create a citizen account to report problems.",
+    "email": "Email",
+    "password": "Password",
+    "name": "Name",
+    "submitLogin": "Sign in",
+    "submitRegister": "Create account",
+    "loggingIn": "Signing in…",
+    "registering": "Creating account…",
+    "noAccount": "No account yet?",
+    "hasAccount": "Already have an account?",
+    "google": "Continue with Google",
+    "orEmail": "or continue with email",
+    "panelAlt": "Sinan Pasha Mosque in Prizren",
+    "emailRequired": "Email is required",
+    "emailInvalid": "Invalid email",
+    "passwordRequired": "Password is required",
+    "passwordMin": "At least 8 characters",
+    "nameMin": "Name must be at least 2 characters"
+  },
+  "Reports": {
+    "title": "Reports",
+    "subtitle": "Public map and list — no personal data.",
+    "emptyTitle": "No reports yet",
+    "emptyBody": "When citizens report issues, they appear here and on the map.",
+    "reportFirst": "Be the first to report",
+    "status": "Status",
+    "all": "All",
+    "nearby": "Nearby (km)",
+    "showNearby": "Show near me",
+    "searching": "Searching…",
+    "loading": "Loading list…",
+    "category": "Category",
+    "from": "From",
+    "to": "To",
+    "applyFilters": "Apply filters",
+    "openDetails": "Open details"
+  },
+  "Common": {
+    "loading": "Loading…",
+    "retry": "Try again",
+    "errorGeneric": "Something went wrong",
+    "back": "Back",
+    "language": "Language"
+  },
+  "NotFound": {
+    "title": "Page not found",
+    "body": "The link may be outdated, or the address was mistyped.",
+    "home": "Back to home",
+    "reports": "Browse reports"
+  },
+  "Toast": {
+    "reportCreated": "Report created successfully",
+    "statusUpdated": "Status updated",
+    "copied": "Copied"
+  }
+}

@@ -1,0 +1,87 @@
+{
+  "Brand": {
+    "name": "Prizren Smart City",
+    "tagline": "Civic reporting"
+  },
+  "Nav": {
+    "reports": "Raporte",
+    "report": "Raporto",
+    "transparency": "Transparenca",
+    "admin": "Admin",
+    "notifications": "Njoftime",
+    "login": "Hyr",
+    "register": "Regjistrohu",
+    "logout": "Dil",
+    "openMenu": "Hap menunë",
+    "closeMenu": "Mbyll menunë",
+    "skipToContent": "Kalo te përmbajtja"
+  },
+  "Home": {
+    "eyebrow": "Prizren · Qyteti i trashëgimisë",
+    "title": "Raporto. Ndiq. Ndreq.",
+    "subtitle": "Platforma qytetare për problemet urbane — harta, transparencë dhe përgjigje nga institucionet.",
+    "ctaReport": "Raporto një problem",
+    "ctaBrowse": "Shiko raportet",
+    "ctaTransparency": "Transparenca",
+    "heroAlt": "Pamje e qytetit të Prizrenit"
+  },
+  "Auth": {
+    "loginTitle": "Hyr",
+    "loginSubtitle": "Hyni në llogarinë e Prizren Smart City.",
+    "registerTitle": "Regjistrohu",
+    "registerSubtitle": "Krijo llogari qytetari për të raportuar probleme.",
+    "email": "Email",
+    "password": "Fjalëkalimi",
+    "name": "Emri",
+    "submitLogin": "Hyr",
+    "submitRegister": "Krijo llogari",
+    "loggingIn": "Duke hyrë…",
+    "registering": "Duke u regjistruar…",
+    "noAccount": "Nuk ke llogari?",
+    "hasAccount": "Ke tashmë llogari?",
+    "google": "Vazhdo me Google",
+    "orEmail": "ose me email",
+    "panelAlt": "Xhamia Sinan Pasha në Prizren",
+    "emailRequired": "Email është i detyrueshëm",
+    "emailInvalid": "Email i pavlefshëm",
+    "passwordRequired": "Fjalëkalimi është i detyrueshëm",
+    "passwordMin": "Të paktën 8 karaktere",
+    "nameMin": "Emri duhet të ketë të paktën 2 karaktere"
+  },
+  "Reports": {
+    "title": "Raporte",
+    "subtitle": "Harta dhe lista publike — pa të dhëna personale.",
+    "emptyTitle": "Ende s’ka raporte",
+    "emptyBody": "Kur qytetarët raportojnë probleme, ato shfaqen këtu dhe në hartë.",
+    "reportFirst": "Raporto i pari",
+    "status": "Status",
+    "all": "Të gjitha",
+    "nearby": "Pranë meje (km)",
+    "showNearby": "Afisho pranë meje",
+    "searching": "Duke kërkuar…",
+    "loading": "Duke ngarkuar listën…",
+    "category": "Kategori",
+    "from": "Nga",
+    "to": "Deri",
+    "applyFilters": "Apliko filtrat",
+    "openDetails": "Hap detajet"
+  },
+  "Common": {
+    "loading": "Duke ngarkuar…",
+    "retry": "Provo sërish",
+    "errorGeneric": "Diçka shkoi keq",
+    "back": "Kthehu",
+    "language": "Gjuha"
+  },
+  "NotFound": {
+    "title": "Faqja nuk u gjet",
+    "body": "Lidhja mund të jetë e vjetër, ose adresa e shkruar gabim.",
+    "home": "Kthehu në fillim",
+    "reports": "Shiko raportet"
+  },
+  "Toast": {
+    "reportCreated": "Raporti u krijua me sukses",
+    "statusUpdated": "Statusi u përditësua",
+    "copied": "U kopjua"
+  }
+}
