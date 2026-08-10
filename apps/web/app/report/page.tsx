@@ -8,6 +8,7 @@ import { ApiError, apiFetch } from '@/lib/api';
 import { useAuth } from '@/components/auth-provider';
 import { FieldError, Spinner } from '@/components/ui';
 import { RemoteImage } from '@/components/remote-image';
+import { useToast } from '@/components/toast-provider';
 
 const LocationPickerMap = dynamic(
   () => import('@/components/location-picker-map').then((m) => m.LocationPickerMap),
@@ -28,6 +29,7 @@ type FieldErrors = {
 export default function ReportPage() {
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
+  const toast = useToast();
   const [categories, setCategories] = useState<CategoryDto[]>([]);
   const [description, setDescription] = useState('');
   const [categoryId, setCategoryId] = useState('');
@@ -121,6 +123,7 @@ export default function ReportPage() {
         body: form,
         auth: true,
       });
+      toast.push('Raporti u krijua me sukses', 'success');
       router.push(`/reports/${report.id}`);
     } catch (err) {
       setFormError(err instanceof ApiError ? err.message : 'Dërgimi dështoi');

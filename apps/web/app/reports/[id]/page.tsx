@@ -14,6 +14,7 @@ import type {
 } from '@prizren/shared-types';
 import { ApiError, apiFetch } from '@/lib/api';
 import { useAuth } from '@/components/auth-provider';
+import { Breadcrumbs } from '@/components/breadcrumbs';
 import { RemoteImage } from '@/components/remote-image';
 import { PriorityBadge, Skeleton, Spinner, StatusBadge } from '@/components/ui';
 import { slaBucket, slaClass, slaLabel } from '@/lib/sla';
@@ -219,6 +220,13 @@ export default function ReportDetailPage() {
 
   return (
     <main className="mx-auto max-w-2xl px-4 py-8 sm:py-10">
+      <Breadcrumbs
+        items={[
+          { href: '/', label: 'Home' },
+          { href: '/reports', label: 'Raporte' },
+          { label: report.id.slice(0, 8) },
+        ]}
+      />
       <Link href="/reports" className="text-sm text-stone-600 hover:text-stone-900">
         ← Kthehu
       </Link>

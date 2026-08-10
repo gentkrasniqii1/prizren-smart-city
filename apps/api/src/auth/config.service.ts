@@ -25,4 +25,26 @@ export class ConfigService {
   get corsOrigin(): string {
     return process.env.CORS_ORIGIN ?? 'http://localhost:3000';
   }
+
+  get googleClientId(): string {
+    return process.env.GOOGLE_CLIENT_ID ?? '';
+  }
+
+  get googleClientSecret(): string {
+    return process.env.GOOGLE_CLIENT_SECRET ?? '';
+  }
+
+  get googleCallbackUrl(): string {
+    return process.env.GOOGLE_CALLBACK_URL ?? 'http://localhost:3001/auth/google/callback';
+  }
+
+  get googleAuthEnabled(): boolean {
+    return Boolean(this.googleClientId && this.googleClientSecret);
+  }
+
+  get webOrigin(): string {
+    return (
+      process.env.WEB_ORIGIN ?? this.corsOrigin.split(',')[0]?.trim() ?? 'http://localhost:3000'
+    );
+  }
 }

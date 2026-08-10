@@ -1,11 +1,24 @@
-import { Controller, HttpCode, HttpStatus, Post, Req, Res, Body, UseGuards } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Post,
+  Req,
+  Res,
+  Body,
+  UseGuards,
+} from '@nestjs/common';
+import { AuthGuard } from '@nestjs/passport';
 import { Throttle } from '@nestjs/throttler';
 import { Request, Response } from 'express';
+import type { AuthResponse } from '@prizren/shared-types';
 import { AuthService } from './auth.service';
 import { ConfigService } from './config.service';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
+import { GoogleEnabledGuard } from './guards/google-enabled.guard';
 import { rejectIfHoneypotFilled } from '../common/honeypot';
 
 @Controller('auth')
@@ -34,6 +47,29 @@ export class AuthController {
     return auth;
   }
 
+  @Get('google/status')
+  googleStatus() {
+    return { enabled: this.config.googleAuthEnabled };
+  }
+
+  @Get('google')
+  @Throttle({ default: { limit: 20, ttl: 60_000 } })
+  @UseGuards(GoogleEnabledGuard, AuthGuard('google'))
+  googleAuth() {
+    // Passport redirects to Google
+  }
+
+  @Get('google/callback')
+  @UseGuards(GoogleEnabledGuard, AuthGuard('google'))
+  googleCallback(
+    @Req() req: Request & { user: { auth: AuthResponse; refreshToken: string } },
+    @Res() res: Response,
+  ) {
+    const session = req.user;
+    this.setRefreshCookie(res, session.refreshToken);
+    return res.redirect(`${this.config.webOrigin}/auth/callback`);
+  }
+
   @Post('refresh')
   @HttpCode(HttpStatus.OK)
   async refresh(@Req() req: Request, @Res({ passthrough: true }) res: Response) {
@@ -58,7 +94,7 @@ export class AuthController {
     res.cookie(this.config.refreshCookieName, token, {
       httpOnly: true,
       secure: this.config.isProduction,
-      sameSite: 'strict',
+      sameSite: 'lax',
       path: '/auth',
       maxAge: maxAgeMs,
     });
@@ -68,7 +104,7 @@ export class AuthController {
     res.clearCookie(this.config.refreshCookieName, {
       httpOnly: true,
       secure: this.config.isProduction,
-      sameSite: 'strict',
+      sameSite: 'lax',
       path: '/auth',
     });
   }
