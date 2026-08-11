@@ -37,13 +37,63 @@
   },
   "Home": {
     "eyebrow": "Prizren · Qyteti i trashëgimisë",
-    "title": "Raporto. Ndiq. Ndreq.",
+    "title": "Raporto. Ndiq. Ndrysho.",
     "subtitle": "Platforma qytetare për problemet urbane — harta, transparencë dhe përgjigje nga institucionet.",
     "ctaReport": "Raporto një problem",
     "ctaBrowse": "Shiko raportet",
     "ctaTransparency": "Transparenca",
     "heroAlt": "Pamje e qytetit të Prizrenit",
-    "howItWorksAnchor": "Si funksionon"
+    "trust": {
+      "transparent": "Raportim transparent",
+      "transparentHint": "Çdo raport publik shfaqet pa të dhëna personale.",
+      "openCount": "{count} çështje të hapura tani",
+      "response": "Përgjigje institucionale",
+      "responseHint": "Departamentet trajtojnë raportet sipas prioritetit.",
+      "avgHours": "Mesatarisht {hours} orë deri në zgjidhje",
+      "realtime": "Status në kohë reale",
+      "realtimeHint": "Ndiq çdo hap nga dërgimi deri te zgjidhja.",
+      "resolvedCount": "{count} të zgjidhura deri më sot",
+      "civic": "Pjesëmarrje qytetare",
+      "civicHint": "Foto, lokacion dhe AI për klasifikim më të shpejtë.",
+      "totalCount": "{count} raporte në platformë"
+    },
+    "how": {
+      "eyebrow": "Procesi",
+      "title": "Si funksionon",
+      "description": "Nga problemi në rrugë deri te përgjigjia e institucionit — në katër hapa të qarta.",
+      "step1Title": "Raporto",
+      "step1Body": "Përshkruaj problemin, shto foto dhe shëno lokacionin në hartë.",
+      "step2Title": "AI analizon",
+      "step2Body": "Sistemi sugjeron kategorinë, rëndësinë dhe departamentin e duhur.",
+      "step3Title": "Institucioni reagon",
+      "step3Body": "Raporti i caktohet stafit përkatës dhe ndiqet deri në zgjidhje.",
+      "step4Title": "Ndiq rezultatin",
+      "step4Body": "Shiko statusin, përditësimet dhe rezultatin në kohë reale."
+    },
+    "live": {
+      "eyebrow": "Në qytet tani",
+      "title": "Çështjet e fundit",
+      "description": "Një pamje e shpejtë e raporteve publike — pa të dhëna personale.",
+      "viewMap": "Shiko në hartë",
+      "emptyTitle": "Ende s’ka raporte publike",
+      "emptyBody": "Bëhu i pari që raporton një problem urban në Prizren.",
+      "noPhoto": "Pa foto",
+      "coords": "{lat}, {lng}"
+    },
+    "transparency": {
+      "eyebrow": "Transparenca",
+      "title": "Shih çfarë po ndodh në qytet",
+      "description": "Statistika agregate publike për raportet, zgjidhjet dhe kohën e përgjigjes.",
+      "cta": "Shiko transparencën",
+      "total": "Total",
+      "open": "Të hapura",
+      "resolved": "Të zgjidhura",
+      "rate": "Norma e zgjidhjes"
+    },
+    "final": {
+      "title": "Ke parë një problem në Prizren?",
+      "body": "Raportoje tani — me foto dhe lokacion. AI ndihmon klasifikimin; ti ndjek zgjidhjen."
+    }
   },
   "Auth": {
     "loginTitle": "Hyr",
