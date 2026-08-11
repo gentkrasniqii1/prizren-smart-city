@@ -9,11 +9,10 @@ type Size = 'sm' | 'md' | 'lg';
 const variants: Record<Variant, string> = {
   primary:
     'bg-primary text-primary-foreground hover:bg-primary-hover shadow-sm disabled:opacity-60',
-  secondary:
-    'border border-stone-300 bg-white text-stone-900 hover:bg-stone-50 disabled:opacity-60',
-  ghost: 'text-stone-800 hover:bg-stone-100 disabled:opacity-60',
-  destructive: 'bg-red-700 text-white hover:bg-red-800 disabled:opacity-60',
-  icon: 'border border-stone-300 bg-white text-stone-800 hover:bg-stone-50 disabled:opacity-60 p-0',
+  secondary: 'border border-border bg-card text-foreground hover:bg-muted disabled:opacity-60',
+  ghost: 'text-foreground hover:bg-muted disabled:opacity-60',
+  destructive: 'bg-destructive text-destructive-foreground hover:opacity-90 disabled:opacity-60',
+  icon: 'border border-border bg-card text-foreground hover:bg-muted disabled:opacity-60 p-0',
 };
 
 const sizes: Record<Size, string> = {
@@ -43,7 +42,7 @@ export const Button = forwardRef<HTMLButtonElement, Props>(function Button(
       ref={ref}
       type={type}
       className={cn(
-        'inline-flex items-center justify-center gap-2 font-medium transition duration-fast ease-product focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-mosque-700',
+        'inline-flex items-center justify-center gap-2 font-medium transition duration-fast ease-product focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring',
         variants[variant],
         variant === 'icon' ? iconSizes[size] : sizes[size],
         className,

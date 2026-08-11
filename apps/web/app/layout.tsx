@@ -5,7 +5,9 @@ import { getLocale, getMessages } from 'next-intl/server';
 import { AuthProvider } from '@/components/auth-provider';
 import { SiteShell } from '@/components/layout/site-shell';
 import { SentryInit } from '@/components/sentry-init';
+import { ThemeProvider } from '@/components/theme-provider';
 import { ToastProvider } from '@/components/toast-provider';
+import { Toaster } from '@/components/ui/sonner';
 import './globals.css';
 
 export const viewport: Viewport = {
@@ -50,7 +52,10 @@ export const metadata: Metadata = {
     description: 'Raporto dhe ndiq problemet urbane në Prizren.',
   },
   icons: {
-    icon: [{ url: '/brand/icon.svg', type: 'image/svg+xml' }],
+    icon: [
+      { url: '/brand/favicon.svg', type: 'image/svg+xml' },
+      { url: '/brand/icon.svg', type: 'image/svg+xml' },
+    ],
   },
 };
 
@@ -63,18 +68,21 @@ export default async function RootLayout({
   const messages = await getMessages();
 
   return (
-    <html lang={locale}>
+    <html lang={locale} suppressHydrationWarning>
       <body
-        className={`${display.variable} ${sans.variable} min-h-screen bg-stone-50 font-sans text-stone-900 antialiased`}
+        className={`${display.variable} ${sans.variable} min-h-screen bg-background font-sans text-foreground antialiased`}
       >
-        <NextIntlClientProvider messages={messages}>
-          <AuthProvider>
-            <ToastProvider>
-              <SentryInit />
-              <SiteShell>{children}</SiteShell>
-            </ToastProvider>
-          </AuthProvider>
-        </NextIntlClientProvider>
+        <ThemeProvider>
+          <NextIntlClientProvider messages={messages}>
+            <AuthProvider>
+              <ToastProvider>
+                <SentryInit />
+                <SiteShell>{children}</SiteShell>
+                <Toaster richColors closeButton position="bottom-right" />
+              </ToastProvider>
+            </AuthProvider>
+          </NextIntlClientProvider>
+        </ThemeProvider>
       </body>
     </html>
   );

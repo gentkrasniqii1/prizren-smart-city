@@ -25,6 +25,12 @@
     "mainNav": "Navigimi kryesor",
     "mobileNav": "Navigimi celular"
   },
+  "Theme": {
+    "label": "Tema",
+    "light": "E ndritshme",
+    "dark": "E errët",
+    "system": "Sistemi"
+  },
   "Footer": {
     "tagline": "Platformë qytetare për raportimin e problemeve urbane në Prizren.",
     "navLabel": "Lidhje të shpejta",
@@ -247,12 +253,19 @@
     "aiTitle": "Çfarë bën AI pas dërgimit",
     "aiBody": "AI analizon foton dhe sugjeron kategorinë, rëndësinë dhe departamentin. Stafi mund ta rishikojë para se të caktohet puna.",
     "reviewIntro": "Kontrollo të dhënat para se të dërgosh.",
-    "afterSubmit": "Pas dërgimit do të ridrejtohesh te raporti. AI fillon analizën automatikisht — statusin e ndjek aty.",
+    "afterSubmit": "Pas dërgimit do të shohësh konfirmimin me ID-në e raportit. AI fillon analizën automatikisht.",
     "back": "Prapa",
     "next": "Vazhdo",
     "submit": "Dërgo raportin",
     "submitting": "Duke dërguar…",
     "successToast": "Raporti u krijua me sukses",
+    "successTitle": "Raporti u dërgua",
+    "successBody": "Faleminderit — raporti yt është regjistruar dhe do të trajtohet nga stafi përkatës.",
+    "successId": "ID e raportit",
+    "successStatus": "Statusi",
+    "successAiNote": "AI po analizon foton dhe do të sugjerojë kategorinë. Statusin e ndjek te detajet e raportit.",
+    "successViewReport": "Shiko raportin",
+    "successBackToList": "Te lista e raporteve",
     "submitFailed": "Dërgimi dështoi",
     "sessionExpired": "Sesioni skadoi. Hyr përsëri për të dërguar raportin.",
     "progressLabel": "Hapat e formularit"

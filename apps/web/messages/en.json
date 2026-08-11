@@ -25,6 +25,12 @@
     "mainNav": "Main navigation",
     "mobileNav": "Mobile navigation"
   },
+  "Theme": {
+    "label": "Theme",
+    "light": "Light",
+    "dark": "Dark",
+    "system": "System"
+  },
   "Footer": {
     "tagline": "A civic platform for reporting urban issues in Prizren.",
     "navLabel": "Quick links",
@@ -247,12 +253,19 @@
     "aiTitle": "What AI does after you submit",
     "aiBody": "AI analyzes the photo and suggests category, severity, and department. Staff can review before work is assigned.",
     "reviewIntro": "Check the details before sending.",
-    "afterSubmit": "After submit you will go to the report page. AI starts analyzing automatically — track status there.",
+    "afterSubmit": "After submit you will see a confirmation with your report ID. AI starts analyzing automatically.",
     "back": "Back",
     "next": "Continue",
     "submit": "Submit report",
     "submitting": "Submitting…",
     "successToast": "Report created successfully",
+    "successTitle": "Report submitted",
+    "successBody": "Thank you — your report is registered and will be handled by the relevant staff.",
+    "successId": "Report ID",
+    "successStatus": "Status",
+    "successAiNote": "AI is analyzing the photo and will suggest a category. Track status on the report details page.",
+    "successViewReport": "View report",
+    "successBackToList": "Back to reports list",
     "submitFailed": "Submit failed",
     "sessionExpired": "Session expired. Sign in again to submit the report.",
     "progressLabel": "Form steps"
