@@ -107,3 +107,61 @@ export function getRoleLabel(role: string, locale: AppLocale = 'sq'): string {
   const map = ROLE_LABELS[locale] ?? ROLE_LABELS.sq;
   return map[role as UserRoleKey] ?? role;
 }
+
+export const AI_CATEGORIES = [
+  'road_damage',
+  'lighting',
+  'waste',
+  'water',
+  'public_space',
+  'other',
+] as const;
+
+export type AiCategoryKey = (typeof AI_CATEGORIES)[number];
+
+export const AI_SEVERITIES = ['low', 'medium', 'high', 'critical'] as const;
+export type AiSeverityKey = (typeof AI_SEVERITIES)[number];
+
+const AI_CATEGORY_LABELS: Record<AppLocale, Record<AiCategoryKey, string>> = {
+  sq: {
+    road_damage: 'Dëmtim rruge',
+    lighting: 'Ndriçim',
+    waste: 'Mbeturina',
+    water: 'Ujë / kanalizim',
+    public_space: 'Hapësirë publike',
+    other: 'Tjetër',
+  },
+  en: {
+    road_damage: 'Road damage',
+    lighting: 'Lighting',
+    waste: 'Waste',
+    water: 'Water / sewage',
+    public_space: 'Public space',
+    other: 'Other',
+  },
+};
+
+const AI_SEVERITY_LABELS: Record<AppLocale, Record<AiSeverityKey, string>> = {
+  sq: {
+    low: 'E ulët',
+    medium: 'Mesatare',
+    high: 'E lartë',
+    critical: 'Kritike',
+  },
+  en: {
+    low: 'Low',
+    medium: 'Medium',
+    high: 'High',
+    critical: 'Critical',
+  },
+};
+
+export function getAiCategoryLabel(category: string, locale: AppLocale = 'sq'): string {
+  const map = AI_CATEGORY_LABELS[locale] ?? AI_CATEGORY_LABELS.sq;
+  return map[category as AiCategoryKey] ?? category.replace(/_/g, ' ');
+}
+
+export function getAiSeverityLabel(severity: string, locale: AppLocale = 'sq'): string {
+  const map = AI_SEVERITY_LABELS[locale] ?? AI_SEVERITY_LABELS.sq;
+  return map[severity as AiSeverityKey] ?? severity;
+}

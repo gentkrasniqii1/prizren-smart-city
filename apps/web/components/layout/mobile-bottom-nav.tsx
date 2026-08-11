@@ -54,7 +54,7 @@ export function MobileBottomNav() {
       href: '/account#profile',
       label: t('profile'),
       icon: UserRound,
-      isActive: () => false,
+      isActive: (p) => p === '/notifications',
     },
   ];
 

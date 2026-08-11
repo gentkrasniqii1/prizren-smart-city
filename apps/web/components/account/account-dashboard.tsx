@@ -15,6 +15,7 @@ import { ApiError, apiFetch } from '@/lib/api';
 import { useAuth } from '@/components/auth-provider';
 import { PageContainer } from '@/components/layout/page-container';
 import { ReportCard } from '@/components/reports/report-card';
+import { NotificationItem } from '@/components/notifications/notification-item';
 import { UserAvatar } from '@/components/user-avatar';
 import { Button, EmptyState, ErrorBanner, Skeleton, Spinner, StatCard } from '@/components/ui';
 import { getRoleLabel } from '@/lib/labels';
@@ -334,33 +335,9 @@ export function AccountDashboard() {
               ) : notifications.length === 0 ? (
                 <p className="mt-3 text-sm text-stone-500">{t('notifEmpty')}</p>
               ) : (
-                <ul className="mt-3 divide-y divide-stone-100">
+                <ul className="-mx-2 mt-3 divide-y divide-stone-100 overflow-hidden rounded-lg border border-stone-100">
                   {notifications.map((n) => (
-                    <li key={n.id} className="py-2.5 first:pt-0 last:pb-0">
-                      <p
-                        className={cn(
-                          'text-sm',
-                          n.read ? 'text-stone-600' : 'font-medium text-stone-900',
-                        )}
-                      >
-                        {n.message ?? n.type}
-                      </p>
-                      <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-stone-500">
-                        <span>
-                          {new Date(n.createdAt).toLocaleDateString(
-                            locale === 'en' ? 'en-GB' : 'sq-AL',
-                          )}
-                        </span>
-                        {n.reportId ? (
-                          <Link
-                            href={`/reports/${n.reportId}`}
-                            className="font-medium text-mosque-800 hover:underline"
-                          >
-                            {t('notifOpenReport')}
-                          </Link>
-                        ) : null}
-                      </div>
-                    </li>
+                    <NotificationItem key={n.id} notification={n} compact />
                   ))}
                 </ul>
               )}

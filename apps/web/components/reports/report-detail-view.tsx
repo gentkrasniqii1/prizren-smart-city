@@ -24,6 +24,7 @@ import { ReportStatusTimeline } from '@/components/reports/report-status-timelin
 import { Button, PriorityBadge, Skeleton, Spinner, StatusBadge } from '@/components/ui';
 import { FieldError } from '@/components/ui/field-error';
 import { Input, Label, Select, Textarea } from '@/components/ui/field';
+import { AI_CATEGORIES, AI_SEVERITIES, getAiCategoryLabel, getAiSeverityLabel } from '@/lib/labels';
 import { slaBucket, slaClass, slaLabel } from '@/lib/sla';
 import type { AppLocale } from '@/i18n/request';
 import { cn } from '@/lib/utils';
@@ -37,16 +38,6 @@ const LocationPickerMap = dynamic(
     },
   },
 );
-
-const AI_CATEGORIES = [
-  'road_damage',
-  'lighting',
-  'waste',
-  'water',
-  'public_space',
-  'other',
-] as const;
-const AI_SEVERITIES = ['low', 'medium', 'high', 'critical'] as const;
 
 export function ReportDetailView() {
   const params = useParams<{ id: string }>();
@@ -67,6 +58,8 @@ export function ReportDetailView() {
   const [commentError, setCommentError] = useState<string | null>(null);
   const [voteBusy, setVoteBusy] = useState(false);
   const [citizenMessage, setCitizenMessage] = useState<string | null>(null);
+  const [related, setRelated] = useState<ReportDto[]>([]);
+  const [aiPolling, setAiPolling] = useState(false);
 
   const canManageAi = user?.role === 'DEPARTMENT_ADMIN' || user?.role === 'SUPER_ADMIN';
   const canStaff =
@@ -98,6 +91,60 @@ export function ReportDetailView() {
       }
     })();
   }, [params.id]);
+
+  // Poll while AI classification is still pending (post-submit job)
+  useEffect(() => {
+    if (!report || report.aiClassification) {
+      setAiPolling(false);
+      return;
+    }
+    setAiPolling(true);
+    let attempts = 0;
+    const reportId = report.id;
+    const timer = window.setInterval(() => {
+      void (async () => {
+        attempts += 1;
+        try {
+          const data = await apiFetch<ReportDto>(`/reports/${reportId}`, { auth: true });
+          if (data.aiClassification) {
+            setReport(data);
+            setDraft(data.aiClassification);
+            setAiPolling(false);
+            window.clearInterval(timer);
+          }
+        } catch {
+          // keep polling until attempts exhausted
+        }
+        if (attempts >= 15) {
+          setAiPolling(false);
+          window.clearInterval(timer);
+        }
+      })();
+    }, 2000);
+    return () => {
+      window.clearInterval(timer);
+    };
+    // Intentionally keyed on id + whether AI exists — not the full report object
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- poll only while AI missing
+  }, [report?.id, report?.aiClassification]);
+
+  useEffect(() => {
+    if (!report) return;
+    const lat = report.lat;
+    const lng = report.lng;
+    const id = report.id;
+    void (async () => {
+      try {
+        const list = await apiFetch<ReportDto[]>(
+          `/reports/nearby?lat=${lat}&lng=${lng}&radiusKm=0.8`,
+        );
+        setRelated(list.filter((r) => r.id !== id).slice(0, 5));
+      } catch {
+        setRelated([]);
+      }
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- reload nearby when coords change
+  }, [report?.id, report?.lat, report?.lng]);
 
   async function toggleVote() {
     if (!report || !user) {
@@ -303,9 +350,12 @@ export function ReportDetailView() {
               </span>
             ) : null}
             {report.duplicateOfId ? (
-              <span className="inline-flex rounded-md bg-orange-200 px-2 py-0.5 text-[11px] font-semibold text-orange-950">
+              <Link
+                href={`/reports/${report.duplicateOfId}`}
+                className="inline-flex rounded-md bg-orange-200 px-2 py-0.5 text-[11px] font-semibold text-orange-950 hover:bg-orange-300"
+              >
                 {t('possibleDuplicate')}
-              </span>
+              </Link>
             ) : null}
           </div>
 
@@ -511,13 +561,13 @@ export function ReportDetailView() {
                         <div>
                           <dt className="text-stone-500">{t('aiCategory')}</dt>
                           <dd className="font-medium text-stone-900">
-                            {report.aiClassification.category}
+                            {getAiCategoryLabel(report.aiClassification.category, locale)}
                           </dd>
                         </div>
                         <div>
                           <dt className="text-stone-500">{t('aiSeverity')}</dt>
                           <dd className="font-medium text-stone-900">
-                            {report.aiClassification.severity}
+                            {getAiSeverityLabel(report.aiClassification.severity, locale)}
                           </dd>
                         </div>
                         <div>
@@ -559,7 +609,7 @@ export function ReportDetailView() {
                           >
                             {AI_CATEGORIES.map((c) => (
                               <option key={c} value={c}>
-                                {c}
+                                {getAiCategoryLabel(c, locale)}
                               </option>
                             ))}
                           </Select>
@@ -582,7 +632,7 @@ export function ReportDetailView() {
                           >
                             {AI_SEVERITIES.map((s) => (
                               <option key={s} value={s}>
-                                {s}
+                                {getAiSeverityLabel(s, locale)}
                               </option>
                             ))}
                           </Select>
@@ -675,9 +725,68 @@ export function ReportDetailView() {
                   </div>
                 </div>
               </section>
+            ) : aiPolling ? (
+              <section
+                aria-labelledby="report-ai-heading"
+                className="rounded-xl border border-mosque-200 bg-mosque-50/50 p-5"
+                aria-busy="true"
+              >
+                <div className="flex items-start gap-3">
+                  <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-mosque-700 text-white">
+                    <Bot className="h-4 w-4 animate-pulse" aria-hidden />
+                  </span>
+                  <div>
+                    <h2
+                      id="report-ai-heading"
+                      className="font-display text-lg tracking-tight text-stone-950"
+                    >
+                      {t('aiHeading')}
+                    </h2>
+                    <p className="mt-2 text-sm text-stone-700" role="status">
+                      {t('aiAnalyzing')}
+                    </p>
+                  </div>
+                </div>
+              </section>
             ) : (
               <p className="text-sm text-stone-500">{t('aiMissing')}</p>
             )}
+
+            <section aria-labelledby="report-related-heading">
+              <h2
+                id="report-related-heading"
+                className="font-display text-xl tracking-tight text-stone-950"
+              >
+                {t('relatedHeading')}
+              </h2>
+              {related.length === 0 ? (
+                <p className="mt-3 text-sm text-stone-500">{t('relatedEmpty')}</p>
+              ) : (
+                <ul className="mt-4 divide-y divide-stone-100 overflow-hidden rounded-xl border border-stone-200 bg-white">
+                  {related.map((r) => (
+                    <li key={r.id}>
+                      <Link
+                        href={`/reports/${r.id}`}
+                        className="flex items-start gap-3 px-4 py-3 transition hover:bg-stone-50"
+                      >
+                        <div className="min-w-0 flex-1">
+                          <div className="flex flex-wrap gap-1.5">
+                            <StatusBadge status={r.status} />
+                            {r.priority ? <PriorityBadge priority={r.priority} /> : null}
+                          </div>
+                          <p className="mt-1.5 line-clamp-2 text-sm text-stone-800">
+                            {r.description}
+                          </p>
+                          <p className="mt-1 text-xs text-stone-500">
+                            {r.categoryName ?? t('relatedNearby')}
+                          </p>
+                        </div>
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </section>
           </div>
 
           {/* Sidebar */}

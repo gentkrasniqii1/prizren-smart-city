@@ -2,18 +2,16 @@
 
 import Link from 'next/link';
 import { useCallback, useEffect, useState } from 'react';
-import { useLocale, useTranslations } from 'next-intl';
+import { useTranslations } from 'next-intl';
 import type { NotificationDto, PaginatedNotifications } from '@prizren/shared-types';
 import { ApiError, apiFetch } from '@/lib/api';
 import { useAuth } from '@/components/auth-provider';
 import { PageContainer } from '@/components/layout/page-container';
+import { NotificationItem } from '@/components/notifications/notification-item';
 import { Button, EmptyState, ErrorBanner, Spinner } from '@/components/ui';
-import { cn } from '@/lib/utils';
-import type { AppLocale } from '@/i18n/request';
 
 export default function NotificationsPage() {
   const t = useTranslations('Notifications');
-  const locale = useLocale() as AppLocale;
   const { user, loading } = useAuth();
   const [items, setItems] = useState<NotificationDto[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -123,41 +121,12 @@ export default function NotificationsPage() {
         ) : (
           <ul className="mt-6 divide-y divide-stone-100 overflow-hidden rounded-xl border border-stone-200 bg-white">
             {items.map((n) => (
-              <li key={n.id} className={cn('px-4 py-4', !n.read && 'bg-mosque-50/40')}>
-                <p
-                  className={cn(
-                    'text-sm leading-relaxed',
-                    n.read ? 'text-stone-700' : 'font-medium text-stone-950',
-                  )}
-                >
-                  {n.message ?? n.type}
-                </p>
-                <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-stone-500">
-                  <span>
-                    {new Date(n.createdAt).toLocaleString(locale === 'en' ? 'en-GB' : 'sq-AL')}
-                  </span>
-                  {n.reportId ? (
-                    <Link
-                      href={`/reports/${n.reportId}`}
-                      className="inline-flex min-h-10 items-center font-medium text-mosque-800 underline"
-                    >
-                      {t('openReport')}
-                    </Link>
-                  ) : null}
-                  {!n.read ? (
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      disabled={busy}
-                      onClick={() => void markOne(n.id)}
-                      className="min-h-10 px-2"
-                    >
-                      {t('markRead')}
-                    </Button>
-                  ) : null}
-                </div>
-              </li>
+              <NotificationItem
+                key={n.id}
+                notification={n}
+                busy={busy}
+                onMarkRead={(id) => void markOne(id)}
+              />
             ))}
           </ul>
         )}
