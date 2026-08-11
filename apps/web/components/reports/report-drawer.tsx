@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { useEffect, useRef } from 'react';
 import { ExternalLink, MapPin, ThumbsUp, X } from 'lucide-react';
 import { useLocale, useTranslations } from 'next-intl';
 import type { ReportDto } from '@prizren/shared-types';
@@ -14,13 +15,22 @@ export function ReportDrawer({
   report,
   onClose,
   className,
+  modal = false,
 }: {
   report: ReportDto;
   onClose: () => void;
   className?: string;
+  /** When true (mobile overlay), expose dialog semantics and focus the close control. */
+  modal?: boolean;
 }) {
   const t = useTranslations('Reports');
   const locale = useLocale() as AppLocale;
+  const closeRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    if (!modal) return;
+    closeRef.current?.focus();
+  }, [modal, report.id]);
 
   return (
     <aside
@@ -29,6 +39,8 @@ export function ReportDrawer({
         className,
       )}
       aria-label={t('drawerLabel')}
+      role={modal ? 'dialog' : undefined}
+      aria-modal={modal ? true : undefined}
     >
       <div className="flex items-start justify-between gap-3 border-b border-stone-100 px-4 py-3">
         <div className="min-w-0">
@@ -41,6 +53,7 @@ export function ReportDrawer({
           </div>
         </div>
         <Button
+          ref={closeRef}
           type="button"
           variant="icon"
           size="sm"

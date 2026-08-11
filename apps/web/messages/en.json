@@ -164,14 +164,19 @@
     "nearbyInvalid": "Enter a valid radius in km",
     "geoUnsupported": "Geolocation is not supported in this browser",
     "nearbyFailed": "Nearby search failed",
-    "geoDenied": "Could not get GPS. Allow location access."
+    "geoDenied": "Could not get GPS. Allow location access.",
+    "mapAria": "Interactive reports map"
   },
   "Common": {
     "loading": "Loading…",
     "retry": "Try again",
     "errorGeneric": "Something went wrong",
+    "errorTitle": "Something went wrong",
     "back": "Back",
-    "language": "Language"
+    "backHome": "Back to home",
+    "language": "Language",
+    "locationMapPick": "Map for choosing a location",
+    "locationMapView": "Report location map"
   },
   "Status": {
     "PENDING": "Pending",
@@ -243,7 +248,8 @@
     "submitting": "Submitting…",
     "successToast": "Report created successfully",
     "submitFailed": "Submit failed",
-    "sessionExpired": "Session expired. Sign in again to submit the report."
+    "sessionExpired": "Session expired. Sign in again to submit the report.",
+    "progressLabel": "Form steps"
   },
   "ReportDetail": {
     "title": "Report details",
@@ -322,6 +328,7 @@
   },
   "Account": {
     "loading": "Loading account…",
+    "title": "My account",
     "greeting": "Welcome back",
     "welcome": "Hello, {name}",
     "ctaReport": "Report a problem",
@@ -455,7 +462,8 @@
     "title": "Page not found",
     "body": "The link may be outdated, or the address was mistyped.",
     "home": "Back to home",
-    "reports": "Browse reports"
+    "reports": "Browse reports",
+    "imageAlt": "View of Prizren old town"
   },
   "Toast": {
     "reportCreated": "Report created successfully",

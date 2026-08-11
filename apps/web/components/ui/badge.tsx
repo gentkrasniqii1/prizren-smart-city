@@ -58,9 +58,7 @@ export function StatusBadge({ status, className }: { status: string; className?:
   const classes = STATUS_CLASS[key] ?? STATUS_CLASS.PENDING;
 
   return (
-    <span className={cn(badgeBase, classes, className)} title={status}>
-      {getStatusLabel(status, locale)}
-    </span>
+    <span className={cn(badgeBase, classes, className)}>{getStatusLabel(status, locale)}</span>
   );
 }
 
@@ -70,8 +68,6 @@ export function PriorityBadge({ priority, className }: { priority: string; class
   const classes = PRIORITY_CLASS[key] ?? PRIORITY_CLASS.LOW;
 
   return (
-    <span className={cn(badgeBase, classes, className)} title={priority}>
-      {getPriorityLabel(priority, locale)}
-    </span>
+    <span className={cn(badgeBase, classes, className)}>{getPriorityLabel(priority, locale)}</span>
   );
 }

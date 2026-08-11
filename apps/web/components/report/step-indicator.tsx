@@ -1,6 +1,7 @@
 'use client';
 
 import { Check } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import { cn } from '@/lib/utils';
 
 export function StepIndicator({
@@ -10,10 +11,14 @@ export function StepIndicator({
   steps: { id: string; label: string }[];
   current: number;
 }) {
+  const t = useTranslations('ReportFlow');
   return (
     <div>
       {/* Mobile: compact number rail + current label */}
-      <ol className="flex items-center justify-between gap-1 sm:hidden" aria-label="Progress">
+      <ol
+        className="flex items-center justify-between gap-1 sm:hidden"
+        aria-label={t('progressLabel')}
+      >
         {steps.map((step, index) => {
           const done = index < current;
           const active = index === current;
@@ -44,7 +49,10 @@ export function StepIndicator({
       </ol>
 
       {/* sm+: full labels in a row */}
-      <ol className="hidden sm:flex sm:flex-row sm:items-center sm:gap-0" aria-label="Progress">
+      <ol
+        className="hidden sm:flex sm:flex-row sm:items-center sm:gap-0"
+        aria-label={t('progressLabel')}
+      >
         {steps.map((step, index) => {
           const done = index < current;
           const active = index === current;

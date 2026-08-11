@@ -101,6 +101,7 @@ export function PhotoUploader({
         <div
           role="button"
           tabIndex={0}
+          aria-label={t('photoDropTitle')}
           onClick={() => inputRef.current?.click()}
           onKeyDown={(e) => {
             if (e.key === 'Enter' || e.key === ' ') {

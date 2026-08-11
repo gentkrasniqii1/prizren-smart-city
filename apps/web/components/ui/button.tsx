@@ -1,6 +1,6 @@
 'use client';
 
-import type { ButtonHTMLAttributes, ReactNode } from 'react';
+import { forwardRef, type ButtonHTMLAttributes, type ReactNode } from 'react';
 import { cn } from '@/lib/utils';
 
 type Variant = 'primary' | 'secondary' | 'ghost' | 'destructive' | 'icon';
@@ -34,16 +34,13 @@ type Props = ButtonHTMLAttributes<HTMLButtonElement> & {
   children: ReactNode;
 };
 
-export function Button({
-  variant = 'primary',
-  size = 'md',
-  className,
-  children,
-  type = 'button',
-  ...rest
-}: Props) {
+export const Button = forwardRef<HTMLButtonElement, Props>(function Button(
+  { variant = 'primary', size = 'md', className, children, type = 'button', ...rest },
+  ref,
+) {
   return (
     <button
+      ref={ref}
       type={type}
       className={cn(
         'inline-flex items-center justify-center gap-2 font-medium transition duration-fast ease-product focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-mosque-700',
@@ -56,4 +53,4 @@ export function Button({
       {children}
     </button>
   );
-}
+});

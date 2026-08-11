@@ -3,6 +3,7 @@
 import { useEffect, useRef } from 'react';
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
+import { useTranslations } from 'next-intl';
 import type { ReportDto } from '@prizren/shared-types';
 
 const PRIZREN: [number, number] = [20.7397, 42.2139];
@@ -29,6 +30,7 @@ type Props = {
 };
 
 export function ReportsMap({ reports, selectedId, onSelect, className }: Props) {
+  const t = useTranslations('Reports');
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<mapboxgl.Map | null>(null);
   const onSelectRef = useRef(onSelect);
@@ -193,7 +195,14 @@ export function ReportsMap({ reports, selectedId, onSelect, className }: Props) 
     );
   }
 
-  return <div ref={containerRef} className={`h-full min-h-[320px] w-full ${className ?? ''}`} />;
+  return (
+    <div
+      ref={containerRef}
+      role="region"
+      aria-label={t('mapAria')}
+      className={`h-full min-h-[320px] w-full ${className ?? ''}`}
+    />
+  );
 }
 
 export { colorForCategory };

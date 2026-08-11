@@ -42,11 +42,13 @@ export function SiteHeader() {
     const prev = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
     window.addEventListener('keydown', onKey);
+    const first = document.getElementById(menuId)?.querySelector<HTMLElement>('a, button');
+    first?.focus();
     return () => {
       document.body.style.overflow = prev;
       window.removeEventListener('keydown', onKey);
     };
-  }, [open]);
+  }, [open, menuId]);
 
   const primaryLinks = [
     {
