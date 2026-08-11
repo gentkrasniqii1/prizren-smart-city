@@ -11,6 +11,13 @@ import { ReportCard } from '@/components/reports/report-card';
 import { ReportDrawer } from '@/components/reports/report-drawer';
 import { ReportFilters, type ReportsFilterState } from '@/components/reports/report-filters';
 import { Button, EmptyState, ErrorBanner, Skeleton, Spinner } from '@/components/ui';
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from '@/components/ui/sheet';
 import type { AppLocale } from '@/i18n/request';
 import { cn } from '@/lib/utils';
 
@@ -101,20 +108,6 @@ export default function ReportsPage() {
     }
   }, [visible, selectedId]);
 
-  useEffect(() => {
-    if (!selectedId) return;
-    function onKey(e: KeyboardEvent) {
-      if (e.key === 'Escape') setSelectedId(null);
-    }
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-    window.addEventListener('keydown', onKey);
-    return () => {
-      document.body.style.overflow = prev;
-      window.removeEventListener('keydown', onKey);
-    };
-  }, [selectedId]);
-
   async function loadNearby() {
     const km = Number(filters.nearbyKm);
     if (!Number.isFinite(km) || km <= 0) {
@@ -155,8 +148,8 @@ export default function ReportsPage() {
   }
 
   const listPanel = (
-    <div className="flex h-full min-h-0 flex-col bg-white">
-      <div className="flex items-center justify-between gap-2 border-b border-stone-200 px-3 py-2.5 text-sm text-stone-600">
+    <div className="flex h-full min-h-0 flex-col bg-card">
+      <div className="flex items-center justify-between gap-2 border-b border-border px-3 py-2.5 text-sm text-muted-foreground">
         <span className="min-w-0 truncate">
           {loading ? <Spinner label={t('loading')} /> : t('count', { count: visible.length })}
         </span>
@@ -209,10 +202,10 @@ export default function ReportsPage() {
       <PageContainer className="py-5 sm:py-6">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
           <div className="min-w-0">
-            <h1 className="font-display text-h1 tracking-tight text-stone-950 sm:text-3xl">
+            <h1 className="font-display text-h1 tracking-tight text-foreground sm:text-3xl">
               {t('title')}
             </h1>
-            <p className="mt-1.5 text-sm text-stone-600 sm:text-base">{t('subtitle')}</p>
+            <p className="mt-1.5 text-sm text-muted-foreground sm:text-base">{t('subtitle')}</p>
           </div>
           <Link href="/report" className="hidden sm:block sm:w-auto">
             <Button size="sm" className="w-full sm:w-auto">
@@ -221,7 +214,7 @@ export default function ReportsPage() {
           </Link>
         </div>
 
-        <div className="mt-5 rounded-lg border border-stone-200 bg-white p-3 sm:p-4">
+        <div className="mt-5 rounded-lg border border-border bg-card p-3 sm:p-4">
           <ReportFilters
             value={filters}
             onChange={setFilters}
@@ -241,8 +234,8 @@ export default function ReportsPage() {
 
       {/* Desktop GIS layout: list | map (+ drawer) */}
       <PageContainer width="wide" className="hidden pb-8 lg:block">
-        <div className="grid h-[min(70vh,720px)] overflow-hidden rounded-xl border border-stone-200 bg-stone-100 lg:grid-cols-[minmax(300px,380px)_minmax(0,1fr)]">
-          <div className="min-h-0 border-r border-stone-200">{listPanel}</div>
+        <div className="grid h-[min(70vh,720px)] overflow-hidden rounded-xl border border-border bg-muted lg:grid-cols-[minmax(300px,380px)_minmax(0,1fr)]">
+          <div className="min-h-0 border-r border-border bg-card">{listPanel}</div>
           <div className="relative min-h-0">
             <ReportsMap
               reports={visible}
@@ -253,7 +246,7 @@ export default function ReportsPage() {
             {selected ? (
               <div
                 key={selected.id}
-                className="motion-slide-in-right absolute inset-y-3 right-3 z-10 w-[min(100%,22rem)] overflow-hidden rounded-lg border border-stone-200"
+                className="motion-slide-in-right absolute inset-y-3 right-3 z-10 w-[min(100%,22rem)] overflow-hidden rounded-lg border border-border"
               >
                 <ReportDrawer report={selected} onClose={() => setSelectedId(null)} />
               </div>
@@ -262,11 +255,11 @@ export default function ReportsPage() {
         </div>
       </PageContainer>
 
-      {/* Mobile / tablet: map + bottom sheet list; drawer as overlay sheet */}
+      {/* Mobile / tablet: map + bottom sheet list; detail via Sheet */}
       <div className="pb-bottom-nav lg:hidden">
         <div
           className={cn(
-            'relative overflow-hidden border-y border-stone-200 bg-stone-100 transition-[height] duration-slow ease-product',
+            'relative overflow-hidden border-y border-border bg-muted transition-[height] duration-slow ease-product',
             mobileSheet === 'list' ? 'h-[28svh]' : 'h-[42svh]',
           )}
         >
@@ -280,34 +273,43 @@ export default function ReportsPage() {
 
         <div
           className={cn(
-            'relative z-10 -mt-3 overflow-hidden rounded-t-2xl border border-stone-200 bg-white shadow-lift',
+            'relative z-10 -mt-3 overflow-hidden rounded-t-2xl border border-border bg-card shadow-lift',
             mobileSheet === 'list' ? 'min-h-[50svh]' : 'max-h-[40svh]',
           )}
         >
           <div className="flex justify-center py-2" aria-hidden>
-            <span className="h-1 w-10 rounded-full bg-stone-300" />
+            <span className="h-1 w-10 rounded-full bg-muted-foreground/30" />
           </div>
           <div className={cn('min-h-0', mobileSheet === 'list' ? 'h-[50svh]' : 'max-h-[36svh]')}>
             {listPanel}
           </div>
         </div>
 
-        {selected ? (
-          <div className="motion-fade-in fixed inset-0 z-50 flex flex-col justify-end bg-stone-950/40 p-0 sm:p-4">
-            <button
-              type="button"
-              className="absolute inset-0 cursor-default"
-              aria-label={t('closeDrawer')}
-              onClick={() => setSelectedId(null)}
-            />
-            <div
-              key={selected.id}
-              className="motion-slide-up relative z-10 mx-auto h-[min(78svh,36rem)] w-full max-w-lg overflow-hidden rounded-t-2xl border border-stone-200 pb-[env(safe-area-inset-bottom)] sm:rounded-xl sm:pb-0"
-            >
-              <ReportDrawer report={selected} onClose={() => setSelectedId(null)} modal />
-            </div>
-          </div>
-        ) : null}
+        <Sheet
+          open={Boolean(selected)}
+          onOpenChange={(open) => {
+            if (!open) setSelectedId(null);
+          }}
+        >
+          <SheetContent
+            side="bottom"
+            className="h-[min(78svh,36rem)] gap-0 border-border p-0 sm:mx-auto sm:max-w-lg sm:rounded-t-xl [&>button]:right-3 [&>button]:top-3"
+          >
+            <SheetHeader className="sr-only">
+              <SheetTitle>{t('drawerTitle')}</SheetTitle>
+              <SheetDescription>{t('drawerLabel')}</SheetDescription>
+            </SheetHeader>
+            {selected ? (
+              <ReportDrawer
+                report={selected}
+                onClose={() => setSelectedId(null)}
+                modal
+                hideClose
+                className="rounded-none border-0 shadow-none"
+              />
+            ) : null}
+          </SheetContent>
+        </Sheet>
       </div>
     </main>
   );

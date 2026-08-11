@@ -324,7 +324,7 @@ export function ReportDetailView() {
 
         <Link
           href="/reports"
-          className="inline-flex items-center gap-1.5 text-sm text-stone-600 transition hover:text-mosque-800"
+          className="inline-flex items-center gap-1.5 text-sm text-muted-foreground transition hover:text-mosque-800"
         >
           <ArrowLeft className="h-4 w-4" aria-hidden />
           {t('backToList')}
@@ -359,10 +359,10 @@ export function ReportDetailView() {
             ) : null}
           </div>
 
-          <h1 className="mt-3 font-display text-h1 tracking-tight text-stone-950 sm:text-3xl">
+          <h1 className="mt-3 font-display text-h1 tracking-tight text-foreground sm:text-3xl">
             {t('title')}
           </h1>
-          <p className="mt-1 text-sm text-stone-500">
+          <p className="mt-1 text-sm text-muted-foreground">
             {t('idLabel', { id: shortId })}
             {report.categoryName ? ` · ${report.categoryName}` : ''}
             {report.departmentName ? ` · ${report.departmentName}` : ''}
@@ -376,7 +376,7 @@ export function ReportDetailView() {
               <h2 id="report-description-heading" className="sr-only">
                 {t('descriptionHeading')}
               </h2>
-              <p className="whitespace-pre-wrap text-base leading-relaxed text-stone-800 sm:text-lg">
+              <p className="whitespace-pre-wrap text-base leading-relaxed text-foreground sm:text-lg">
                 {report.description}
               </p>
 
@@ -392,7 +392,7 @@ export function ReportDetailView() {
                   {report.votedByMe ? t('unvote') : t('vote')} · {report.voteCount ?? 0}
                 </Button>
                 {citizenMessage ? (
-                  <p className="text-sm text-stone-600" role="status">
+                  <p className="text-sm text-muted-foreground" role="status">
                     {citizenMessage}
                   </p>
                 ) : null}
@@ -402,39 +402,39 @@ export function ReportDetailView() {
             <section aria-labelledby="report-photos-heading">
               <h2
                 id="report-photos-heading"
-                className="font-display text-xl tracking-tight text-stone-950"
+                className="font-display text-xl tracking-tight text-foreground"
               >
                 {t('photosHeading')}
               </h2>
               <div className="mt-4 grid gap-4 sm:grid-cols-2">
                 <figure>
-                  <figcaption className="text-caption uppercase tracking-wide text-stone-500">
+                  <figcaption className="text-caption uppercase tracking-wide text-muted-foreground">
                     {t('photoBefore')}
                   </figcaption>
                   {report.photoUrl ? (
                     <RemoteImage
                       src={report.photoUrl}
                       alt={t('photoBeforeAlt')}
-                      className="mt-2 max-h-80 w-full rounded-lg border border-stone-200 object-cover"
+                      className="mt-2 max-h-80 w-full rounded-lg border border-border object-cover"
                     />
                   ) : (
-                    <p className="mt-2 rounded-lg border border-dashed border-stone-300 bg-stone-50 px-3 py-10 text-center text-sm text-stone-500">
+                    <p className="mt-2 rounded-lg border border-dashed border-border bg-muted px-3 py-10 text-center text-sm text-muted-foreground">
                       {t('noPhoto')}
                     </p>
                   )}
                 </figure>
                 <figure>
-                  <figcaption className="text-caption uppercase tracking-wide text-stone-500">
+                  <figcaption className="text-caption uppercase tracking-wide text-muted-foreground">
                     {t('photoAfter')}
                   </figcaption>
                   {report.photoAfterUrl ? (
                     <RemoteImage
                       src={report.photoAfterUrl}
                       alt={t('photoAfterAlt')}
-                      className="mt-2 max-h-80 w-full rounded-lg border border-stone-200 object-cover"
+                      className="mt-2 max-h-80 w-full rounded-lg border border-border object-cover"
                     />
                   ) : (
-                    <p className="mt-2 rounded-lg border border-dashed border-stone-300 bg-stone-50 px-3 py-10 text-center text-sm text-stone-500">
+                    <p className="mt-2 rounded-lg border border-dashed border-border bg-muted px-3 py-10 text-center text-sm text-muted-foreground">
                       {t('noPhotoAfter')}
                     </p>
                   )}
@@ -444,26 +444,23 @@ export function ReportDetailView() {
 
             <section
               aria-labelledby="report-comments-heading"
-              className="border-t border-stone-200 pt-8"
+              className="border-t border-border pt-8"
             >
               <h2
                 id="report-comments-heading"
-                className="font-display text-xl tracking-tight text-stone-950"
+                className="font-display text-xl tracking-tight text-foreground"
               >
                 {t('commentsHeading')}
               </h2>
               <ul className="mt-4 space-y-4">
                 {comments.length === 0 ? (
-                  <li className="text-sm text-stone-500">{t('noComments')}</li>
+                  <li className="text-sm text-muted-foreground">{t('noComments')}</li>
                 ) : (
                   comments.map((c) => (
-                    <li
-                      key={c.id}
-                      className="border-b border-stone-100 pb-4 last:border-0 last:pb-0"
-                    >
-                      <p className="text-sm font-semibold text-stone-900">{c.authorName}</p>
-                      <p className="mt-1 whitespace-pre-wrap text-sm text-stone-700">{c.text}</p>
-                      <p className="mt-1.5 text-xs text-stone-500">
+                    <li key={c.id} className="border-b border-border pb-4 last:border-0 last:pb-0">
+                      <p className="text-sm font-semibold text-foreground">{c.authorName}</p>
+                      <p className="mt-1 whitespace-pre-wrap text-sm text-foreground">{c.text}</p>
+                      <p className="mt-1.5 text-xs text-muted-foreground">
                         {new Date(c.createdAt).toLocaleString(locale === 'en' ? 'en-GB' : 'sq-AL')}
                       </p>
                     </li>
@@ -492,7 +489,7 @@ export function ReportDetailView() {
                   </Button>
                 </div>
               ) : (
-                <p className="mt-4 text-sm text-stone-600">
+                <p className="mt-4 text-sm text-muted-foreground">
                   <Link href="/login" className="font-medium text-mosque-800 underline">
                     {t('loginLink')}
                   </Link>{' '}
@@ -504,15 +501,15 @@ export function ReportDetailView() {
             {canStaff ? (
               <section
                 aria-labelledby="report-workflow-heading"
-                className="rounded-xl border border-stone-200 bg-white p-5"
+                className="rounded-xl border border-border bg-card p-5"
               >
                 <h2
                   id="report-workflow-heading"
-                  className="font-display text-lg tracking-tight text-stone-950"
+                  className="font-display text-lg tracking-tight text-foreground"
                 >
                   {t('workflowHeading')}
                 </h2>
-                <p className="mt-1 text-sm text-stone-600">{t('workflowIntro')}</p>
+                <p className="mt-1 text-sm text-muted-foreground">{t('workflowIntro')}</p>
                 <Label htmlFor="photo-after" className="mt-4">
                   {t('afterUploadLabel')}
                 </Label>
@@ -533,7 +530,7 @@ export function ReportDetailView() {
                   {t('markResolved')}
                 </Button>
                 {workflowMessage ? (
-                  <p className="mt-3 text-sm text-stone-700" role="status">
+                  <p className="mt-3 text-sm text-foreground" role="status">
                     {workflowMessage}
                   </p>
                 ) : null}
@@ -552,39 +549,39 @@ export function ReportDetailView() {
                   <div className="min-w-0 flex-1">
                     <h2
                       id="report-ai-heading"
-                      className="font-display text-lg tracking-tight text-stone-950"
+                      className="font-display text-lg tracking-tight text-foreground"
                     >
                       {t('aiHeading')}
                     </h2>
                     {!editing ? (
                       <dl className="mt-3 grid gap-3 text-sm sm:grid-cols-2">
                         <div>
-                          <dt className="text-stone-500">{t('aiCategory')}</dt>
-                          <dd className="font-medium text-stone-900">
+                          <dt className="text-muted-foreground">{t('aiCategory')}</dt>
+                          <dd className="font-medium text-foreground">
                             {getAiCategoryLabel(report.aiClassification.category, locale)}
                           </dd>
                         </div>
                         <div>
-                          <dt className="text-stone-500">{t('aiSeverity')}</dt>
-                          <dd className="font-medium text-stone-900">
+                          <dt className="text-muted-foreground">{t('aiSeverity')}</dt>
+                          <dd className="font-medium text-foreground">
                             {getAiSeverityLabel(report.aiClassification.severity, locale)}
                           </dd>
                         </div>
                         <div>
-                          <dt className="text-stone-500">{t('aiConfidence')}</dt>
-                          <dd className="font-medium text-stone-900">
+                          <dt className="text-muted-foreground">{t('aiConfidence')}</dt>
+                          <dd className="font-medium text-foreground">
                             {(report.aiClassification.confidence * 100).toFixed(0)}%
                           </dd>
                         </div>
                         <div>
-                          <dt className="text-stone-500">{t('aiDepartment')}</dt>
-                          <dd className="font-medium text-stone-900">
+                          <dt className="text-muted-foreground">{t('aiDepartment')}</dt>
+                          <dd className="font-medium text-foreground">
                             {report.aiClassification.recommendedDepartment}
                           </dd>
                         </div>
                         <div className="sm:col-span-2">
-                          <dt className="text-stone-500">{t('aiSummary')}</dt>
-                          <dd className="mt-0.5 text-stone-800">
+                          <dt className="text-muted-foreground">{t('aiSummary')}</dt>
+                          <dd className="mt-0.5 text-foreground">
                             {report.aiClassification.summary}
                           </dd>
                         </div>
@@ -718,7 +715,7 @@ export function ReportDetailView() {
                       </div>
                     ) : null}
                     {aiMessage ? (
-                      <p className="mt-3 text-sm text-stone-700" role="status">
+                      <p className="mt-3 text-sm text-foreground" role="status">
                         {aiMessage}
                       </p>
                     ) : null}
@@ -738,46 +735,46 @@ export function ReportDetailView() {
                   <div>
                     <h2
                       id="report-ai-heading"
-                      className="font-display text-lg tracking-tight text-stone-950"
+                      className="font-display text-lg tracking-tight text-foreground"
                     >
                       {t('aiHeading')}
                     </h2>
-                    <p className="mt-2 text-sm text-stone-700" role="status">
+                    <p className="mt-2 text-sm text-foreground" role="status">
                       {t('aiAnalyzing')}
                     </p>
                   </div>
                 </div>
               </section>
             ) : (
-              <p className="text-sm text-stone-500">{t('aiMissing')}</p>
+              <p className="text-sm text-muted-foreground">{t('aiMissing')}</p>
             )}
 
             <section aria-labelledby="report-related-heading">
               <h2
                 id="report-related-heading"
-                className="font-display text-xl tracking-tight text-stone-950"
+                className="font-display text-xl tracking-tight text-foreground"
               >
                 {t('relatedHeading')}
               </h2>
               {related.length === 0 ? (
-                <p className="mt-3 text-sm text-stone-500">{t('relatedEmpty')}</p>
+                <p className="mt-3 text-sm text-muted-foreground">{t('relatedEmpty')}</p>
               ) : (
-                <ul className="mt-4 divide-y divide-stone-100 overflow-hidden rounded-xl border border-stone-200 bg-white">
+                <ul className="mt-4 divide-y divide-border overflow-hidden rounded-xl border border-border bg-card">
                   {related.map((r) => (
                     <li key={r.id}>
                       <Link
                         href={`/reports/${r.id}`}
-                        className="flex items-start gap-3 px-4 py-3 transition hover:bg-stone-50"
+                        className="flex items-start gap-3 px-4 py-3 transition hover:bg-muted"
                       >
                         <div className="min-w-0 flex-1">
                           <div className="flex flex-wrap gap-1.5">
                             <StatusBadge status={r.status} />
                             {r.priority ? <PriorityBadge priority={r.priority} /> : null}
                           </div>
-                          <p className="mt-1.5 line-clamp-2 text-sm text-stone-800">
+                          <p className="mt-1.5 line-clamp-2 text-sm text-foreground">
                             {r.description}
                           </p>
-                          <p className="mt-1 text-xs text-stone-500">
+                          <p className="mt-1 text-xs text-muted-foreground">
                             {r.categoryName ?? t('relatedNearby')}
                           </p>
                         </div>
@@ -791,7 +788,7 @@ export function ReportDetailView() {
 
           {/* Sidebar */}
           <aside className="space-y-6 lg:sticky lg:top-24">
-            <div className="rounded-xl border border-stone-200 bg-white p-5">
+            <div className="rounded-xl border border-border bg-card p-5">
               <ReportStatusTimeline
                 status={report.status}
                 createdAt={report.createdAt}
@@ -801,12 +798,12 @@ export function ReportDetailView() {
               />
             </div>
 
-            <div className="rounded-xl border border-stone-200 bg-white p-5">
-              <h2 className="text-label text-stone-700">{t('metaHeading')}</h2>
+            <div className="rounded-xl border border-border bg-card p-5">
+              <h2 className="text-label text-foreground">{t('metaHeading')}</h2>
               <dl className="mt-3 space-y-3 text-sm">
                 <div>
-                  <dt className="text-stone-500">{t('location')}</dt>
-                  <dd className="mt-0.5 text-stone-900">
+                  <dt className="text-muted-foreground">{t('location')}</dt>
+                  <dd className="mt-0.5 text-foreground">
                     <span className="inline-flex items-start gap-1.5">
                       <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-mosque-700" aria-hidden />
                       <span>
@@ -817,7 +814,7 @@ export function ReportDetailView() {
                               lng: report.lng.toFixed(5),
                             })}
                         {report.address ? (
-                          <span className="mt-0.5 block text-xs text-stone-500">
+                          <span className="mt-0.5 block text-xs text-muted-foreground">
                             {t('coords', {
                               lat: report.lat.toFixed(5),
                               lng: report.lng.toFixed(5),
@@ -829,22 +826,22 @@ export function ReportDetailView() {
                   </dd>
                 </div>
                 <div>
-                  <dt className="text-stone-500">{t('created')}</dt>
-                  <dd className="mt-0.5 text-stone-900">
+                  <dt className="text-muted-foreground">{t('created')}</dt>
+                  <dd className="mt-0.5 text-foreground">
                     {new Date(report.createdAt).toLocaleString(locale === 'en' ? 'en-GB' : 'sq-AL')}
                   </dd>
                 </div>
                 {report.dueAt ? (
                   <div>
-                    <dt className="text-stone-500">{t('dueAt')}</dt>
-                    <dd className="mt-0.5 text-stone-900">
+                    <dt className="text-muted-foreground">{t('dueAt')}</dt>
+                    <dd className="mt-0.5 text-foreground">
                       {new Date(report.dueAt).toLocaleString(locale === 'en' ? 'en-GB' : 'sq-AL')}
                     </dd>
                   </div>
                 ) : null}
               </dl>
 
-              <div className="mt-4 overflow-hidden rounded-md border border-stone-200">
+              <div className="mt-4 overflow-hidden rounded-md border border-border">
                 <LocationPickerMap
                   lat={report.lat}
                   lng={report.lng}
