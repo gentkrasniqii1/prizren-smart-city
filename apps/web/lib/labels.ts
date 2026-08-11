@@ -78,3 +78,32 @@ export function getSlaLabel(
   if (!bucket) return '—';
   return (SLA_LABELS[locale] ?? SLA_LABELS.sq)[bucket];
 }
+
+export const USER_ROLES = [
+  'CITIZEN',
+  'DEPARTMENT_STAFF',
+  'DEPARTMENT_ADMIN',
+  'SUPER_ADMIN',
+] as const;
+
+export type UserRoleKey = (typeof USER_ROLES)[number];
+
+const ROLE_LABELS: Record<AppLocale, Record<UserRoleKey, string>> = {
+  sq: {
+    CITIZEN: 'Qytetar',
+    DEPARTMENT_STAFF: 'Staf departamenti',
+    DEPARTMENT_ADMIN: 'Admin departamenti',
+    SUPER_ADMIN: 'Super admin',
+  },
+  en: {
+    CITIZEN: 'Citizen',
+    DEPARTMENT_STAFF: 'Department staff',
+    DEPARTMENT_ADMIN: 'Department admin',
+    SUPER_ADMIN: 'Super admin',
+  },
+};
+
+export function getRoleLabel(role: string, locale: AppLocale = 'sq'): string {
+  const map = ROLE_LABELS[locale] ?? ROLE_LABELS.sq;
+  return map[role as UserRoleKey] ?? role;
+}
