@@ -1,4 +1,4 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import { Fraunces, Manrope } from 'next/font/google';
 import { NextIntlClientProvider } from 'next-intl';
 import { getLocale, getMessages } from 'next-intl/server';
@@ -7,6 +7,13 @@ import { SiteShell } from '@/components/layout/site-shell';
 import { SentryInit } from '@/components/sentry-init';
 import { ToastProvider } from '@/components/toast-provider';
 import './globals.css';
+
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  viewportFit: 'cover',
+  themeColor: '#faf8f5',
+};
 
 const display = Fraunces({
   subsets: ['latin'],

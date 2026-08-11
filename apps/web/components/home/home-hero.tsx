@@ -8,7 +8,7 @@ export async function HomeHero() {
   const t = await getTranslations('Home');
 
   return (
-    <section className="relative min-h-[min(92vh,52rem)] overflow-hidden">
+    <section className="relative min-h-[min(92svh,52rem)] overflow-hidden">
       <Image
         src="/images/prizren/overview.jpg"
         alt={t('heroAlt')}
@@ -21,7 +21,7 @@ export async function HomeHero() {
         className="absolute inset-0 bg-gradient-to-r from-stone-950/85 via-stone-950/60 to-mosque-950/40"
         aria-hidden
       />
-      <PageContainer className="relative flex min-h-[min(92vh,52rem)] flex-col justify-end pb-16 pt-28 sm:justify-center sm:pb-24">
+      <PageContainer className="relative flex min-h-[min(92svh,52rem)] flex-col justify-end pb-20 pt-28 sm:justify-center sm:pb-24">
         <p className="text-xs font-semibold uppercase tracking-[0.22em] text-river-200 sm:text-sm">
           {t('eyebrow')}
         </p>

@@ -17,15 +17,15 @@ const variants: Record<Variant, string> = {
 };
 
 const sizes: Record<Size, string> = {
-  sm: 'px-3 py-1.5 text-sm rounded-md',
-  md: 'px-4 py-2.5 text-sm rounded-md',
-  lg: 'px-5 py-3 text-base rounded-lg',
+  sm: 'min-h-10 px-3 py-2 text-sm rounded-md sm:min-h-0 sm:py-1.5',
+  md: 'min-h-11 px-4 py-2.5 text-sm rounded-md',
+  lg: 'min-h-12 px-5 py-3 text-base rounded-lg',
 };
 
 const iconSizes: Record<Size, string> = {
-  sm: 'h-8 w-8 rounded-md',
-  md: 'h-10 w-10 rounded-md',
-  lg: 'h-11 w-11 rounded-lg',
+  sm: 'h-10 w-10 rounded-md',
+  md: 'h-11 w-11 rounded-md',
+  lg: 'h-12 w-12 rounded-lg',
 };
 
 type Props = ButtonHTMLAttributes<HTMLButtonElement> & {

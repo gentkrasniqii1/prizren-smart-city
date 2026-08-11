@@ -16,7 +16,7 @@ export function AuthShell({
   children: ReactNode;
 }) {
   return (
-    <main className="mx-auto grid min-h-[calc(100vh-4.5rem)] max-w-6xl lg:grid-cols-2">
+    <main className="mx-auto grid min-h-[calc(100dvh-4.5rem)] max-w-6xl lg:grid-cols-2">
       <div className="relative hidden overflow-hidden lg:block">
         <Image src={imageSrc} alt={imageAlt} fill className="object-cover" sizes="50vw" priority />
         <div className="absolute inset-0 bg-gradient-to-t from-stone-950/85 via-stone-950/30 to-stone-950/35" />
