@@ -202,7 +202,7 @@ export function ReportWizard() {
         <div className="mt-8 rounded-xl border border-stone-200 bg-white p-4 sm:p-6">
           <StepIndicator steps={steps} current={step} />
 
-          <div className="mt-8">
+          <div key={step} className="motion-fade-in mt-8">
             {step === 0 ? (
               <div className="space-y-4">
                 <div>

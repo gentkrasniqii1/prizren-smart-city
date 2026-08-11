@@ -26,7 +26,7 @@ export function StepIndicator({
             <li key={step.id} className="flex min-w-0 flex-1 flex-col items-center gap-1">
               <span
                 className={cn(
-                  'inline-flex h-9 w-9 items-center justify-center rounded-full text-sm font-semibold',
+                  'inline-flex h-9 w-9 items-center justify-center rounded-full text-sm font-semibold transition duration-normal ease-product',
                   done && 'bg-mosque-700 text-white',
                   active && 'bg-mosque-700 text-white ring-4 ring-mosque-100',
                   !done && !active && 'bg-stone-200 text-stone-600',
@@ -61,7 +61,7 @@ export function StepIndicator({
               <div className="flex items-center gap-2.5">
                 <span
                   className={cn(
-                    'inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm font-semibold',
+                    'inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm font-semibold transition duration-normal ease-product',
                     done && 'bg-mosque-700 text-white',
                     active && 'bg-mosque-700 text-white ring-4 ring-mosque-100',
                     !done && !active && 'bg-stone-200 text-stone-600',
@@ -81,7 +81,10 @@ export function StepIndicator({
               </div>
               {index < steps.length - 1 ? (
                 <div
-                  className={cn('mx-3 h-px flex-1', done ? 'bg-mosque-400' : 'bg-stone-200')}
+                  className={cn(
+                    'mx-3 h-px flex-1 transition-colors duration-normal ease-product',
+                    done ? 'bg-mosque-400' : 'bg-stone-200',
+                  )}
                   aria-hidden
                 />
               ) : null}

@@ -165,7 +165,11 @@
     "geoUnsupported": "Geolocation is not supported in this browser",
     "nearbyFailed": "Nearby search failed",
     "geoDenied": "Could not get GPS. Allow location access.",
-    "mapAria": "Interactive reports map"
+    "mapAria": "Interactive reports map",
+    "showFilters": "Filters",
+    "hideFilters": "Hide filters",
+    "clearFilters": "Clear",
+    "filtersHeading": "Filters"
   },
   "Common": {
     "loading": "Loading…",

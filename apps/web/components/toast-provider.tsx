@@ -33,7 +33,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
         {items.map((t) => (
           <div
             key={t.id}
-            className={`pointer-events-auto rounded-lg px-4 py-3 text-sm shadow-lift ${
+            className={`motion-slide-up pointer-events-auto rounded-lg px-4 py-3 text-sm shadow-lift ${
               t.tone === 'error'
                 ? 'bg-red-800 text-white'
                 : t.tone === 'info'

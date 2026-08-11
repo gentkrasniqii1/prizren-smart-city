@@ -22,14 +22,16 @@ export async function HomeHero() {
         aria-hidden
       />
       <PageContainer className="relative flex min-h-[min(92svh,52rem)] flex-col justify-end pb-20 pt-28 sm:justify-center sm:pb-24">
-        <p className="text-xs font-semibold uppercase tracking-[0.22em] text-river-200 sm:text-sm">
+        <p className="motion-fade-up text-xs font-semibold uppercase tracking-[0.22em] text-river-200 sm:text-sm">
           {t('eyebrow')}
         </p>
-        <h1 className="mt-4 max-w-3xl font-display text-4xl font-semibold tracking-tight text-stone-50 sm:text-5xl md:text-6xl">
+        <h1 className="motion-fade-up motion-delay-1 mt-4 max-w-3xl font-display text-4xl font-semibold tracking-tight text-stone-50 sm:text-5xl md:text-6xl">
           {t('title')}
         </h1>
-        <p className="mt-4 max-w-xl text-base text-stone-200 sm:text-lg">{t('subtitle')}</p>
-        <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center">
+        <p className="motion-fade-up motion-delay-2 mt-4 max-w-xl text-base text-stone-200 sm:text-lg">
+          {t('subtitle')}
+        </p>
+        <div className="motion-fade-up motion-delay-3 mt-8 flex flex-col gap-3 sm:flex-row sm:items-center">
           <Link href="/report">
             <Button size="lg" className="w-full sm:w-auto">
               {t('ctaReport')}

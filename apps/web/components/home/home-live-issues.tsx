@@ -3,6 +3,7 @@ import { getLocale, getTranslations } from 'next-intl/server';
 import type { ReportDto } from '@prizren/shared-types';
 import { PageContainer } from '@/components/layout/page-container';
 import { Section, SectionHeading } from '@/components/home/section';
+import { Reveal } from '@/components/motion/reveal';
 import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
 import { StatusBadge } from '@/components/ui/badge';
@@ -23,18 +24,20 @@ export async function HomeLiveIssues({ reports }: { reports: ReportDto[] }) {
   return (
     <Section className="bg-white">
       <PageContainer>
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-          <SectionHeading
-            eyebrow={t('live.eyebrow')}
-            title={t('live.title')}
-            description={t('live.description')}
-          />
-          <Link href="/reports" className="shrink-0">
-            <Button variant="secondary" size="sm">
-              {t('live.viewMap')}
-            </Button>
-          </Link>
-        </div>
+        <Reveal>
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+            <SectionHeading
+              eyebrow={t('live.eyebrow')}
+              title={t('live.title')}
+              description={t('live.description')}
+            />
+            <Link href="/reports" className="shrink-0">
+              <Button variant="secondary" size="sm">
+                {t('live.viewMap')}
+              </Button>
+            </Link>
+          </div>
+        </Reveal>
 
         {reports.length === 0 ? (
           <div className="mt-8">
