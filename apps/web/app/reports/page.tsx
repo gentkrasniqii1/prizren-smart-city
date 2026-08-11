@@ -298,7 +298,7 @@ export default function ReportsPage() {
               onClick={() => setSelectedId(null)}
             />
             <div className="relative z-10 mx-auto h-[min(78svh,36rem)] w-full max-w-lg overflow-hidden rounded-t-2xl border border-stone-200 pb-[env(safe-area-inset-bottom)] sm:rounded-xl sm:pb-0">
-              <ReportDrawer report={selected} onClose={() => setSelectedId(null)} />
+              <ReportDrawer report={selected} onClose={() => setSelectedId(null)} modal />
             </div>
           </div>
         ) : null}

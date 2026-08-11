@@ -11,7 +11,7 @@ export default async function NotFound() {
       <div className="relative mb-8 h-40 w-full max-w-md overflow-hidden rounded-xl shadow-soft">
         <Image
           src="/images/prizren/old-town.jpg"
-          alt=""
+          alt={t('imageAlt')}
           fill
           className="object-cover"
           sizes="28rem"

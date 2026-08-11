@@ -135,6 +135,7 @@ export function AccountDashboard() {
     return (
       <main className="py-16">
         <PageContainer width="default">
+          <h1 className="sr-only">{t('title')}</h1>
           <Spinner label={t('loading')} />
           <div className="mt-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             <Skeleton className="h-24" />

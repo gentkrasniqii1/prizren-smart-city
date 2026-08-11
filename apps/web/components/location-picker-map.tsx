@@ -3,6 +3,7 @@
 import { useEffect, useRef } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
+import { useTranslations } from 'next-intl';
 
 type Props = {
   lat: number | null;
@@ -23,6 +24,7 @@ L.Icon.Default.mergeOptions({
 });
 
 export function LocationPickerMap({ lat, lng, onPick, interactive = true }: Props) {
+  const t = useTranslations('Common');
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<L.Map | null>(null);
   const markerRef = useRef<L.Marker | null>(null);
@@ -81,6 +83,8 @@ export function LocationPickerMap({ lat, lng, onPick, interactive = true }: Prop
   return (
     <div
       ref={containerRef}
+      role={interactive ? 'application' : 'img'}
+      aria-label={interactive ? t('locationMapPick') : t('locationMapView')}
       className="h-64 w-full overflow-hidden rounded-md border border-stone-300 sm:h-72"
     />
   );

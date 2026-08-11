@@ -38,6 +38,7 @@ test-results/
 playwright-report/
 blob-report/
 playwright/.cache/
+apps/web/.a11y-mobile-shots/
 
 # Prisma
 apps/api/prisma/*.db

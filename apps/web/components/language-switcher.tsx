@@ -1,10 +1,11 @@
 'use client';
 
-import { useLocale } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
 import { useTransition } from 'react';
 
 export function LanguageSwitcher() {
+  const t = useTranslations('Common');
   const locale = useLocale();
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -20,12 +21,14 @@ export function LanguageSwitcher() {
     <div
       className="inline-flex items-center rounded-md border border-stone-300 bg-white p-0.5 text-xs font-semibold"
       role="group"
-      aria-label="Language"
+      aria-label={t('language')}
     >
       <button
         type="button"
         disabled={pending || locale === 'sq'}
         onClick={() => setLocale('sq')}
+        aria-pressed={locale === 'sq'}
+        lang="sq"
         className={`min-h-10 min-w-10 rounded px-2.5 py-2 ${locale === 'sq' ? 'bg-mosque-700 text-white' : 'text-stone-600 hover:bg-stone-50'}`}
       >
         SQ
@@ -34,6 +37,8 @@ export function LanguageSwitcher() {
         type="button"
         disabled={pending || locale === 'en'}
         onClick={() => setLocale('en')}
+        aria-pressed={locale === 'en'}
+        lang="en"
         className={`min-h-10 min-w-10 rounded px-2.5 py-2 ${locale === 'en' ? 'bg-mosque-700 text-white' : 'text-stone-600 hover:bg-stone-50'}`}
       >
         EN

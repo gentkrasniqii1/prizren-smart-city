@@ -164,14 +164,19 @@
     "nearbyInvalid": "Shkruaj radius të vlefshëm në km",
     "geoUnsupported": "Geolocation nuk mbështetet në këtë shfletues",
     "nearbyFailed": "Kërkimi “pranë meje” dështoi",
-    "geoDenied": "Nuk u mor GPS. Lejo aksesin te lokacioni."
+    "geoDenied": "Nuk u mor GPS. Lejo aksesin te lokacioni.",
+    "mapAria": "Hartë interaktive e raporteve"
   },
   "Common": {
     "loading": "Duke ngarkuar…",
     "retry": "Provo sërish",
     "errorGeneric": "Diçka shkoi keq",
+    "errorTitle": "Ndodhi një gabim",
     "back": "Kthehu",
-    "language": "Gjuha"
+    "backHome": "Kthehu në fillim",
+    "language": "Gjuha",
+    "locationMapPick": "Hartë për zgjedhjen e lokacionit",
+    "locationMapView": "Hartë e lokacionit të raportit"
   },
   "Status": {
     "PENDING": "Në pritje",
@@ -243,7 +248,8 @@
     "submitting": "Duke dërguar…",
     "successToast": "Raporti u krijua me sukses",
     "submitFailed": "Dërgimi dështoi",
-    "sessionExpired": "Sesioni skadoi. Hyr përsëri për të dërguar raportin."
+    "sessionExpired": "Sesioni skadoi. Hyr përsëri për të dërguar raportin.",
+    "progressLabel": "Hapat e formularit"
   },
   "ReportDetail": {
     "title": "Detajet e raportit",
@@ -322,6 +328,7 @@
   },
   "Account": {
     "loading": "Duke ngarkuar llogarinë…",
+    "title": "Llogaria ime",
     "greeting": "Mirë se erdhe",
     "welcome": "Përshëndetje, {name}",
     "ctaReport": "Raporto një problem",
@@ -455,7 +462,8 @@
     "title": "Faqja nuk u gjet",
     "body": "Lidhja mund të jetë e vjetër, ose adresa e shkruar gabim.",
     "home": "Kthehu në fillim",
-    "reports": "Shiko raportet"
+    "reports": "Shiko raportet",
+    "imageAlt": "Pamje e qytetit të vjetër të Prizrenit"
   },
   "Toast": {
     "reportCreated": "Raporti u krijua me sukses",
