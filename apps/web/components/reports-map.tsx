@@ -25,9 +25,10 @@ type Props = {
   reports: ReportDto[];
   selectedId: string | null;
   onSelect: (id: string) => void;
+  className?: string;
 };
 
-export function ReportsMap({ reports, selectedId, onSelect }: Props) {
+export function ReportsMap({ reports, selectedId, onSelect, className }: Props) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<mapboxgl.Map | null>(null);
   const onSelectRef = useRef(onSelect);
@@ -63,9 +64,9 @@ export function ReportsMap({ reports, selectedId, onSelect }: Props) {
         source: 'reports',
         filter: ['has', 'point_count'],
         paint: {
-          'circle-color': '#1c1917',
+          'circle-color': '#335f9b',
           'circle-radius': ['step', ['get', 'point_count'], 18, 10, 24, 30, 30],
-          'circle-opacity': 0.85,
+          'circle-opacity': 0.9,
         },
       });
 
@@ -79,7 +80,7 @@ export function ReportsMap({ reports, selectedId, onSelect }: Props) {
           'text-size': 12,
         },
         paint: {
-          'text-color': '#fafaf9',
+          'text-color': '#faf8f5',
         },
       });
 
@@ -90,9 +91,9 @@ export function ReportsMap({ reports, selectedId, onSelect }: Props) {
         filter: ['!', ['has', 'point_count']],
         paint: {
           'circle-color': ['get', 'color'],
-          'circle-radius': 8,
-          'circle-stroke-width': 2,
-          'circle-stroke-color': '#fff',
+          'circle-radius': ['case', ['==', ['get', 'selected'], 1], 11, 8],
+          'circle-stroke-width': ['case', ['==', ['get', 'selected'], 1], 3, 2],
+          'circle-stroke-color': ['case', ['==', ['get', 'selected'], 1], '#335f9b', '#ffffff'],
         },
       });
 
@@ -156,7 +157,7 @@ export function ReportsMap({ reports, selectedId, onSelect }: Props) {
             status: r.status,
             categoryName: r.categoryName,
             description: r.description.slice(0, 80),
-            selected: r.id === selectedId,
+            selected: r.id === selectedId ? 1 : 0,
           },
           geometry: {
             type: 'Point',
@@ -184,13 +185,15 @@ export function ReportsMap({ reports, selectedId, onSelect }: Props) {
   const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
   if (!token) {
     return (
-      <div className="flex h-full min-h-[320px] items-center justify-center rounded-md border border-stone-300 bg-stone-100 px-4 text-center text-sm text-stone-600">
+      <div
+        className={`flex h-full min-h-[320px] items-center justify-center bg-stone-100 px-4 text-center text-sm text-stone-600 ${className ?? ''}`}
+      >
         Mungon NEXT_PUBLIC_MAPBOX_TOKEN ne .env.local
       </div>
     );
   }
 
-  return <div ref={containerRef} className="h-full min-h-[320px] w-full rounded-md border border-stone-300" />;
+  return <div ref={containerRef} className={`h-full min-h-[320px] w-full ${className ?? ''}`} />;
 }
 
 export { colorForCategory };
