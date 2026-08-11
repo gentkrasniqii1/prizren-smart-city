@@ -91,7 +91,7 @@ export function ReportCard({
   );
 
   const className = cn(
-    'w-full border-b border-stone-100 text-left transition',
+    'w-full border-b border-stone-100 text-left transition duration-fast ease-product',
     selected ? 'bg-mosque-50' : 'bg-white hover:bg-stone-50',
     compact ? 'flex gap-3 p-3' : 'block',
   );

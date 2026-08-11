@@ -79,7 +79,7 @@ export function MobileBottomNav() {
                 >
                   <span
                     className={cn(
-                      'inline-flex h-12 w-12 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-soft ring-4 ring-stone-50 transition hover:bg-primary-hover',
+                      'inline-flex h-12 w-12 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-soft ring-4 ring-stone-50 transition duration-normal ease-product hover:bg-primary-hover active:scale-95',
                       active && 'ring-mosque-200',
                     )}
                   >

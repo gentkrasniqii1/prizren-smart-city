@@ -119,6 +119,88 @@ select {
   }
 }
 
+/* Product motion — presence & hierarchy (tokens: --motion-*) */
+@keyframes motion-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(0.75rem);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes motion-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes motion-slide-up {
+  from {
+    opacity: 0;
+    transform: translateY(1.25rem);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes motion-slide-in-right {
+  from {
+    opacity: 0;
+    transform: translateX(0.85rem);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.motion-fade-up {
+  animation: motion-fade-up var(--motion-slow) var(--motion-ease) both;
+}
+
+.motion-fade-in {
+  animation: motion-fade-in var(--motion-normal) var(--motion-ease) both;
+}
+
+.motion-slide-up {
+  animation: motion-slide-up var(--motion-slow) var(--motion-ease) both;
+}
+
+.motion-slide-in-right {
+  animation: motion-slide-in-right var(--motion-slow) var(--motion-ease) both;
+}
+
+.motion-delay-1 {
+  animation-delay: 70ms;
+}
+.motion-delay-2 {
+  animation-delay: 140ms;
+}
+.motion-delay-3 {
+  animation-delay: 210ms;
+}
+.motion-delay-4 {
+  animation-delay: 280ms;
+}
+
+/* Scroll reveal: hidden until .is-visible (Reveal component) */
+.motion-reveal {
+  opacity: 0;
+  transform: translateY(0.75rem);
+}
+
+.motion-reveal.is-visible {
+  animation: motion-fade-up var(--motion-slow) var(--motion-ease) both;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
@@ -126,6 +208,13 @@ select {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  .motion-reveal {
+    opacity: 1 !important;
+    transform: none !important;
+    animation: none !important;
   }
 }
 
