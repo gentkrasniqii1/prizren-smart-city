@@ -1,19 +1,17 @@
 'use client';
 
-import {
-  Bar,
-  BarChart,
-  CartesianGrid,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from 'recharts';
+import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import type { AnalyticsByCategoryItem } from '@prizren/shared-types';
 
-export function CategoryBarChart({ data }: { data: AnalyticsByCategoryItem[] }) {
+export function CategoryBarChart({
+  data,
+  emptyLabel = 'Nuk ka të dhëna për grafikun.',
+}: {
+  data: AnalyticsByCategoryItem[];
+  emptyLabel?: string;
+}) {
   if (data.length === 0) {
-    return <p className="text-sm text-stone-500">Nuk ka të dhëna për grafikun.</p>;
+    return <p className="text-sm text-stone-500">{emptyLabel}</p>;
   }
 
   return (
@@ -31,7 +29,7 @@ export function CategoryBarChart({ data }: { data: AnalyticsByCategoryItem[] }) 
           />
           <YAxis allowDecimals={false} tick={{ fontSize: 11, fill: '#57534e' }} />
           <Tooltip />
-          <Bar dataKey="count" fill="#1c1917" radius={[4, 4, 0, 0]} />
+          <Bar dataKey="count" fill="#335f9b" radius={[4, 4, 0, 0]} />
         </BarChart>
       </ResponsiveContainer>
     </div>
