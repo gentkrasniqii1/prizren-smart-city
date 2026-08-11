@@ -132,7 +132,7 @@ export function ReportFilters({
 
         <div>
           <Label htmlFor="reports-nearby">{t('nearby')}</Label>
-          <div className="mt-1 flex gap-2">
+          <div className="mt-1 flex flex-col gap-2 sm:flex-row">
             <Input
               id="reports-nearby"
               type="number"
@@ -147,7 +147,7 @@ export function ReportFilters({
               type="button"
               variant="secondary"
               size="sm"
-              className="shrink-0"
+              className="w-full shrink-0 sm:w-auto"
               onClick={onNearby}
               disabled={nearbyBusy}
             >

@@ -106,8 +106,13 @@ export default function ReportsPage() {
     function onKey(e: KeyboardEvent) {
       if (e.key === 'Escape') setSelectedId(null);
     }
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
     window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
+    return () => {
+      document.body.style.overflow = prev;
+      window.removeEventListener('keydown', onKey);
+    };
   }, [selectedId]);
 
   async function loadNearby() {
@@ -152,12 +157,12 @@ export default function ReportsPage() {
   const listPanel = (
     <div className="flex h-full min-h-0 flex-col bg-white">
       <div className="flex items-center justify-between gap-2 border-b border-stone-200 px-3 py-2.5 text-sm text-stone-600">
-        <span>
+        <span className="min-w-0 truncate">
           {loading ? <Spinner label={t('loading')} /> : t('count', { count: visible.length })}
         </span>
         <button
           type="button"
-          className="text-xs font-medium text-mosque-800 underline md:hidden"
+          className="inline-flex min-h-10 shrink-0 items-center rounded-md px-3 text-xs font-semibold text-mosque-800 ring-1 ring-mosque-200 md:hidden"
           onClick={() => setMobileSheet((s) => (s === 'list' ? 'peek' : 'list'))}
         >
           {mobileSheet === 'list' ? t('showMap') : t('expandList')}
@@ -255,11 +260,11 @@ export default function ReportsPage() {
       </PageContainer>
 
       {/* Mobile / tablet: map + bottom sheet list; drawer as overlay sheet */}
-      <div className="lg:hidden">
+      <div className="pb-bottom-nav lg:hidden">
         <div
           className={cn(
             'relative overflow-hidden border-y border-stone-200 bg-stone-100',
-            mobileSheet === 'list' ? 'h-[28vh]' : 'h-[48vh]',
+            mobileSheet === 'list' ? 'h-[28svh]' : 'h-[42svh]',
           )}
         >
           <ReportsMap
@@ -273,13 +278,13 @@ export default function ReportsPage() {
         <div
           className={cn(
             'relative z-10 -mt-3 overflow-hidden rounded-t-2xl border border-stone-200 bg-white shadow-lift',
-            mobileSheet === 'list' ? 'min-h-[55vh]' : 'max-h-[38vh]',
+            mobileSheet === 'list' ? 'min-h-[50svh]' : 'max-h-[40svh]',
           )}
         >
-          <div className="flex justify-center py-2 md:hidden" aria-hidden>
+          <div className="flex justify-center py-2" aria-hidden>
             <span className="h-1 w-10 rounded-full bg-stone-300" />
           </div>
-          <div className={cn(mobileSheet === 'list' ? 'h-[55vh]' : 'max-h-[34vh]', 'min-h-0')}>
+          <div className={cn('min-h-0', mobileSheet === 'list' ? 'h-[50svh]' : 'max-h-[36svh]')}>
             {listPanel}
           </div>
         </div>
@@ -292,7 +297,7 @@ export default function ReportsPage() {
               aria-label={t('closeDrawer')}
               onClick={() => setSelectedId(null)}
             />
-            <div className="relative z-10 mx-auto h-[min(78vh,36rem)] w-full max-w-lg overflow-hidden rounded-t-2xl border border-stone-200 sm:rounded-xl">
+            <div className="relative z-10 mx-auto h-[min(78svh,36rem)] w-full max-w-lg overflow-hidden rounded-t-2xl border border-stone-200 pb-[env(safe-area-inset-bottom)] sm:rounded-xl sm:pb-0">
               <ReportDrawer report={selected} onClose={() => setSelectedId(null)} />
             </div>
           </div>

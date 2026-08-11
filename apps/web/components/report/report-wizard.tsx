@@ -192,7 +192,7 @@ export function ReportWizard() {
   }
 
   return (
-    <main className="pb-10 pt-6 sm:pb-14 sm:pt-8">
+    <main className="pb-bottom-nav pt-6 sm:pt-8">
       <PageContainer width="narrow">
         <h1 className="font-display text-h1 tracking-tight text-stone-950 sm:text-3xl">
           {t('title')}
@@ -417,24 +417,32 @@ export function ReportWizard() {
             </p>
           ) : null}
 
-          <div className="mt-8 flex flex-col-reverse gap-2 border-t border-stone-100 pt-4 sm:flex-row sm:justify-between">
-            <Button
-              type="button"
-              variant="ghost"
-              onClick={goBack}
-              disabled={step === 0 || submitting}
-            >
-              {t('back')}
-            </Button>
-            {step < STEP_IDS.length - 1 ? (
-              <Button type="button" onClick={goNext}>
-                {t('next')}
+          <div className="sticky bottom-0 z-10 -mx-4 mt-8 border-t border-stone-100 bg-white/95 px-4 py-4 backdrop-blur-sm sm:static sm:mx-0 sm:bg-transparent sm:px-0 sm:backdrop-blur-none">
+            <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-between">
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={goBack}
+                disabled={step === 0 || submitting}
+                className="w-full sm:w-auto"
+              >
+                {t('back')}
               </Button>
-            ) : (
-              <Button type="button" onClick={() => void submit()} disabled={submitting}>
-                {submitting ? t('submitting') : t('submit')}
-              </Button>
-            )}
+              {step < STEP_IDS.length - 1 ? (
+                <Button type="button" onClick={goNext} className="w-full sm:w-auto">
+                  {t('next')}
+                </Button>
+              ) : (
+                <Button
+                  type="button"
+                  onClick={() => void submit()}
+                  disabled={submitting}
+                  className="w-full sm:w-auto"
+                >
+                  {submitting ? t('submitting') : t('submit')}
+                </Button>
+              )}
+            </div>
           </div>
         </div>
       </PageContainer>

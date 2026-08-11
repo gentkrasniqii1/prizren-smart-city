@@ -437,6 +437,20 @@
     "assignSavedDue": "Assignment saved for {id} · due {due}",
     "assignFailed": "Assignment failed"
   },
+  "Notifications": {
+    "title": "Notifications",
+    "loading": "Loading…",
+    "loginRequired": "Sign in to view notifications.",
+    "loginLink": "Sign in",
+    "unread": "{count} unread",
+    "markAll": "Mark all as read",
+    "markRead": "Mark as read",
+    "openReport": "Open report",
+    "emptyTitle": "No notifications",
+    "emptyBody": "When report status changes, notifications appear here.",
+    "loadError": "Could not load notifications",
+    "actionFailed": "Action failed"
+  },
   "NotFound": {
     "title": "Page not found",
     "body": "The link may be outdated, or the address was mistyped.",

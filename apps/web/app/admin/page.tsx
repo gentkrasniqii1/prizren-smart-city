@@ -261,7 +261,7 @@ export default function AdminPage() {
   }
 
   return (
-    <main className="pb-12 pt-6 sm:pb-16 sm:pt-8">
+    <main className="pb-bottom-nav pt-6 sm:pt-8">
       <PageContainer width="wide">
         <Breadcrumbs items={[{ href: '/', label: t('crumbHome') }, { label: t('title') }]} />
 
@@ -320,8 +320,8 @@ export default function AdminPage() {
             <p className="mt-1 text-sm text-stone-600">{t('tableSubtitle')}</p>
           </div>
 
-          <div className="flex flex-wrap gap-2 rounded-xl border border-stone-200 bg-white p-3">
-            <div>
+          <div className="flex flex-col gap-2 rounded-xl border border-stone-200 bg-white p-3 sm:flex-row sm:flex-wrap">
+            <div className="min-w-0 flex-1 sm:min-w-[9rem] sm:flex-none">
               <Label htmlFor="admin-status" className="sr-only">
                 {t('filterStatus')}
               </Label>
@@ -329,7 +329,7 @@ export default function AdminPage() {
                 id="admin-status"
                 value={status}
                 onChange={(e) => setStatus(e.target.value)}
-                className="mt-0 min-w-[9rem]"
+                className="mt-0 w-full"
               >
                 <option value="">{t('filterStatusAll')}</option>
                 {STATUSES.map((s) => (
@@ -339,7 +339,7 @@ export default function AdminPage() {
                 ))}
               </Select>
             </div>
-            <div>
+            <div className="min-w-0 flex-1 sm:min-w-[9rem] sm:flex-none">
               <Label htmlFor="admin-category" className="sr-only">
                 {t('filterCategory')}
               </Label>
@@ -347,7 +347,7 @@ export default function AdminPage() {
                 id="admin-category"
                 value={categoryId}
                 onChange={(e) => setCategoryId(e.target.value)}
-                className="mt-0 min-w-[9rem]"
+                className="mt-0 w-full"
               >
                 <option value="">{t('filterCategoryAll')}</option>
                 {categories.map((c) => (
@@ -357,7 +357,7 @@ export default function AdminPage() {
                 ))}
               </Select>
             </div>
-            <div>
+            <div className="min-w-0 flex-1 sm:min-w-[9rem] sm:flex-none">
               <Label htmlFor="admin-dept" className="sr-only">
                 {t('filterDepartment')}
               </Label>
@@ -365,7 +365,7 @@ export default function AdminPage() {
                 id="admin-dept"
                 value={departmentId}
                 onChange={(e) => setDepartmentId(e.target.value)}
-                className="mt-0 min-w-[9rem]"
+                className="mt-0 w-full"
               >
                 <option value="">{t('filterDepartmentAll')}</option>
                 {departments.map((d) => (
@@ -375,31 +375,33 @@ export default function AdminPage() {
                 ))}
               </Select>
             </div>
-            <div>
-              <Label htmlFor="admin-from" className="sr-only">
-                {t('filterFrom')}
-              </Label>
-              <Input
-                id="admin-from"
-                type="date"
-                value={from}
-                onChange={(e) => setFrom(e.target.value)}
-                className="mt-0"
-                aria-label={t('filterFrom')}
-              />
-            </div>
-            <div>
-              <Label htmlFor="admin-to" className="sr-only">
-                {t('filterTo')}
-              </Label>
-              <Input
-                id="admin-to"
-                type="date"
-                value={to}
-                onChange={(e) => setTo(e.target.value)}
-                className="mt-0"
-                aria-label={t('filterTo')}
-              />
+            <div className="grid grid-cols-2 gap-2 sm:contents">
+              <div className="min-w-0">
+                <Label htmlFor="admin-from" className="sr-only">
+                  {t('filterFrom')}
+                </Label>
+                <Input
+                  id="admin-from"
+                  type="date"
+                  value={from}
+                  onChange={(e) => setFrom(e.target.value)}
+                  className="mt-0 w-full"
+                  aria-label={t('filterFrom')}
+                />
+              </div>
+              <div className="min-w-0">
+                <Label htmlFor="admin-to" className="sr-only">
+                  {t('filterTo')}
+                </Label>
+                <Input
+                  id="admin-to"
+                  type="date"
+                  value={to}
+                  onChange={(e) => setTo(e.target.value)}
+                  className="mt-0 w-full"
+                  aria-label={t('filterTo')}
+                />
+              </div>
             </div>
           </div>
 

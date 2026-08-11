@@ -85,7 +85,7 @@ export function TransparencyView() {
     })) ?? [];
 
   return (
-    <main className="pb-12 pt-6 sm:pb-16 sm:pt-8">
+    <main className="pb-bottom-nav pt-6 sm:pt-8">
       <PageContainer width="default">
         <header className="max-w-2xl">
           <p className="text-caption uppercase tracking-[0.14em] text-mosque-800">{t('eyebrow')}</p>
