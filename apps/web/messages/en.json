@@ -37,13 +37,63 @@
   },
   "Home": {
     "eyebrow": "Prizren · Heritage city",
-    "title": "Report. Track. Resolve.",
+    "title": "Report. Track. Change.",
     "subtitle": "A civic platform for urban issues — maps, transparency, and institutional response.",
     "ctaReport": "Report a problem",
     "ctaBrowse": "Browse reports",
     "ctaTransparency": "Transparency",
     "heroAlt": "View of Prizren city",
-    "howItWorksAnchor": "How it works"
+    "trust": {
+      "transparent": "Transparent reporting",
+      "transparentHint": "Public reports appear without personal data.",
+      "openCount": "{count} open issues right now",
+      "response": "Institutional response",
+      "responseHint": "Departments handle reports by priority.",
+      "avgHours": "Avg. {hours} hours to resolution",
+      "realtime": "Real-time status",
+      "realtimeHint": "Follow every step from submit to resolve.",
+      "resolvedCount": "{count} resolved so far",
+      "civic": "Citizen participation",
+      "civicHint": "Photo, location, and AI for faster routing.",
+      "totalCount": "{count} reports on the platform"
+    },
+    "how": {
+      "eyebrow": "Process",
+      "title": "How it works",
+      "description": "From a street-level problem to an institutional response — in four clear steps.",
+      "step1Title": "Report",
+      "step1Body": "Describe the issue, add a photo, and pin the location on the map.",
+      "step2Title": "AI analyzes",
+      "step2Body": "The system suggests category, severity, and the right department.",
+      "step3Title": "Institutions act",
+      "step3Body": "Staff are assigned and the report is tracked through to resolution.",
+      "step4Title": "Track the outcome",
+      "step4Body": "See status, updates, and results in real time."
+    },
+    "live": {
+      "eyebrow": "In the city now",
+      "title": "Latest issues",
+      "description": "A quick look at public reports — no personal data.",
+      "viewMap": "View on map",
+      "emptyTitle": "No public reports yet",
+      "emptyBody": "Be the first to report an urban issue in Prizren.",
+      "noPhoto": "No photo",
+      "coords": "{lat}, {lng}"
+    },
+    "transparency": {
+      "eyebrow": "Transparency",
+      "title": "See what is happening in the city",
+      "description": "Public aggregate stats for reports, resolutions, and response time.",
+      "cta": "Open transparency",
+      "total": "Total",
+      "open": "Open",
+      "resolved": "Resolved",
+      "rate": "Resolution rate"
+    },
+    "final": {
+      "title": "Spotted a problem in Prizren?",
+      "body": "Report it now — with a photo and location. AI helps classify; you track the fix."
+    }
   },
   "Auth": {
     "loginTitle": "Sign in",
