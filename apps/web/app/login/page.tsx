@@ -1,16 +1,16 @@
 'use client';
 
-import Image from 'next/image';
 import Link from 'next/link';
 import { FormEvent, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { ApiError } from '@/lib/api';
 import { useAuth } from '@/components/auth-provider';
+import { AuthShell } from '@/components/auth/auth-shell';
+import { GoogleSignInButton } from '@/components/google-sign-in-button';
 import { FieldError } from '@/components/ui';
 import { Button } from '@/components/ui/button';
 import { Input, Label } from '@/components/ui/field';
-import { GoogleSignInButton } from '@/components/google-sign-in-button';
 
 type FieldErrors = { email?: string; password?: string };
 
@@ -45,106 +45,95 @@ export default function LoginPage() {
       await login({ email: email.trim(), password, website });
       router.push('/account');
     } catch (err) {
-      setFormError(err instanceof ApiError ? err.message : 'Login failed');
+      setFormError(err instanceof ApiError ? err.message : t('loginFailed'));
     } finally {
       setSubmitting(false);
     }
   }
 
   return (
-    <main className="mx-auto grid min-h-[calc(100vh-4.5rem)] max-w-6xl lg:grid-cols-2">
-      <div className="relative hidden overflow-hidden lg:block">
-        <Image
-          src="/images/prizren/sinan-pasha.jpg"
-          alt={t('panelAlt')}
-          fill
-          className="object-cover"
-          sizes="50vw"
-          priority
-        />
-        <div className="absolute inset-0 bg-gradient-to-t from-stone-950/70 via-transparent to-stone-950/20" />
-        <p className="absolute bottom-8 left-8 right-8 font-display text-2xl text-stone-50">
-          Prizren Smart City
+    <AuthShell
+      imageSrc="/images/prizren/sinan-pasha.jpg"
+      imageAlt={t('loginPanelAlt')}
+      panelTitle={t('loginPanelTitle')}
+      panelBody={t('loginPanelBody')}
+    >
+      <h1 className="font-display text-3xl font-semibold tracking-tight text-stone-950">
+        {t('loginTitle')}
+      </h1>
+      <p className="mt-2 text-stone-600">{t('loginSubtitle')}</p>
+
+      <div className="mt-8 space-y-4">
+        <GoogleSignInButton label={t('google')} />
+        <p className="text-center text-xs uppercase tracking-wider text-stone-400">
+          {t('orEmail')}
         </p>
       </div>
 
-      <div className="flex flex-col justify-center px-4 py-12 sm:px-10">
-        <h1 className="font-display text-3xl font-semibold tracking-tight text-stone-950">
-          {t('loginTitle')}
-        </h1>
-        <p className="mt-2 text-stone-600">{t('loginSubtitle')}</p>
-
-        <div className="mt-8 space-y-4">
-          <GoogleSignInButton label={t('google')} />
-          <p className="text-center text-xs uppercase tracking-wider text-stone-400">
-            {t('orEmail')}
-          </p>
+      <form onSubmit={onSubmit} className="mt-4 space-y-4" noValidate>
+        <div>
+          <Label htmlFor="login-email">{t('email')}</Label>
+          <Input
+            id="login-email"
+            type="email"
+            autoComplete="email"
+            value={email}
+            invalid={Boolean(fieldErrors.email)}
+            onChange={(e) => {
+              setEmail(e.target.value);
+              setFieldErrors((f) => ({ ...f, email: undefined }));
+            }}
+          />
+          <FieldError message={fieldErrors.email} />
+        </div>
+        <div>
+          <Label htmlFor="login-password">{t('password')}</Label>
+          <Input
+            id="login-password"
+            type="password"
+            autoComplete="current-password"
+            value={password}
+            invalid={Boolean(fieldErrors.password)}
+            onChange={(e) => {
+              setPassword(e.target.value);
+              setFieldErrors((f) => ({ ...f, password: undefined }));
+            }}
+          />
+          <FieldError message={fieldErrors.password} />
         </div>
 
-        <form onSubmit={onSubmit} className="mt-4 space-y-4" noValidate>
-          <div>
-            <Label htmlFor="login-email">{t('email')}</Label>
-            <Input
-              id="login-email"
-              type="email"
-              autoComplete="email"
-              value={email}
-              onChange={(e) => {
-                setEmail(e.target.value);
-                setFieldErrors((f) => ({ ...f, email: undefined }));
-              }}
-              aria-invalid={Boolean(fieldErrors.email)}
+        <div aria-hidden className="absolute -left-[9999px] h-0 w-0 overflow-hidden">
+          <label>
+            Website
+            <input
+              type="text"
+              name="website"
+              tabIndex={-1}
+              autoComplete="off"
+              value={website}
+              onChange={(e) => setWebsite(e.target.value)}
             />
-            <FieldError message={fieldErrors.email} />
-          </div>
-          <div>
-            <Label htmlFor="login-password">{t('password')}</Label>
-            <Input
-              id="login-password"
-              type="password"
-              autoComplete="current-password"
-              value={password}
-              onChange={(e) => {
-                setPassword(e.target.value);
-                setFieldErrors((f) => ({ ...f, password: undefined }));
-              }}
-              aria-invalid={Boolean(fieldErrors.password)}
-            />
-            <FieldError message={fieldErrors.password} />
-          </div>
+          </label>
+        </div>
 
-          <div aria-hidden className="absolute -left-[9999px] h-0 w-0 overflow-hidden">
-            <label>
-              Website
-              <input
-                type="text"
-                name="website"
-                tabIndex={-1}
-                autoComplete="off"
-                value={website}
-                onChange={(e) => setWebsite(e.target.value)}
-              />
-            </label>
-          </div>
+        {formError ? (
+          <p className="text-sm text-red-700" role="alert">
+            {formError}
+          </p>
+        ) : null}
 
-          {formError ? (
-            <p className="text-sm text-red-700" role="alert">
-              {formError}
-            </p>
-          ) : null}
+        <Button type="submit" className="w-full" disabled={submitting}>
+          {submitting ? t('loggingIn') : t('submitLogin')}
+        </Button>
+      </form>
 
-          <Button type="submit" className="w-full" disabled={submitting}>
-            {submitting ? t('loggingIn') : t('submitLogin')}
-          </Button>
-        </form>
-
-        <p className="mt-6 text-sm text-stone-600">
-          {t('noAccount')}{' '}
-          <Link href="/register" className="font-medium text-mosque-800 underline">
-            {t('registerTitle')}
-          </Link>
-        </p>
-      </div>
-    </main>
+      <p className="mt-6 text-sm text-stone-600">
+        {t('noAccount')}{' '}
+        <Link href="/register" className="font-medium text-mosque-800 underline">
+          {t('registerTitle')}
+        </Link>
+      </p>
+      <p className="mt-4 text-xs leading-relaxed text-stone-500">{t('trustNote')}</p>
+    </AuthShell>
   );
 }
