@@ -59,6 +59,10 @@ export default async function Home() {
           </Link>
         </div>
       </div>
+      {/* Anchor for global nav — full section lands in Phase 4 */}
+      <div id="how-it-works" className="sr-only" tabIndex={-1}>
+        {t('howItWorksAnchor')}
+      </div>
     </main>
   );
 }

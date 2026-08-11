@@ -3,7 +3,7 @@ import { Fraunces, Manrope } from 'next/font/google';
 import { NextIntlClientProvider } from 'next-intl';
 import { getLocale, getMessages } from 'next-intl/server';
 import { AuthProvider } from '@/components/auth-provider';
-import { SiteHeader } from '@/components/site-header';
+import { SiteShell } from '@/components/layout/site-shell';
 import { SentryInit } from '@/components/sentry-init';
 import { ToastProvider } from '@/components/toast-provider';
 import './globals.css';
@@ -64,8 +64,7 @@ export default async function RootLayout({
           <AuthProvider>
             <ToastProvider>
               <SentryInit />
-              <SiteHeader />
-              <div id="main-content">{children}</div>
+              <SiteShell>{children}</SiteShell>
             </ToastProvider>
           </AuthProvider>
         </NextIntlClientProvider>

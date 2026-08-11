@@ -4,17 +4,36 @@
     "tagline": "Civic reporting"
   },
   "Nav": {
+    "home": "Ballina",
+    "map": "Harta",
     "reports": "Raporte",
     "report": "Raporto",
+    "reportCta": "Raporto një problem",
     "transparency": "Transparenca",
+    "howItWorks": "Si funksionon",
     "admin": "Admin",
     "notifications": "Njoftime",
+    "account": "Llogaria",
+    "myReports": "Raportet e mia",
+    "profile": "Profili",
     "login": "Hyr",
     "register": "Regjistrohu",
     "logout": "Dil",
     "openMenu": "Hap menunë",
     "closeMenu": "Mbyll menunë",
-    "skipToContent": "Kalo te përmbajtja"
+    "skipToContent": "Kalo te përmbajtja",
+    "mainNav": "Navigimi kryesor",
+    "mobileNav": "Navigimi celular"
+  },
+  "Footer": {
+    "tagline": "Platformë qytetare për raportimin e problemeve urbane në Prizren.",
+    "navLabel": "Lidhje të shpejta",
+    "reports": "Raporte",
+    "report": "Raporto",
+    "transparency": "Transparenca",
+    "howItWorks": "Si funksionon",
+    "copyright": "Prizren Smart City",
+    "privacyNote": "Faqja publike nuk ekspozon të dhëna personale."
   },
   "Home": {
     "eyebrow": "Prizren · Qyteti i trashëgimisë",
@@ -23,7 +42,8 @@
     "ctaReport": "Raporto një problem",
     "ctaBrowse": "Shiko raportet",
     "ctaTransparency": "Transparenca",
-    "heroAlt": "Pamje e qytetit të Prizrenit"
+    "heroAlt": "Pamje e qytetit të Prizrenit",
+    "howItWorksAnchor": "Si funksionon"
   },
   "Auth": {
     "loginTitle": "Hyr",
