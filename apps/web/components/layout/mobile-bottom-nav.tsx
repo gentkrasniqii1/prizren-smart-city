@@ -45,17 +45,16 @@ export function MobileBottomNav() {
       isActive: (p) => p === '/report',
     },
     {
-      href: '/account',
+      href: '/account#reports',
       label: t('myReports'),
       icon: FileText,
       isActive: (p) => p === '/account',
     },
     {
-      href: '/account',
+      href: '/account#profile',
       label: t('profile'),
       icon: UserRound,
-      // Profile hub expands in Phase 4; notifications keep a distinct active state via the bell
-      isActive: (p) => p === '/notifications',
+      isActive: () => false,
     },
   ];
 
