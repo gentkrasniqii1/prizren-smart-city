@@ -4,17 +4,36 @@
     "tagline": "Civic reporting"
   },
   "Nav": {
+    "home": "Home",
+    "map": "Map",
     "reports": "Reports",
     "report": "Report",
+    "reportCta": "Report a problem",
     "transparency": "Transparency",
+    "howItWorks": "How it works",
     "admin": "Admin",
     "notifications": "Notifications",
+    "account": "Account",
+    "myReports": "My reports",
+    "profile": "Profile",
     "login": "Sign in",
     "register": "Sign up",
     "logout": "Sign out",
     "openMenu": "Open menu",
     "closeMenu": "Close menu",
-    "skipToContent": "Skip to content"
+    "skipToContent": "Skip to content",
+    "mainNav": "Main navigation",
+    "mobileNav": "Mobile navigation"
+  },
+  "Footer": {
+    "tagline": "A civic platform for reporting urban issues in Prizren.",
+    "navLabel": "Quick links",
+    "reports": "Reports",
+    "report": "Report",
+    "transparency": "Transparency",
+    "howItWorks": "How it works",
+    "copyright": "Prizren Smart City",
+    "privacyNote": "The public site does not expose personal data."
   },
   "Home": {
     "eyebrow": "Prizren · Heritage city",
@@ -23,7 +42,8 @@
     "ctaReport": "Report a problem",
     "ctaBrowse": "Browse reports",
     "ctaTransparency": "Transparency",
-    "heroAlt": "View of Prizren city"
+    "heroAlt": "View of Prizren city",
+    "howItWorksAnchor": "How it works"
   },
   "Auth": {
     "loginTitle": "Sign in",

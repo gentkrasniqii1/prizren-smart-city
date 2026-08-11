@@ -3,16 +3,29 @@
 import Link from 'next/link';
 import { useEffect, useId, useState } from 'react';
 import { usePathname } from 'next/navigation';
+import { Menu, X } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useAuth } from '@/components/auth-provider';
 import { BrandWordmark } from '@/components/brand';
 import { LanguageSwitcher } from '@/components/language-switcher';
-import { UserAvatar } from '@/components/user-avatar';
+import { NotificationBell } from '@/components/layout/notification-bell';
+import { PageContainer } from '@/components/layout/page-container';
+import { UserMenu } from '@/components/layout/user-menu';
 import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
+
+function navLinkClass(active: boolean) {
+  return cn(
+    'rounded-md px-2.5 py-1.5 text-sm font-medium transition',
+    active
+      ? 'bg-mosque-100 text-mosque-900'
+      : 'text-stone-700 hover:bg-stone-100 hover:text-stone-950',
+  );
+}
 
 export function SiteHeader() {
   const t = useTranslations('Nav');
-  const { user, loading, logout } = useAuth();
+  const { user, loading } = useAuth();
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const menuId = useId();
@@ -30,67 +43,23 @@ export function SiteHeader() {
     return () => window.removeEventListener('keydown', onKey);
   }, [open]);
 
-  const isStaff =
-    user &&
-    (user.role === 'DEPARTMENT_STAFF' ||
-      user.role === 'DEPARTMENT_ADMIN' ||
-      user.role === 'SUPER_ADMIN');
-
-  const linkClass =
-    'rounded-md px-2.5 py-1.5 text-sm font-medium text-stone-700 hover:bg-stone-100 hover:text-stone-950';
-
-  const navLinks = (
-    <>
-      <Link href="/reports" className={linkClass} onClick={() => setOpen(false)}>
-        {t('reports')}
-      </Link>
-      <Link href="/report" className={linkClass} onClick={() => setOpen(false)}>
-        {t('report')}
-      </Link>
-      <Link href="/transparency" className={linkClass} onClick={() => setOpen(false)}>
-        {t('transparency')}
-      </Link>
-      {!loading && isStaff ? (
-        <Link href="/admin" className={linkClass} onClick={() => setOpen(false)}>
-          {t('admin')}
-        </Link>
-      ) : null}
-      {!loading && user ? (
-        <>
-          <Link href="/notifications" className={linkClass} onClick={() => setOpen(false)}>
-            {t('notifications')}
-          </Link>
-          <Link
-            href="/account"
-            className={`${linkClass} inline-flex items-center gap-2`}
-            onClick={() => setOpen(false)}
-          >
-            <UserAvatar name={user.name} size={28} />
-            <span className="max-w-[8rem] truncate">{user.name}</span>
-          </Link>
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={() => {
-              setOpen(false);
-              void logout();
-            }}
-          >
-            {t('logout')}
-          </Button>
-        </>
-      ) : !loading ? (
-        <>
-          <Link href="/login" className={linkClass} onClick={() => setOpen(false)}>
-            {t('login')}
-          </Link>
-          <Link href="/register" onClick={() => setOpen(false)}>
-            <Button size="sm">{t('register')}</Button>
-          </Link>
-        </>
-      ) : null}
-    </>
-  );
+  const primaryLinks = [
+    {
+      href: '/reports',
+      label: t('reports'),
+      active: pathname === '/reports' || pathname.startsWith('/reports/'),
+    },
+    {
+      href: '/transparency',
+      label: t('transparency'),
+      active: pathname === '/transparency',
+    },
+    {
+      href: '/#how-it-works',
+      label: t('howItWorks'),
+      active: false,
+    },
+  ];
 
   return (
     <header className="sticky top-0 z-40 border-b border-stone-200/80 bg-stone-50/90 backdrop-blur-md">
@@ -100,40 +69,116 @@ export function SiteHeader() {
       >
         {t('skipToContent')}
       </a>
-      <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-3">
-        <Link href="/" className="min-w-0 shrink">
-          <BrandWordmark />
+
+      <PageContainer className="flex h-14 items-center justify-between gap-3 sm:h-16">
+        <Link href="/" className="min-w-0 shrink" onClick={() => setOpen(false)}>
+          <span className="md:hidden">
+            <BrandWordmark compact />
+          </span>
+          <span className="hidden md:inline-flex">
+            <BrandWordmark />
+          </span>
         </Link>
 
-        <div className="hidden items-center gap-2 md:flex">
-          <nav className="flex items-center gap-0.5" aria-label="Main">
-            {navLinks}
-          </nav>
+        {/* Desktop primary nav — kept lean; account actions sit on the right */}
+        <nav className="hidden items-center gap-0.5 md:flex" aria-label={t('mainNav')}>
+          {primaryLinks.map((link) => (
+            <Link key={link.href} href={link.href} className={navLinkClass(link.active)}>
+              {link.label}
+            </Link>
+          ))}
+          <Link href="/report" className="ml-2">
+            <Button size="sm">{t('reportCta')}</Button>
+          </Link>
+        </nav>
+
+        <div className="hidden items-center gap-1 md:flex">
           <LanguageSwitcher />
+          {!loading && user ? (
+            <>
+              <NotificationBell />
+              <UserMenu />
+            </>
+          ) : !loading ? (
+            <>
+              <Link href="/login" className={navLinkClass(pathname === '/login')}>
+                {t('login')}
+              </Link>
+              <Link href="/register">
+                <Button size="sm" variant="secondary">
+                  {t('register')}
+                </Button>
+              </Link>
+            </>
+          ) : null}
         </div>
 
-        <div className="flex items-center gap-2 md:hidden">
+        {/* Mobile top bar: language + menu (primary actions live in bottom nav) */}
+        <div className="flex items-center gap-1 md:hidden">
+          {!loading && user ? <NotificationBell /> : null}
           <LanguageSwitcher />
-          <button
+          <Button
             type="button"
-            className="inline-flex items-center justify-center rounded-md border border-stone-300 bg-white px-3 py-2 text-sm text-stone-800"
+            variant="icon"
+            size="sm"
             aria-expanded={open}
             aria-controls={menuId}
             onClick={() => setOpen((v) => !v)}
+            aria-label={open ? t('closeMenu') : t('openMenu')}
           >
-            <span className="sr-only">{open ? t('closeMenu') : t('openMenu')}</span>
-            <span aria-hidden className="flex flex-col gap-1.5">
-              <span className="block h-0.5 w-5 bg-stone-800" />
-              <span className="block h-0.5 w-5 bg-stone-800" />
-              <span className="block h-0.5 w-5 bg-stone-800" />
-            </span>
-          </button>
+            {open ? (
+              <X className="h-5 w-5" aria-hidden />
+            ) : (
+              <Menu className="h-5 w-5" aria-hidden />
+            )}
+          </Button>
         </div>
-      </div>
+      </PageContainer>
 
       {open ? (
-        <nav id={menuId} className="border-t border-stone-200 bg-stone-50 px-4 py-3 md:hidden">
-          <div className="mx-auto flex max-w-6xl flex-col gap-1">{navLinks}</div>
+        <nav
+          id={menuId}
+          className="border-t border-stone-200 bg-stone-50 md:hidden"
+          aria-label={t('mainNav')}
+        >
+          <PageContainer className="flex flex-col gap-1 py-3">
+            {primaryLinks.map((link) => (
+              <Link
+                key={link.href}
+                href={link.href}
+                className={navLinkClass(link.active)}
+                onClick={() => setOpen(false)}
+              >
+                {link.label}
+              </Link>
+            ))}
+            <Link href="/report" onClick={() => setOpen(false)} className="pt-1">
+              <Button size="sm" className="w-full">
+                {t('reportCta')}
+              </Button>
+            </Link>
+            {!loading && !user ? (
+              <div className="mt-2 flex flex-col gap-1 border-t border-stone-200 pt-2">
+                <Link
+                  href="/login"
+                  className={navLinkClass(pathname === '/login')}
+                  onClick={() => setOpen(false)}
+                >
+                  {t('login')}
+                </Link>
+                <Link href="/register" onClick={() => setOpen(false)}>
+                  <Button size="sm" variant="secondary" className="w-full">
+                    {t('register')}
+                  </Button>
+                </Link>
+              </div>
+            ) : null}
+            {!loading && user ? (
+              <div className="mt-2 border-t border-stone-200 pt-2">
+                <UserMenu />
+              </div>
+            ) : null}
+          </PageContainer>
         </nav>
       ) : null}
     </header>
