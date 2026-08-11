@@ -10,12 +10,13 @@ import { ApiError, apiFetch } from '@/lib/api';
 import { useAuth } from '@/components/auth-provider';
 import { PageContainer } from '@/components/layout/page-container';
 import { PhotoUploader } from '@/components/report/photo-uploader';
+import { AddressSearch } from '@/components/report/address-search';
 import { StepIndicator } from '@/components/report/step-indicator';
 import { RemoteImage } from '@/components/remote-image';
 import { useToast } from '@/components/toast-provider';
 import { Button } from '@/components/ui/button';
 import { FieldError } from '@/components/ui/field-error';
-import { Input, Label, Select, Textarea } from '@/components/ui/field';
+import { Label, Select, Textarea } from '@/components/ui/field';
 import { Spinner } from '@/components/ui/spinner';
 import { Skeleton } from '@/components/ui/skeleton';
 
@@ -294,16 +295,16 @@ export function ReportWizard() {
                     : t('locationHint')}
                 </p>
 
-                <div>
-                  <Label htmlFor="report-address">{t('addressLabel')}</Label>
-                  <Input
-                    id="report-address"
-                    value={address}
-                    onChange={(e) => setAddress(e.target.value)}
-                    placeholder={t('addressPlaceholder')}
-                  />
-                  <p className="mt-1.5 text-xs text-stone-500">{t('addressHint')}</p>
-                </div>
+                <AddressSearch
+                  value={address}
+                  onChange={setAddress}
+                  onPick={(nextLat, nextLng, label) => {
+                    setLat(nextLat);
+                    setLng(nextLng);
+                    setAddress(label);
+                    setFieldErrors((f) => ({ ...f, location: undefined }));
+                  }}
+                />
               </div>
             ) : null}
 
