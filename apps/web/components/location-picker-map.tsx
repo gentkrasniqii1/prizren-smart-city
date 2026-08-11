@@ -8,6 +8,8 @@ type Props = {
   lat: number | null;
   lng: number | null;
   onPick: (lat: number, lng: number) => void;
+  /** When false, map is display-only (no click-to-pick). Default true. */
+  interactive?: boolean;
 };
 
 const PRIZREN: [number, number] = [42.2139, 20.7397];
@@ -20,7 +22,7 @@ L.Icon.Default.mergeOptions({
   shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
 });
 
-export function LocationPickerMap({ lat, lng, onPick }: Props) {
+export function LocationPickerMap({ lat, lng, onPick, interactive = true }: Props) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<L.Map | null>(null);
   const markerRef = useRef<L.Marker | null>(null);
@@ -31,8 +33,14 @@ export function LocationPickerMap({ lat, lng, onPick }: Props) {
     if (!containerRef.current || mapRef.current) return;
 
     const map = L.map(containerRef.current, {
-      center: PRIZREN,
+      center: lat != null && lng != null ? [lat, lng] : PRIZREN,
       zoom: 14,
+      dragging: interactive,
+      scrollWheelZoom: interactive,
+      doubleClickZoom: interactive,
+      boxZoom: interactive,
+      keyboard: interactive,
+      touchZoom: interactive,
     });
 
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -40,9 +48,11 @@ export function LocationPickerMap({ lat, lng, onPick }: Props) {
       maxZoom: 19,
     }).addTo(map);
 
-    map.on('click', (e: L.LeafletMouseEvent) => {
-      onPickRef.current(e.latlng.lat, e.latlng.lng);
-    });
+    if (interactive) {
+      map.on('click', (e: L.LeafletMouseEvent) => {
+        onPickRef.current(e.latlng.lat, e.latlng.lng);
+      });
+    }
 
     mapRef.current = map;
 
@@ -51,6 +61,8 @@ export function LocationPickerMap({ lat, lng, onPick }: Props) {
       mapRef.current = null;
       markerRef.current = null;
     };
+    // Mount once; lat/lng updates handled below. interactive is fixed per mount.
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional
   }, []);
 
   useEffect(() => {
