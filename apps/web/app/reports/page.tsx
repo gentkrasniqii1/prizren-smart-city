@@ -3,36 +3,45 @@
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useTranslations, useLocale } from 'next-intl';
 import type { PaginatedReports, ReportDto } from '@prizren/shared-types';
 import { apiFetch } from '@/lib/api';
-import { colorForCategory } from '@/components/reports-map';
-import { Button, EmptyState, ErrorBanner, Skeleton, Spinner, StatusBadge } from '@/components/ui';
-import { getStatusLabel, REPORT_STATUSES } from '@/lib/labels';
-import { useLocale } from 'next-intl';
+import { PageContainer } from '@/components/layout/page-container';
+import { ReportCard } from '@/components/reports/report-card';
+import { ReportDrawer } from '@/components/reports/report-drawer';
+import { ReportFilters, type ReportsFilterState } from '@/components/reports/report-filters';
+import { Button, EmptyState, ErrorBanner, Skeleton, Spinner } from '@/components/ui';
 import type { AppLocale } from '@/i18n/request';
+import { cn } from '@/lib/utils';
 
 const ReportsMap = dynamic(() => import('@/components/reports-map').then((m) => m.ReportsMap), {
   ssr: false,
   loading: function MapSkeleton() {
-    return <Skeleton className="h-full min-h-[280px] sm:min-h-[320px]" />;
+    return <Skeleton className="h-full min-h-[280px] w-full" />;
   },
 });
 
+const initialFilters: ReportsFilterState = {
+  query: '',
+  status: '',
+  categoryId: '',
+  priority: '',
+  from: '',
+  to: '',
+  nearbyKm: '',
+};
+
 export default function ReportsPage() {
-  const router = useRouter();
+  const t = useTranslations('Reports');
   const locale = useLocale() as AppLocale;
   const [reports, setReports] = useState<ReportDto[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [status, setStatus] = useState('');
-  const [categoryId, setCategoryId] = useState('');
-  const [from, setFrom] = useState('');
-  const [to, setTo] = useState('');
+  const [filters, setFilters] = useState<ReportsFilterState>(initialFilters);
   const [categories, setCategories] = useState<{ id: string; name: string }[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [nearbyKm, setNearbyKm] = useState('');
   const [nearbyBusy, setNearbyBusy] = useState(false);
+  const [mobileSheet, setMobileSheet] = useState<'peek' | 'list'>('peek');
 
   function loadReports() {
     void (async () => {
@@ -41,14 +50,16 @@ export default function ReportsPage() {
       try {
         const params = new URLSearchParams();
         params.set('limit', '100');
-        if (status) params.set('status', status);
-        if (categoryId) params.set('categoryId', categoryId);
-        if (from) params.set('from', new Date(from).toISOString());
-        if (to) params.set('to', new Date(`${to}T23:59:59.999`).toISOString());
+        if (filters.status) params.set('status', filters.status);
+        if (filters.categoryId) params.set('categoryId', filters.categoryId);
+        if (filters.from) params.set('from', new Date(filters.from).toISOString());
+        if (filters.to) {
+          params.set('to', new Date(`${filters.to}T23:59:59.999`).toISOString());
+        }
         const res = await apiFetch<PaginatedReports>(`/reports?${params.toString()}`);
         setReports(res.data);
       } catch {
-        setError('Nuk u ngarkuan raportet. Kontrollo lidhjen me API.');
+        setError(t('loadError'));
       } finally {
         setLoading(false);
       }
@@ -63,22 +74,50 @@ export default function ReportsPage() {
 
   useEffect(() => {
     loadReports();
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- reload when filters change
-  }, [status, categoryId, from, to]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- reload when server-side filters change
+  }, [filters.status, filters.categoryId, filters.from, filters.to]);
+
+  const visible = useMemo(() => {
+    const q = filters.query.trim().toLowerCase();
+    return reports.filter((r) => {
+      if (filters.priority && r.priority !== filters.priority) return false;
+      if (!q) return true;
+      return (
+        r.description.toLowerCase().includes(q) ||
+        (r.address?.toLowerCase().includes(q) ?? false) ||
+        (r.categoryName?.toLowerCase().includes(q) ?? false)
+      );
+    });
+  }, [reports, filters.query, filters.priority]);
 
   const selected = useMemo(
-    () => reports.find((r) => r.id === selectedId) ?? null,
-    [reports, selectedId],
+    () => visible.find((r) => r.id === selectedId) ?? null,
+    [visible, selectedId],
   );
 
+  useEffect(() => {
+    if (selectedId && !visible.some((r) => r.id === selectedId)) {
+      setSelectedId(null);
+    }
+  }, [visible, selectedId]);
+
+  useEffect(() => {
+    if (!selectedId) return;
+    function onKey(e: KeyboardEvent) {
+      if (e.key === 'Escape') setSelectedId(null);
+    }
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [selectedId]);
+
   async function loadNearby() {
-    const km = Number(nearbyKm);
+    const km = Number(filters.nearbyKm);
     if (!Number.isFinite(km) || km <= 0) {
-      setError('Shkruaj radius të vlefshëm në km');
+      setError(t('nearbyInvalid'));
       return;
     }
     if (!navigator.geolocation) {
-      setError('Geolocation nuk mbështetet në këtë shfletues');
+      setError(t('geoUnsupported'));
       return;
     }
     setNearbyBusy(true);
@@ -92,196 +131,173 @@ export default function ReportsPage() {
           setReports(data);
           setSelectedId(null);
         } catch {
-          setError('Kërkimi “pranë meje” dështoi');
+          setError(t('nearbyFailed'));
         } finally {
           setNearbyBusy(false);
         }
       },
       () => {
-        setError('Nuk u mor GPS. Lejo aksesin te lokacioni.');
+        setError(t('geoDenied'));
         setNearbyBusy(false);
       },
       { enableHighAccuracy: true, timeout: 10000 },
     );
   }
 
-  return (
-    <main className="mx-auto max-w-6xl px-4 py-6 sm:py-8">
-      <div className="flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-end sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-stone-900 sm:text-3xl">
-            Raportet
-          </h1>
-          <p className="mt-2 text-sm text-stone-600 sm:text-base">
-            Harta dhe lista publike — pa të dhëna personale.
-          </p>
-        </div>
-        <Link href="/report" className="w-full sm:w-auto">
-          <Button size="sm" className="w-full sm:w-auto">
-            Raporto
-          </Button>
-        </Link>
-      </div>
+  function selectReport(id: string) {
+    setSelectedId(id);
+    setMobileSheet('peek');
+  }
 
-      <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end">
-        <label className="flex flex-col gap-1 text-sm sm:flex-row sm:items-center sm:gap-2">
-          <span className="text-stone-700">Status</span>
-          <select
-            value={status}
-            onChange={(e) => setStatus(e.target.value)}
-            className="rounded-md border border-stone-300 px-2 py-1.5"
-          >
-            <option value="">Të gjitha</option>
-            {REPORT_STATUSES.map((s) => (
-              <option key={s} value={s}>
-                {getStatusLabel(s, locale)}
-              </option>
-            ))}
-          </select>
-        </label>
-
-        <label className="flex flex-col gap-1 text-sm sm:flex-row sm:items-center sm:gap-2">
-          <span className="text-stone-700">Kategori</span>
-          <select
-            value={categoryId}
-            onChange={(e) => setCategoryId(e.target.value)}
-            className="rounded-md border border-stone-300 px-2 py-1.5"
-          >
-            <option value="">Të gjitha</option>
-            {categories.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name}
-              </option>
-            ))}
-          </select>
-        </label>
-
-        <label className="flex flex-col gap-1 text-sm sm:flex-row sm:items-center sm:gap-2">
-          <span className="text-stone-700">Nga</span>
-          <input
-            type="date"
-            value={from}
-            onChange={(e) => setFrom(e.target.value)}
-            className="rounded-md border border-stone-300 px-2 py-1.5"
-          />
-        </label>
-
-        <label className="flex flex-col gap-1 text-sm sm:flex-row sm:items-center sm:gap-2">
-          <span className="text-stone-700">Deri</span>
-          <input
-            type="date"
-            value={to}
-            onChange={(e) => setTo(e.target.value)}
-            className="rounded-md border border-stone-300 px-2 py-1.5"
-          />
-        </label>
-
-        <label className="flex flex-col gap-1 text-sm sm:flex-row sm:items-center sm:gap-2">
-          <span className="text-stone-700">Pranë meje (km)</span>
-          <input
-            type="number"
-            min={0.1}
-            step={0.1}
-            value={nearbyKm}
-            onChange={(e) => setNearbyKm(e.target.value)}
-            placeholder="2"
-            className="w-full rounded-md border border-stone-300 px-2 py-1.5 sm:w-20"
-          />
-        </label>
-        <Button
+  const listPanel = (
+    <div className="flex h-full min-h-0 flex-col bg-white">
+      <div className="flex items-center justify-between gap-2 border-b border-stone-200 px-3 py-2.5 text-sm text-stone-600">
+        <span>
+          {loading ? <Spinner label={t('loading')} /> : t('count', { count: visible.length })}
+        </span>
+        <button
           type="button"
-          variant="secondary"
-          size="sm"
-          onClick={() => void loadNearby()}
-          disabled={nearbyBusy}
+          className="text-xs font-medium text-mosque-800 underline md:hidden"
+          onClick={() => setMobileSheet((s) => (s === 'list' ? 'peek' : 'list'))}
         >
-          {nearbyBusy ? 'Duke kërkuar…' : 'Afisho pranë meje'}
-        </Button>
+          {mobileSheet === 'list' ? t('showMap') : t('expandList')}
+        </button>
       </div>
 
-      {error ? (
-        <div className="mt-4">
-          <ErrorBanner message={error} onRetry={loadReports} />
+      {loading ? (
+        <div className="space-y-2 p-3">
+          <Skeleton className="h-20 w-full" />
+          <Skeleton className="h-20 w-full" />
+          <Skeleton className="h-20 w-full" />
         </div>
-      ) : null}
+      ) : visible.length === 0 ? (
+        <div className="p-3">
+          <EmptyState
+            title={t('emptyTitle')}
+            description={t('emptyBody')}
+            action={
+              <Link href="/report">
+                <Button size="sm">{t('reportFirst')}</Button>
+              </Link>
+            }
+          />
+        </div>
+      ) : (
+        <ul className="flex-1 overflow-y-auto">
+          {visible.map((r) => (
+            <li key={r.id}>
+              <ReportCard
+                report={r}
+                selected={selectedId === r.id}
+                onSelect={selectReport}
+                compact
+              />
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
 
-      <div className="mt-6 grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(280px,360px)] lg:items-stretch">
-        <div className="min-h-[280px] overflow-hidden sm:min-h-[420px] lg:min-h-[560px]">
-          <ReportsMap
-            reports={reports}
-            selectedId={selectedId}
-            onSelect={(id) => {
-              setSelectedId(id);
-              router.push(`/reports/${id}`);
-            }}
+  return (
+    <main className="pb-2">
+      <PageContainer className="py-5 sm:py-6">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <h1 className="font-display text-h1 tracking-tight text-stone-950 sm:text-3xl">
+              {t('title')}
+            </h1>
+            <p className="mt-1.5 text-sm text-stone-600 sm:text-base">{t('subtitle')}</p>
+          </div>
+          <Link href="/report" className="w-full sm:w-auto">
+            <Button size="sm" className="w-full sm:w-auto">
+              {t('reportCta')}
+            </Button>
+          </Link>
+        </div>
+
+        <div className="mt-5 rounded-lg border border-stone-200 bg-white p-3 sm:p-4">
+          <ReportFilters
+            value={filters}
+            onChange={setFilters}
+            categories={categories}
+            locale={locale}
+            nearbyBusy={nearbyBusy}
+            onNearby={() => void loadNearby()}
           />
         </div>
 
-        <div className="flex max-h-[420px] flex-col overflow-hidden rounded-md border border-stone-200 bg-white lg:max-h-[560px]">
-          <div className="border-b border-stone-200 px-3 py-2 text-sm text-stone-600">
-            {loading ? <Spinner label="Duke ngarkuar listën…" /> : `${reports.length} raporte`}
+        {error ? (
+          <div className="mt-4">
+            <ErrorBanner message={error} onRetry={loadReports} />
           </div>
-          {loading ? (
-            <div className="space-y-2 p-3">
-              <Skeleton className="h-14 w-full" />
-              <Skeleton className="h-14 w-full" />
-              <Skeleton className="h-14 w-full" />
-            </div>
-          ) : reports.length === 0 ? (
-            <div className="p-3">
-              <EmptyState
-                title="Ende s’ka raporte"
-                description="Kur qytetarët reportojnë probleme, ato shfaqen këtu dhe në hartë."
-                action={
-                  <Link href="/report" className="text-sm font-medium text-stone-900 underline">
-                    Raporto i pari
-                  </Link>
-                }
-              />
-            </div>
-          ) : (
-            <ul className="flex-1 overflow-y-auto">
-              {reports.map((r) => (
-                <li key={r.id} className="border-b border-stone-100">
-                  <button
-                    type="button"
-                    onClick={() => setSelectedId(r.id)}
-                    onDoubleClick={() => router.push(`/reports/${r.id}`)}
-                    className={`w-full px-3 py-3 text-left hover:bg-stone-50 focus-visible:bg-stone-50 ${
-                      selectedId === r.id ? 'bg-stone-100' : ''
-                    }`}
-                  >
-                    <div className="flex flex-wrap items-center gap-2 text-xs uppercase tracking-wide text-stone-500">
-                      <span
-                        className="inline-block h-2.5 w-2.5 rounded-full"
-                        style={{ backgroundColor: colorForCategory(r.categoryName) }}
-                        aria-hidden
-                      />
-                      <StatusBadge status={r.status} />
-                      {r.categoryName ? <span>· {r.categoryName}</span> : null}
-                    </div>
-                    <p className="mt-1 line-clamp-2 text-sm text-stone-900">{r.description}</p>
-                    <Link
-                      href={`/reports/${r.id}`}
-                      className="mt-1 inline-block text-xs text-stone-600 underline"
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      Hap detajet
-                    </Link>
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-      </div>
+        ) : null}
+      </PageContainer>
 
-      {selected ? (
-        <p className="mt-3 text-sm text-stone-500">
-          I zgjedhur: {selected.description.slice(0, 80)}
-          {selected.description.length > 80 ? '…' : ''} — hap detajet ose double-click.
-        </p>
-      ) : null}
+      {/* Desktop GIS layout: list | map (+ drawer) */}
+      <PageContainer width="wide" className="hidden pb-8 lg:block">
+        <div className="grid h-[min(70vh,720px)] overflow-hidden rounded-xl border border-stone-200 bg-stone-100 lg:grid-cols-[minmax(300px,380px)_minmax(0,1fr)]">
+          <div className="min-h-0 border-r border-stone-200">{listPanel}</div>
+          <div className="relative min-h-0">
+            <ReportsMap
+              reports={visible}
+              selectedId={selectedId}
+              onSelect={selectReport}
+              className="h-full min-h-0"
+            />
+            {selected ? (
+              <div className="absolute inset-y-3 right-3 z-10 w-[min(100%,22rem)] overflow-hidden rounded-lg border border-stone-200">
+                <ReportDrawer report={selected} onClose={() => setSelectedId(null)} />
+              </div>
+            ) : null}
+          </div>
+        </div>
+      </PageContainer>
+
+      {/* Mobile / tablet: map + bottom sheet list; drawer as overlay sheet */}
+      <div className="lg:hidden">
+        <div
+          className={cn(
+            'relative overflow-hidden border-y border-stone-200 bg-stone-100',
+            mobileSheet === 'list' ? 'h-[28vh]' : 'h-[48vh]',
+          )}
+        >
+          <ReportsMap
+            reports={visible}
+            selectedId={selectedId}
+            onSelect={selectReport}
+            className="h-full min-h-0 rounded-none border-0"
+          />
+        </div>
+
+        <div
+          className={cn(
+            'relative z-10 -mt-3 overflow-hidden rounded-t-2xl border border-stone-200 bg-white shadow-lift',
+            mobileSheet === 'list' ? 'min-h-[55vh]' : 'max-h-[38vh]',
+          )}
+        >
+          <div className="flex justify-center py-2 md:hidden" aria-hidden>
+            <span className="h-1 w-10 rounded-full bg-stone-300" />
+          </div>
+          <div className={cn(mobileSheet === 'list' ? 'h-[55vh]' : 'max-h-[34vh]', 'min-h-0')}>
+            {listPanel}
+          </div>
+        </div>
+
+        {selected ? (
+          <div className="fixed inset-0 z-50 flex flex-col justify-end bg-stone-950/40 p-0 sm:p-4">
+            <button
+              type="button"
+              className="absolute inset-0 cursor-default"
+              aria-label={t('closeDrawer')}
+              onClick={() => setSelectedId(null)}
+            />
+            <div className="relative z-10 mx-auto h-[min(78vh,36rem)] w-full max-w-lg overflow-hidden rounded-t-2xl border border-stone-200 sm:rounded-xl">
+              <ReportDrawer report={selected} onClose={() => setSelectedId(null)} />
+            </div>
+          </div>
+        ) : null}
+      </div>
     </main>
   );
 }
