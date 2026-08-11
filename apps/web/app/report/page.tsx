@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import type { CategoryDto, ReportDto } from '@prizren/shared-types';
 import { ApiError, apiFetch } from '@/lib/api';
 import { useAuth } from '@/components/auth-provider';
-import { FieldError, Spinner } from '@/components/ui';
+import { Button, FieldError, Spinner } from '@/components/ui';
 import { RemoteImage } from '@/components/remote-image';
 import { useToast } from '@/components/toast-provider';
 
@@ -247,14 +247,15 @@ export default function ReportPage() {
             <p id="report-location-label" className="text-sm text-stone-700">
               Lokacioni
             </p>
-            <button
+            <Button
               type="button"
+              variant="secondary"
+              size="sm"
               onClick={requestGeolocation}
               disabled={geoBusy}
-              className="rounded-md border border-stone-300 px-3 py-1.5 text-sm hover:bg-stone-50 disabled:opacity-60"
             >
               {geoBusy ? 'Duke gjetur...' : 'Përdor GPS'}
-            </button>
+            </Button>
           </div>
           <div aria-labelledby="report-location-label">
             <LocationPickerMap
@@ -281,13 +282,9 @@ export default function ReportPage() {
               {formError}
             </p>
           ) : null}
-          <button
-            type="submit"
-            disabled={submitting}
-            className="w-full rounded-md bg-stone-900 px-5 py-2.5 text-white hover:bg-stone-800 disabled:opacity-60 sm:w-auto"
-          >
+          <Button type="submit" disabled={submitting} className="w-full sm:w-auto">
             {submitting ? 'Duke dërguar...' : 'Dërgo raportin'}
-          </button>
+          </Button>
         </div>
       </form>
     </main>

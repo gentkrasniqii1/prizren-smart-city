@@ -16,8 +16,10 @@ import { ApiError, apiFetch } from '@/lib/api';
 import { useAuth } from '@/components/auth-provider';
 import { Breadcrumbs } from '@/components/breadcrumbs';
 import { RemoteImage } from '@/components/remote-image';
-import { PriorityBadge, Skeleton, Spinner, StatusBadge } from '@/components/ui';
+import { Button, PriorityBadge, Skeleton, Spinner, StatusBadge } from '@/components/ui';
 import { slaBucket, slaClass, slaLabel } from '@/lib/sla';
+import { useLocale } from 'next-intl';
+import type { AppLocale } from '@/i18n/request';
 
 const AI_CATEGORIES = [
   'road_damage',
@@ -31,6 +33,7 @@ const AI_SEVERITIES = ['low', 'medium', 'high', 'critical'] as const;
 
 export default function ReportDetailPage() {
   const params = useParams<{ id: string }>();
+  const locale = useLocale() as AppLocale;
   const { user } = useAuth();
   const [report, setReport] = useState<ReportDto | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -236,7 +239,7 @@ export default function ReportDetailPage() {
         {report.priority ? <PriorityBadge priority={report.priority} /> : null}
         {bucket ? (
           <span className={`rounded px-2 py-0.5 font-semibold ${slaClass(bucket)}`}>
-            {slaLabel(bucket)}
+            {slaLabel(bucket, locale)}
           </span>
         ) : null}
         {report.aiNeedsReview ? (
@@ -256,14 +259,15 @@ export default function ReportDetailPage() {
       <p className="mt-4 whitespace-pre-wrap text-stone-800">{report.description}</p>
 
       <div className="mt-4 flex flex-wrap items-center gap-3">
-        <button
+        <Button
           type="button"
+          variant="secondary"
+          size="sm"
           disabled={voteBusy}
           onClick={() => void toggleVote()}
-          className="rounded-md border border-stone-300 bg-white px-3 py-1.5 text-sm hover:bg-stone-50 disabled:opacity-60"
         >
           {report.votedByMe ? 'Hiq votën' : 'Voto'} · {report.voteCount ?? 0}
-        </button>
+        </Button>
         {citizenMessage ? <p className="text-sm text-stone-600">{citizenMessage}</p> : null}
       </div>
 
@@ -345,13 +349,9 @@ export default function ReportDetailPage() {
               value={commentText}
               onChange={(e) => setCommentText(e.target.value)}
             />
-            <button
-              type="button"
-              onClick={() => void submitComment()}
-              className="rounded-md bg-stone-900 px-3 py-1.5 text-sm text-white"
-            >
+            <Button type="button" size="sm" onClick={() => void submitComment()}>
               Dërgo komentin
-            </button>
+            </Button>
           </div>
         ) : (
           <p className="mt-3 text-sm text-stone-600">
@@ -379,14 +379,15 @@ export default function ReportDetailPage() {
               onChange={(e) => void uploadAfterPhoto(e.target.files?.[0] ?? null)}
             />
           </label>
-          <button
+          <Button
             type="button"
+            size="sm"
             disabled={workflowBusy || report.status === 'RESOLVED'}
             onClick={() => void markResolved()}
-            className="mt-4 rounded-md bg-stone-900 px-3 py-1.5 text-sm text-white disabled:opacity-60"
+            className="mt-4"
           >
             Shenoe RESOLVED
-          </button>
+          </Button>
           {workflowMessage ? (
             <p className="mt-3 text-sm text-stone-700">{workflowMessage}</p>
           ) : null}
@@ -492,47 +493,49 @@ export default function ReportDetailPage() {
             <div className="mt-4 flex flex-wrap gap-2">
               {!editing ? (
                 <>
-                  <button
+                  <Button
                     type="button"
+                    size="sm"
                     disabled={aiBusy}
                     onClick={() => void submitAi('accept')}
-                    className="rounded-md bg-stone-900 px-3 py-1.5 text-sm text-white disabled:opacity-60"
                   >
                     Accept
-                  </button>
-                  <button
+                  </Button>
+                  <Button
                     type="button"
+                    variant="secondary"
+                    size="sm"
                     disabled={aiBusy}
                     onClick={() => {
                       setDraft(report.aiClassification);
                       setEditing(true);
                     }}
-                    className="rounded-md border border-stone-300 px-3 py-1.5 text-sm"
                   >
                     Edit
-                  </button>
+                  </Button>
                 </>
               ) : (
                 <>
-                  <button
+                  <Button
                     type="button"
+                    size="sm"
                     disabled={aiBusy}
                     onClick={() => void submitAi('edit')}
-                    className="rounded-md bg-stone-900 px-3 py-1.5 text-sm text-white disabled:opacity-60"
                   >
                     Save
-                  </button>
-                  <button
+                  </Button>
+                  <Button
                     type="button"
+                    variant="secondary"
+                    size="sm"
                     disabled={aiBusy}
                     onClick={() => {
                       setDraft(report.aiClassification);
                       setEditing(false);
                     }}
-                    className="rounded-md border border-stone-300 px-3 py-1.5 text-sm"
                   >
                     Cancel
-                  </button>
+                  </Button>
                 </>
               )}
             </div>

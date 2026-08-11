@@ -2,9 +2,74 @@
 @tailwind components;
 @tailwind utilities;
 
+/**
+ * Design tokens — keep in sync with lib/design-tokens.ts and tailwind.config.ts
+ */
 :root {
-  --background: #faf8f5;
-  --foreground: #27211c;
+  /* Neutrals (stone) */
+  --color-stone-50: #faf8f5;
+  --color-stone-100: #f3efe8;
+  --color-stone-200: #e6ddd0;
+  --color-stone-300: #d4c5b0;
+  --color-stone-400: #b8a48a;
+  --color-stone-500: #9a856c;
+  --color-stone-600: #7d6a55;
+  --color-stone-700: #655645;
+  --color-stone-800: #54483c;
+  --color-stone-900: #473e35;
+  --color-stone-950: #27211c;
+
+  /* Civic blue (mosque) */
+  --color-mosque-50: #f0f5fb;
+  --color-mosque-100: #dde9f5;
+  --color-mosque-200: #c2d7ed;
+  --color-mosque-300: #98bbe0;
+  --color-mosque-400: #6798cf;
+  --color-mosque-500: #4479b8;
+  --color-mosque-600: #335f9b;
+  --color-mosque-700: #2b4d7d;
+  --color-mosque-800: #274368;
+  --color-mosque-900: #253a57;
+  --color-mosque-950: #19253a;
+
+  /* Accent teal (river) */
+  --color-river-50: #f0faf8;
+  --color-river-100: #daf3ee;
+  --color-river-200: #b8e6dc;
+  --color-river-300: #89d3c5;
+  --color-river-400: #56b7a7;
+  --color-river-500: #3a9b8c;
+  --color-river-600: #2c7c71;
+  --color-river-700: #27645c;
+  --color-river-800: #23514b;
+  --color-river-900: #21443f;
+  --color-river-950: #0f2725;
+
+  --background: var(--color-stone-50);
+  --foreground: var(--color-stone-950);
+  --primary: var(--color-mosque-600);
+  --primary-foreground: var(--color-stone-50);
+  --primary-hover: var(--color-mosque-700);
+  --accent: var(--color-river-500);
+  --accent-foreground: var(--color-stone-50);
+  --muted: var(--color-stone-100);
+  --muted-foreground: var(--color-stone-600);
+  --border: var(--color-stone-200);
+  --ring: var(--color-mosque-700);
+
+  --radius-sm: 0.375rem;
+  --radius-md: 0.625rem;
+  --radius-lg: 1rem;
+  --radius-xl: 1.25rem;
+
+  --shadow-sm: 0 1px 2px rgb(39 33 28 / 0.06);
+  --shadow-md: 0 8px 24px rgb(39 33 28 / 0.08);
+  --shadow-lg: 0 18px 48px rgb(39 33 28 / 0.12);
+
+  --motion-fast: 120ms;
+  --motion-normal: 200ms;
+  --motion-slow: 320ms;
+  --motion-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
 body {
@@ -20,8 +85,18 @@ select {
 }
 
 :focus-visible {
-  outline: 2px solid #2b4d7d;
+  outline: 2px solid var(--ring);
   outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }
 
 .mapboxgl-map,

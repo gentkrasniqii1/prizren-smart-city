@@ -14,6 +14,7 @@
     "@prizren/shared-types": "*",
     "@sentry/react": "^10.69.0",
     "leaflet": "^1.9.4",
+    "lucide-react": "^1.31.0",
     "mapbox-gl": "^3.28.1",
     "next": "14.2.18",
     "next-intl": "^4.13.6",
