@@ -7,7 +7,10 @@ import { useRouter } from 'next/navigation';
 import type { PaginatedReports, ReportDto } from '@prizren/shared-types';
 import { apiFetch } from '@/lib/api';
 import { colorForCategory } from '@/components/reports-map';
-import { EmptyState, ErrorBanner, Skeleton, Spinner, StatusBadge } from '@/components/ui';
+import { Button, EmptyState, ErrorBanner, Skeleton, Spinner, StatusBadge } from '@/components/ui';
+import { getStatusLabel, REPORT_STATUSES } from '@/lib/labels';
+import { useLocale } from 'next-intl';
+import type { AppLocale } from '@/i18n/request';
 
 const ReportsMap = dynamic(() => import('@/components/reports-map').then((m) => m.ReportsMap), {
   ssr: false,
@@ -18,6 +21,7 @@ const ReportsMap = dynamic(() => import('@/components/reports-map').then((m) => 
 
 export default function ReportsPage() {
   const router = useRouter();
+  const locale = useLocale() as AppLocale;
   const [reports, setReports] = useState<ReportDto[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [status, setStatus] = useState('');
@@ -112,11 +116,10 @@ export default function ReportsPage() {
             Harta dhe lista publike — pa të dhëna personale.
           </p>
         </div>
-        <Link
-          href="/report"
-          className="inline-flex w-full items-center justify-center rounded-md bg-stone-900 px-3 py-2 text-sm text-white sm:w-auto"
-        >
-          Raporto
+        <Link href="/report" className="w-full sm:w-auto">
+          <Button size="sm" className="w-full sm:w-auto">
+            Raporto
+          </Button>
         </Link>
       </div>
 
@@ -129,11 +132,11 @@ export default function ReportsPage() {
             className="rounded-md border border-stone-300 px-2 py-1.5"
           >
             <option value="">Të gjitha</option>
-            <option value="PENDING">PENDING</option>
-            <option value="IN_REVIEW">IN_REVIEW</option>
-            <option value="IN_PROGRESS">IN_PROGRESS</option>
-            <option value="RESOLVED">RESOLVED</option>
-            <option value="REJECTED">REJECTED</option>
+            {REPORT_STATUSES.map((s) => (
+              <option key={s} value={s}>
+                {getStatusLabel(s, locale)}
+              </option>
+            ))}
           </select>
         </label>
 
@@ -185,14 +188,15 @@ export default function ReportsPage() {
             className="w-full rounded-md border border-stone-300 px-2 py-1.5 sm:w-20"
           />
         </label>
-        <button
+        <Button
           type="button"
+          variant="secondary"
+          size="sm"
           onClick={() => void loadNearby()}
           disabled={nearbyBusy}
-          className="rounded-md border border-stone-300 px-3 py-1.5 text-sm hover:bg-stone-50 disabled:opacity-60"
         >
           {nearbyBusy ? 'Duke kërkuar…' : 'Afisho pranë meje'}
-        </button>
+        </Button>
       </div>
 
       {error ? (

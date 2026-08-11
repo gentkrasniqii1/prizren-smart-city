@@ -18,9 +18,12 @@ import type {
 } from '@prizren/shared-types';
 import { ApiError, apiFetch } from '@/lib/api';
 import { useAuth } from '@/components/auth-provider';
-import { EmptyState, ErrorBanner, Skeleton, Spinner } from '@/components/ui';
+import { Button, EmptyState, ErrorBanner, Skeleton, Spinner, StatCard } from '@/components/ui';
 import { Breadcrumbs } from '@/components/breadcrumbs';
 import { slaBucket, slaClass, slaLabel } from '@/lib/sla';
+import { getStatusLabel } from '@/lib/labels';
+import { useLocale } from 'next-intl';
+import type { AppLocale } from '@/i18n/request';
 
 const CategoryBarChart = dynamic(
   () => import('@/components/category-bar-chart').then((m) => m.CategoryBarChart),
@@ -56,6 +59,7 @@ function formatHours(hours: number | null) {
 
 export default function AdminPage() {
   const { user, loading: authLoading } = useAuth();
+  const locale = useLocale() as AppLocale;
   const [reports, setReports] = useState<ReportDto[]>([]);
   const [metaTotal, setMetaTotal] = useState(0);
   const [categories, setCategories] = useState<CategoryDto[]>([]);
@@ -250,13 +254,9 @@ export default function AdminPage() {
             Filtra, status inline dhe analytics nga baza e të dhënave — pa reload të plotë.
           </p>
         </div>
-        <button
-          type="button"
-          onClick={() => void loadDashboard()}
-          className="rounded-md border border-stone-300 px-3 py-1.5 text-sm hover:bg-stone-50"
-        >
+        <Button type="button" variant="secondary" size="sm" onClick={() => void loadDashboard()}>
           Rifresko
-        </button>
+        </Button>
       </div>
 
       <section className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
@@ -290,7 +290,7 @@ export default function AdminPage() {
             <option value="">Status — të gjitha</option>
             {STATUSES.map((s) => (
               <option key={s} value={s}>
-                {s}
+                {getStatusLabel(s, locale)}
               </option>
             ))}
           </select>
@@ -387,7 +387,7 @@ export default function AdminPage() {
                         >
                           {STATUSES.map((s) => (
                             <option key={s} value={s}>
-                              {s}
+                              {getStatusLabel(s, locale)}
                             </option>
                           ))}
                         </select>
@@ -436,7 +436,7 @@ export default function AdminPage() {
                         <span
                           className={`inline-block rounded px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide ${slaClass(bucket)}`}
                         >
-                          {slaLabel(bucket)}
+                          {slaLabel(bucket, locale)}
                         </span>
                         {report.dueAt ? (
                           <div className="mt-1 text-[10px] text-stone-500">
@@ -464,14 +464,5 @@ export default function AdminPage() {
         </div>
       </section>
     </main>
-  );
-}
-
-function StatCard({ label, value }: { label: string; value: string | number }) {
-  return (
-    <div className="border border-stone-200 bg-white px-4 py-3">
-      <p className="text-xs uppercase tracking-wide text-stone-500">{label}</p>
-      <p className="mt-1 text-2xl font-semibold tabular-nums text-stone-900">{value}</p>
-    </div>
   );
 }

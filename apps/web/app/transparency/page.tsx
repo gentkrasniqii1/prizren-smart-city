@@ -4,9 +4,13 @@ import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import type { TransparencyStats } from '@prizren/shared-types';
 import { apiFetch } from '@/lib/api';
-import { EmptyState, ErrorBanner, Skeleton } from '@/components/ui';
+import { EmptyState, ErrorBanner, Skeleton, StatCard } from '@/components/ui';
+import { getStatusLabel } from '@/lib/labels';
+import { useLocale } from 'next-intl';
+import type { AppLocale } from '@/i18n/request';
 
 export default function TransparencyPage() {
+  const locale = useLocale() as AppLocale;
   const [stats, setStats] = useState<TransparencyStats | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -72,10 +76,10 @@ export default function TransparencyPage() {
       {stats && stats.total > 0 ? (
         <>
           <section className="mt-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            <Stat label="Total" value={stats.total} />
-            <Stat label="Të zgjidhura" value={stats.resolved} />
-            <Stat label="Të hapura" value={stats.pendingOpen} />
-            <Stat
+            <StatCard label="Total" value={stats.total} />
+            <StatCard label="Të zgjidhura" value={stats.resolved} />
+            <StatCard label="Të hapura" value={stats.pendingOpen} />
+            <StatCard
               label="Norma zgjidhje"
               value={stats.resolutionRate == null ? '—' : `${stats.resolutionRate}%`}
             />
@@ -98,7 +102,7 @@ export default function TransparencyPage() {
                       key={row.status}
                       className="flex justify-between border-b border-stone-100 py-1.5"
                     >
-                      <span className="text-stone-600">{row.status}</span>
+                      <span className="text-stone-600">{getStatusLabel(row.status, locale)}</span>
                       <span className="tabular-nums font-medium text-stone-900">{row.count}</span>
                     </li>
                   ))
@@ -131,14 +135,5 @@ export default function TransparencyPage() {
         </>
       ) : null}
     </main>
-  );
-}
-
-function Stat({ label, value }: { label: string; value: string | number }) {
-  return (
-    <div className="border border-stone-200 bg-white px-4 py-3">
-      <p className="text-xs uppercase tracking-wide text-stone-500">{label}</p>
-      <p className="mt-1 text-2xl font-semibold tabular-nums text-stone-900">{value}</p>
-    </div>
   );
 }

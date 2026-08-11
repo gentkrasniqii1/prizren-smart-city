@@ -5,6 +5,7 @@ import { useCallback, useEffect, useState } from 'react';
 import type { NotificationDto, PaginatedNotifications } from '@prizren/shared-types';
 import { ApiError, apiFetch } from '@/lib/api';
 import { useAuth } from '@/components/auth-provider';
+import { Button } from '@/components/ui';
 
 export default function NotificationsPage() {
   const { user, loading } = useAuth();
@@ -83,14 +84,15 @@ export default function NotificationsPage() {
           <h1 className="text-2xl font-semibold text-stone-900">Njoftime</h1>
           <p className="mt-1 text-sm text-stone-600">{unreadCount} të palexuara</p>
         </div>
-        <button
+        <Button
           type="button"
+          variant="secondary"
+          size="sm"
           disabled={busy || unreadCount === 0}
           onClick={() => void markAll()}
-          className="rounded-md border border-stone-300 px-3 py-1.5 text-sm disabled:opacity-50"
         >
           Shëno të gjitha si të lexuara
-        </button>
+        </Button>
       </div>
 
       {error ? <p className="mt-4 text-sm text-red-600">{error}</p> : null}
@@ -113,14 +115,16 @@ export default function NotificationsPage() {
                   </Link>
                 ) : null}
                 {!n.read ? (
-                  <button
+                  <Button
                     type="button"
+                    variant="ghost"
+                    size="sm"
                     disabled={busy}
                     onClick={() => void markOne(n.id)}
-                    className="underline"
+                    className="h-auto px-0 py-0 text-xs underline"
                   >
                     Shëno të lexuar
-                  </button>
+                  </Button>
                 ) : null}
               </div>
             </li>
