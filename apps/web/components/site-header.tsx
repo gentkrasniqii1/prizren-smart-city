@@ -39,8 +39,13 @@ export function SiteHeader() {
     function onKey(e: KeyboardEvent) {
       if (e.key === 'Escape') setOpen(false);
     }
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
     window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
+    return () => {
+      document.body.style.overflow = prev;
+      window.removeEventListener('keydown', onKey);
+    };
   }, [open]);
 
   const primaryLinks = [
@@ -141,19 +146,19 @@ export function SiteHeader() {
           className="border-t border-stone-200 bg-stone-50 md:hidden"
           aria-label={t('mainNav')}
         >
-          <PageContainer className="flex flex-col gap-1 py-3">
+          <PageContainer className="flex flex-col gap-1 py-3 pb-bottom-nav">
             {primaryLinks.map((link) => (
               <Link
                 key={link.href}
                 href={link.href}
-                className={navLinkClass(link.active)}
+                className={cn(navLinkClass(link.active), 'min-h-11 px-3 py-3')}
                 onClick={() => setOpen(false)}
               >
                 {link.label}
               </Link>
             ))}
             <Link href="/report" onClick={() => setOpen(false)} className="pt-1">
-              <Button size="sm" className="w-full">
+              <Button size="sm" className="w-full min-h-11">
                 {t('reportCta')}
               </Button>
             </Link>
@@ -161,13 +166,13 @@ export function SiteHeader() {
               <div className="mt-2 flex flex-col gap-1 border-t border-stone-200 pt-2">
                 <Link
                   href="/login"
-                  className={navLinkClass(pathname === '/login')}
+                  className={cn(navLinkClass(pathname === '/login'), 'min-h-11 px-3 py-3')}
                   onClick={() => setOpen(false)}
                 >
                   {t('login')}
                 </Link>
                 <Link href="/register" onClick={() => setOpen(false)}>
-                  <Button size="sm" variant="secondary" className="w-full">
+                  <Button size="sm" variant="secondary" className="w-full min-h-11">
                     {t('register')}
                   </Button>
                 </Link>

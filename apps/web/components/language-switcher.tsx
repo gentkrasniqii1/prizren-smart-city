@@ -26,7 +26,7 @@ export function LanguageSwitcher() {
         type="button"
         disabled={pending || locale === 'sq'}
         onClick={() => setLocale('sq')}
-        className={`rounded px-2 py-1 ${locale === 'sq' ? 'bg-mosque-700 text-white' : 'text-stone-600 hover:bg-stone-50'}`}
+        className={`min-h-10 min-w-10 rounded px-2.5 py-2 ${locale === 'sq' ? 'bg-mosque-700 text-white' : 'text-stone-600 hover:bg-stone-50'}`}
       >
         SQ
       </button>
@@ -34,7 +34,7 @@ export function LanguageSwitcher() {
         type="button"
         disabled={pending || locale === 'en'}
         onClick={() => setLocale('en')}
-        className={`rounded px-2 py-1 ${locale === 'en' ? 'bg-mosque-700 text-white' : 'text-stone-600 hover:bg-stone-50'}`}
+        className={`min-h-10 min-w-10 rounded px-2.5 py-2 ${locale === 'en' ? 'bg-mosque-700 text-white' : 'text-stone-600 hover:bg-stone-50'}`}
       >
         EN
       </button>

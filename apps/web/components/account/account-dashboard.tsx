@@ -152,7 +152,7 @@ export function AccountDashboard() {
   const firstName = user.name.trim().split(/\s+/)[0] || user.name;
 
   return (
-    <main className="pb-12 pt-6 sm:pb-16 sm:pt-8">
+    <main className="pb-bottom-nav pt-6 sm:pt-8">
       <PageContainer width="default">
         {/* Header */}
         <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">

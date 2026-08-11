@@ -437,6 +437,20 @@
     "assignSavedDue": "Caktimi u ruajt për {id} · afati {due}",
     "assignFailed": "Caktimi dështoi"
   },
+  "Notifications": {
+    "title": "Njoftime",
+    "loading": "Duke ngarkuar…",
+    "loginRequired": "Hyr për të parë njoftimet.",
+    "loginLink": "Hyr",
+    "unread": "{count} të palexuara",
+    "markAll": "Shëno të gjitha si të lexuara",
+    "markRead": "Shëno të lexuar",
+    "openReport": "Hap raportin",
+    "emptyTitle": "Nuk ka njoftime",
+    "emptyBody": "Kur statusi i raporteve ndryshon, njoftimet shfaqen këtu.",
+    "loadError": "Nuk u ngarkuan njoftimet",
+    "actionFailed": "Veprimi dështoi"
+  },
   "NotFound": {
     "title": "Faqja nuk u gjet",
     "body": "Lidhja mund të jetë e vjetër, ose adresa e shkruar gabim.",

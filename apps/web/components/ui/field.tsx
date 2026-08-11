@@ -7,7 +7,7 @@ import type {
 import { cn } from '@/lib/utils';
 
 const fieldBase =
-  'mt-1 w-full rounded-md border bg-white px-3 py-2 text-stone-900 outline-none transition duration-fast ease-product placeholder:text-stone-400 disabled:cursor-not-allowed disabled:bg-stone-100 disabled:text-stone-500';
+  'mt-1 w-full min-h-11 rounded-md border bg-white px-3 py-2.5 text-base text-stone-900 outline-none transition duration-fast ease-product placeholder:text-stone-400 disabled:cursor-not-allowed disabled:bg-stone-100 disabled:text-stone-500 sm:min-h-10 sm:py-2 sm:text-sm';
 
 const fieldOk =
   'border-stone-300 hover:border-stone-400 focus:border-mosque-500 focus:ring-2 focus:ring-mosque-200';

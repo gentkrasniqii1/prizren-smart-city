@@ -265,7 +265,7 @@ export function ReportDetailView() {
   const mapUrl = `https://www.openstreetmap.org/?mlat=${report.lat}&mlon=${report.lng}#map=17/${report.lat}/${report.lng}`;
 
   return (
-    <main className="pb-12 pt-6 sm:pb-16 sm:pt-8">
+    <main className="pb-bottom-nav pt-6 sm:pt-8">
       <PageContainer width="wide">
         <Breadcrumbs
           items={[
