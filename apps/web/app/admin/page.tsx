@@ -3,6 +3,7 @@
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { useLocale, useTranslations } from 'next-intl';
 import type {
   AnalyticsByCategoryItem,
@@ -37,6 +38,33 @@ const CategoryBarChart = dynamic(
   },
 );
 
+const ReportsOverTimeChart = dynamic(
+  () => import('@/components/admin/reports-over-time-chart').then((m) => m.ReportsOverTimeChart),
+  {
+    ssr: false,
+    loading: function ChartSkeleton() {
+      return <Skeleton className="h-64 w-full" />;
+    },
+  },
+);
+
+const DepartmentBarChart = dynamic(
+  () => import('@/components/admin/department-bar-chart').then((m) => m.DepartmentBarChart),
+  {
+    ssr: false,
+    loading: function ChartSkeleton() {
+      return <Skeleton className="h-64 w-full" />;
+    },
+  },
+);
+
+const ReportsMap = dynamic(() => import('@/components/reports-map').then((m) => m.ReportsMap), {
+  ssr: false,
+  loading: function MapSkeleton() {
+    return <Skeleton className="h-72 w-full" />;
+  },
+});
+
 const STATUSES: ReportStatus[] = [
   'PENDING',
   'IN_REVIEW',
@@ -64,6 +92,7 @@ function formatHours(
 
 export default function AdminPage() {
   const t = useTranslations('Admin');
+  const router = useRouter();
   const { user, loading: authLoading } = useAuth();
   const locale = useLocale() as AppLocale;
   const [reports, setReports] = useState<ReportDto[]>([]);
@@ -85,6 +114,28 @@ export default function AdminPage() {
   const [message, setMessage] = useState<string | null>(null);
 
   const canAssign = ASSIGN_ROLES.has(user?.role ?? '');
+
+  const overTimeData = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const r of reports) {
+      const day = r.createdAt.slice(0, 10);
+      counts.set(day, (counts.get(day) ?? 0) + 1);
+    }
+    return Array.from(counts.entries())
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([date, count]) => ({ date, count }));
+  }, [reports]);
+
+  const byDepartmentData = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const r of reports) {
+      const name = r.departmentName?.trim() || t('noDepartment');
+      counts.set(name, (counts.get(name) ?? 0) + 1);
+    }
+    return Array.from(counts.entries())
+      .map(([department, count]) => ({ department, count }))
+      .sort((a, b) => b.count - a.count);
+  }, [reports, t]);
 
   const reportQuery = useMemo(() => {
     const params = new URLSearchParams();
@@ -307,8 +358,43 @@ export default function AdminPage() {
           <h2 className="font-display text-xl tracking-tight text-stone-950">
             {t('chartHeading')}
           </h2>
-          <div className="mt-3 rounded-xl border border-stone-200 bg-white p-4">
-            <CategoryBarChart data={byCategory} emptyLabel={t('chartEmpty')} />
+          <div className="mt-3 grid gap-4 lg:grid-cols-2">
+            <div className="rounded-xl border border-stone-200 bg-white p-4">
+              <CategoryBarChart data={byCategory} emptyLabel={t('chartEmpty')} />
+            </div>
+            <div className="rounded-xl border border-stone-200 bg-white p-4">
+              <h3 className="text-sm font-medium text-stone-700">{t('chartDepartment')}</h3>
+              <div className="mt-2">
+                <DepartmentBarChart data={byDepartmentData} emptyLabel={t('chartEmpty')} />
+              </div>
+            </div>
+            <div className="rounded-xl border border-stone-200 bg-white p-4 lg:col-span-2">
+              <h3 className="text-sm font-medium text-stone-700">{t('chartOverTime')}</h3>
+              <div className="mt-2">
+                <ReportsOverTimeChart data={overTimeData} emptyLabel={t('chartEmpty')} />
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section className="mt-10">
+          <h2 className="font-display text-xl tracking-tight text-stone-950">
+            {t('heatmapHeading')}
+          </h2>
+          <p className="mt-1 text-sm text-stone-600">{t('heatmapHint')}</p>
+          <div className="mt-3 h-72 overflow-hidden rounded-xl border border-stone-200 bg-stone-100">
+            {reports.length === 0 ? (
+              <p className="flex h-full items-center justify-center text-sm text-stone-500">
+                {t('heatmapEmpty')}
+              </p>
+            ) : (
+              <ReportsMap
+                reports={reports}
+                selectedId={null}
+                onSelect={(id) => router.push(`/reports/${id}`)}
+                className="h-full min-h-0"
+              />
+            )}
           </div>
         </section>
 

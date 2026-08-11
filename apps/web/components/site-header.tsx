@@ -100,7 +100,6 @@ export function SiteHeader() {
         </nav>
 
         <div className="hidden items-center gap-1 md:flex">
-          <LanguageSwitcher />
           {!loading && user ? (
             <>
               <NotificationBell />
@@ -118,6 +117,7 @@ export function SiteHeader() {
               </Link>
             </>
           ) : null}
+          <LanguageSwitcher />
         </div>
 
         {/* Mobile top bar: language + menu (primary actions live in bottom nav) */}

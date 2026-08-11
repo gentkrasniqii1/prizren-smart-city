@@ -328,7 +328,11 @@
     "aiAccepted": "Klasifikimi u pranua.",
     "aiUpdated": "Klasifikimi u përditësua.",
     "aiFailed": "Veprimi AI dështoi",
-    "aiMissing": "Nuk ka klasifikim AI ende (mungon çelësi, ose AI dështoi me fallback)."
+    "aiAnalyzing": "AI po analizon problemin…",
+    "aiMissing": "Nuk ka klasifikim AI ende (mungon çelësi, ose AI dështoi me fallback).",
+    "relatedHeading": "Raporte të afërta",
+    "relatedEmpty": "Nuk u gjetën raporte të tjera pranë këtij lokacioni.",
+    "relatedNearby": "Pranë"
   },
   "Account": {
     "loading": "Duke ngarkuar llogarinë…",
@@ -392,6 +396,8 @@
     "noData": "Nuk ka të dhëna",
     "ctaMap": "Shiko raportet në hartë",
     "ctaReport": "Raporto një problem",
+    "mapHeading": "Harta e problemeve",
+    "mapHint": "Pamje publike e raporteve të hapura — kliko një pikë për detaje.",
     "privacyNote": "Këto shifra janë agregate. Identiteti i qytetarëve nuk shfaqet publikisht."
   },
   "Admin": {
@@ -416,6 +422,11 @@
     "slaOnTime": "Në kohë",
     "chartHeading": "Raporte sipas kategorisë",
     "chartEmpty": "Nuk ka të dhëna për grafikun.",
+    "chartOverTime": "Raporte me kalimin e kohës",
+    "chartDepartment": "Raporte sipas departamentit",
+    "heatmapHeading": "Dendësia e problemeve",
+    "heatmapHint": "Harta e raporteve të filtruar (max 50 në tabelë).",
+    "heatmapEmpty": "Nuk ka koordinata për hartën.",
     "tableHeading": "Raporte",
     "tableSubtitle": "Ndrysho statusin dhe caktimin drejtpërdrejt nga tabela.",
     "filterStatus": "Status",

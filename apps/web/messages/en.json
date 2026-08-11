@@ -328,7 +328,11 @@
     "aiAccepted": "Classification accepted.",
     "aiUpdated": "Classification updated.",
     "aiFailed": "AI action failed",
-    "aiMissing": "No AI classification yet (missing key, or AI failed with graceful fallback)."
+    "aiAnalyzing": "AI is analyzing the problem…",
+    "aiMissing": "No AI classification yet (missing key, or AI failed with graceful fallback).",
+    "relatedHeading": "Nearby reports",
+    "relatedEmpty": "No other reports found near this location.",
+    "relatedNearby": "Nearby"
   },
   "Account": {
     "loading": "Loading account…",
@@ -392,6 +396,8 @@
     "noData": "No data",
     "ctaMap": "View reports on the map",
     "ctaReport": "Report a problem",
+    "mapHeading": "Issue map",
+    "mapHint": "Public view of open reports — click a marker for details.",
     "privacyNote": "These figures are aggregates. Citizen identity is not shown publicly."
   },
   "Admin": {
@@ -416,6 +422,11 @@
     "slaOnTime": "On time",
     "chartHeading": "Reports by category",
     "chartEmpty": "No chart data.",
+    "chartOverTime": "Reports over time",
+    "chartDepartment": "Reports by department",
+    "heatmapHeading": "Issue density",
+    "heatmapHint": "Map of filtered reports (max 50 in the table).",
+    "heatmapEmpty": "No coordinates available for the map.",
     "tableHeading": "Reports",
     "tableSubtitle": "Change status and assignment directly from the table.",
     "filterStatus": "Status",

@@ -1,15 +1,24 @@
 'use client';
 
+import dynamic from 'next/dynamic';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { useLocale, useTranslations } from 'next-intl';
-import type { TransparencyStats } from '@prizren/shared-types';
+import type { PaginatedReports, ReportDto, TransparencyStats } from '@prizren/shared-types';
 import { apiFetch } from '@/lib/api';
 import { PageContainer } from '@/components/layout/page-container';
 import { EmptyState, ErrorBanner, Skeleton, StatCard } from '@/components/ui';
 import { getStatusLabel } from '@/lib/labels';
 import type { AppLocale } from '@/i18n/request';
 import { cn } from '@/lib/utils';
+
+const ReportsMap = dynamic(() => import('@/components/reports-map').then((m) => m.ReportsMap), {
+  ssr: false,
+  loading: function MapSkeleton() {
+    return <Skeleton className="h-[min(50vh,22rem)] w-full rounded-xl" />;
+  },
+});
 
 function DistributionList({
   items,
@@ -45,7 +54,9 @@ function DistributionList({
 export function TransparencyView() {
   const t = useTranslations('Transparency');
   const locale = useLocale() as AppLocale;
+  const router = useRouter();
   const [stats, setStats] = useState<TransparencyStats | null>(null);
+  const [mapReports, setMapReports] = useState<ReportDto[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -54,11 +65,16 @@ export function TransparencyView() {
       setLoading(true);
       setError(null);
       try {
-        const data = await apiFetch<TransparencyStats>('/transparency');
+        const [data, reportsPage] = await Promise.all([
+          apiFetch<TransparencyStats>('/transparency'),
+          apiFetch<PaginatedReports>('/reports?limit=100'),
+        ]);
         setStats(data);
+        setMapReports(reportsPage.data);
       } catch {
         setError(t('loadError'));
         setStats(null);
+        setMapReports([]);
       } finally {
         setLoading(false);
       }
@@ -167,6 +183,26 @@ export function TransparencyView() {
                 <DistributionList items={categoryItems} emptyLabel={t('noData')} />
               </div>
             </section>
+
+            {mapReports.length > 0 ? (
+              <section aria-labelledby="transparency-map" className="mt-10">
+                <h2
+                  id="transparency-map"
+                  className="font-display text-lg tracking-tight text-stone-950"
+                >
+                  {t('mapHeading')}
+                </h2>
+                <p className="mt-1 text-sm text-stone-600">{t('mapHint')}</p>
+                <div className="mt-4 h-[min(50vh,22rem)] overflow-hidden rounded-xl border border-stone-200">
+                  <ReportsMap
+                    reports={mapReports}
+                    selectedId={null}
+                    onSelect={(id) => router.push(`/reports/${id}`)}
+                    className="h-full min-h-0"
+                  />
+                </div>
+              </section>
+            ) : null}
 
             <div className={cn('mt-10 flex flex-wrap gap-3')}>
               <Link
