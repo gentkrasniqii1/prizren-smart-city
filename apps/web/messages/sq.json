@@ -73,6 +73,25 @@
     "back": "Kthehu",
     "language": "Gjuha"
   },
+  "Status": {
+    "PENDING": "Në pritje",
+    "IN_REVIEW": "Në shqyrtim",
+    "ASSIGNED": "I caktuar",
+    "IN_PROGRESS": "Në progres",
+    "RESOLVED": "I zgjidhur",
+    "REJECTED": "I refuzuar"
+  },
+  "Priority": {
+    "LOW": "E ulët",
+    "MEDIUM": "Mesatare",
+    "HIGH": "E lartë",
+    "CRITICAL": "Kritike"
+  },
+  "Sla": {
+    "overdue": "Vonuar",
+    "due_soon": "Afati afër",
+    "on_time": "Në kohë"
+  },
   "NotFound": {
     "title": "Faqja nuk u gjet",
     "body": "Lidhja mund të jetë e vjetër, ose adresa e shkruar gabim.",

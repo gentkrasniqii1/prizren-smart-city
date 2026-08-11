@@ -1,23 +1,31 @@
 'use client';
 
 import type { ButtonHTMLAttributes, ReactNode } from 'react';
+import { cn } from '@/lib/utils';
 
-type Variant = 'primary' | 'secondary' | 'ghost' | 'destructive';
+type Variant = 'primary' | 'secondary' | 'ghost' | 'destructive' | 'icon';
 type Size = 'sm' | 'md' | 'lg';
 
 const variants: Record<Variant, string> = {
   primary:
-    'bg-primary text-primary-foreground hover:bg-primary-hover shadow-soft disabled:opacity-60',
+    'bg-primary text-primary-foreground hover:bg-primary-hover shadow-sm disabled:opacity-60',
   secondary:
     'border border-stone-300 bg-white text-stone-900 hover:bg-stone-50 disabled:opacity-60',
   ghost: 'text-stone-800 hover:bg-stone-100 disabled:opacity-60',
   destructive: 'bg-red-700 text-white hover:bg-red-800 disabled:opacity-60',
+  icon: 'border border-stone-300 bg-white text-stone-800 hover:bg-stone-50 disabled:opacity-60 p-0',
 };
 
 const sizes: Record<Size, string> = {
   sm: 'px-3 py-1.5 text-sm rounded-md',
   md: 'px-4 py-2.5 text-sm rounded-md',
   lg: 'px-5 py-3 text-base rounded-lg',
+};
+
+const iconSizes: Record<Size, string> = {
+  sm: 'h-8 w-8 rounded-md',
+  md: 'h-10 w-10 rounded-md',
+  lg: 'h-11 w-11 rounded-lg',
 };
 
 type Props = ButtonHTMLAttributes<HTMLButtonElement> & {
@@ -29,7 +37,7 @@ type Props = ButtonHTMLAttributes<HTMLButtonElement> & {
 export function Button({
   variant = 'primary',
   size = 'md',
-  className = '',
+  className,
   children,
   type = 'button',
   ...rest
@@ -37,7 +45,12 @@ export function Button({
   return (
     <button
       type={type}
-      className={`inline-flex items-center justify-center gap-2 font-medium transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-mosque-700 ${variants[variant]} ${sizes[size]} ${className}`}
+      className={cn(
+        'inline-flex items-center justify-center gap-2 font-medium transition duration-fast ease-product focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-mosque-700',
+        variants[variant],
+        variant === 'icon' ? iconSizes[size] : sizes[size],
+        className,
+      )}
       {...rest}
     >
       {children}

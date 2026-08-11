@@ -73,6 +73,25 @@
     "back": "Back",
     "language": "Language"
   },
+  "Status": {
+    "PENDING": "Pending",
+    "IN_REVIEW": "Under review",
+    "ASSIGNED": "Assigned",
+    "IN_PROGRESS": "In progress",
+    "RESOLVED": "Resolved",
+    "REJECTED": "Rejected"
+  },
+  "Priority": {
+    "LOW": "Low",
+    "MEDIUM": "Medium",
+    "HIGH": "High",
+    "CRITICAL": "Critical"
+  },
+  "Sla": {
+    "overdue": "Overdue",
+    "due_soon": "Due soon",
+    "on_time": "On time"
+  },
   "NotFound": {
     "title": "Page not found",
     "body": "The link may be outdated, or the address was mistyped.",
