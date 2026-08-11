@@ -207,14 +207,14 @@ export default function ReportsPage() {
   return (
     <main className="pb-2">
       <PageContainer className="py-5 sm:py-6">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-          <div>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+          <div className="min-w-0">
             <h1 className="font-display text-h1 tracking-tight text-stone-950 sm:text-3xl">
               {t('title')}
             </h1>
             <p className="mt-1.5 text-sm text-stone-600 sm:text-base">{t('subtitle')}</p>
           </div>
-          <Link href="/report" className="w-full sm:w-auto">
+          <Link href="/report" className="hidden sm:block sm:w-auto">
             <Button size="sm" className="w-full sm:w-auto">
               {t('reportCta')}
             </Button>
@@ -251,7 +251,10 @@ export default function ReportsPage() {
               className="h-full min-h-0"
             />
             {selected ? (
-              <div className="absolute inset-y-3 right-3 z-10 w-[min(100%,22rem)] overflow-hidden rounded-lg border border-stone-200">
+              <div
+                key={selected.id}
+                className="motion-slide-in-right absolute inset-y-3 right-3 z-10 w-[min(100%,22rem)] overflow-hidden rounded-lg border border-stone-200"
+              >
                 <ReportDrawer report={selected} onClose={() => setSelectedId(null)} />
               </div>
             ) : null}
@@ -263,7 +266,7 @@ export default function ReportsPage() {
       <div className="pb-bottom-nav lg:hidden">
         <div
           className={cn(
-            'relative overflow-hidden border-y border-stone-200 bg-stone-100',
+            'relative overflow-hidden border-y border-stone-200 bg-stone-100 transition-[height] duration-slow ease-product',
             mobileSheet === 'list' ? 'h-[28svh]' : 'h-[42svh]',
           )}
         >
@@ -290,14 +293,17 @@ export default function ReportsPage() {
         </div>
 
         {selected ? (
-          <div className="fixed inset-0 z-50 flex flex-col justify-end bg-stone-950/40 p-0 sm:p-4">
+          <div className="motion-fade-in fixed inset-0 z-50 flex flex-col justify-end bg-stone-950/40 p-0 sm:p-4">
             <button
               type="button"
               className="absolute inset-0 cursor-default"
               aria-label={t('closeDrawer')}
               onClick={() => setSelectedId(null)}
             />
-            <div className="relative z-10 mx-auto h-[min(78svh,36rem)] w-full max-w-lg overflow-hidden rounded-t-2xl border border-stone-200 pb-[env(safe-area-inset-bottom)] sm:rounded-xl sm:pb-0">
+            <div
+              key={selected.id}
+              className="motion-slide-up relative z-10 mx-auto h-[min(78svh,36rem)] w-full max-w-lg overflow-hidden rounded-t-2xl border border-stone-200 pb-[env(safe-area-inset-bottom)] sm:rounded-xl sm:pb-0"
+            >
               <ReportDrawer report={selected} onClose={() => setSelectedId(null)} modal />
             </div>
           </div>

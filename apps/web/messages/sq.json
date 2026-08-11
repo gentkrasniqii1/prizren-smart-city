@@ -165,7 +165,11 @@
     "geoUnsupported": "Geolocation nuk mbështetet në këtë shfletues",
     "nearbyFailed": "Kërkimi “pranë meje” dështoi",
     "geoDenied": "Nuk u mor GPS. Lejo aksesin te lokacioni.",
-    "mapAria": "Hartë interaktive e raporteve"
+    "mapAria": "Hartë interaktive e raporteve",
+    "showFilters": "Filtra",
+    "hideFilters": "Fshih filtrat",
+    "clearFilters": "Pastro",
+    "filtersHeading": "Filtra"
   },
   "Common": {
     "loading": "Duke ngarkuar…",
