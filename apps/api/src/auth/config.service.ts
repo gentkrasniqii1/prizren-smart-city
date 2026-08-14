@@ -18,12 +18,26 @@ export class ConfigService {
     return Number(process.env.JWT_REFRESH_EXPIRES_DAYS ?? 7);
   }
 
+  get rememberMeExpiresDays(): number {
+    return Number(process.env.JWT_REMEMBER_EXPIRES_DAYS ?? 30);
+  }
+
+  get encryptionKey(): string {
+    return process.env.AUTH_ENCRYPTION_KEY ?? this.jwtAccessSecret;
+  }
+
   get isProduction(): boolean {
     return process.env.NODE_ENV === 'production';
   }
 
   get corsOrigin(): string {
     return process.env.CORS_ORIGIN ?? 'http://localhost:3000';
+  }
+
+  get webOrigin(): string {
+    return (
+      process.env.WEB_ORIGIN ?? this.corsOrigin.split(',')[0]?.trim() ?? 'http://localhost:3000'
+    );
   }
 
   get googleClientId(): string {
@@ -42,9 +56,79 @@ export class ConfigService {
     return Boolean(this.googleClientId && this.googleClientSecret);
   }
 
-  get webOrigin(): string {
-    return (
-      process.env.WEB_ORIGIN ?? this.corsOrigin.split(',')[0]?.trim() ?? 'http://localhost:3000'
+  get appleClientId(): string {
+    return process.env.APPLE_CLIENT_ID ?? '';
+  }
+
+  get appleTeamId(): string {
+    return process.env.APPLE_TEAM_ID ?? '';
+  }
+
+  get appleKeyId(): string {
+    return process.env.APPLE_KEY_ID ?? '';
+  }
+
+  get applePrivateKey(): string {
+    return (process.env.APPLE_PRIVATE_KEY ?? '').replace(/\\n/g, '\n');
+  }
+
+  get appleCallbackUrl(): string {
+    return process.env.APPLE_CALLBACK_URL ?? 'http://localhost:3001/auth/apple/callback';
+  }
+
+  get appleAuthEnabled(): boolean {
+    return Boolean(
+      this.appleClientId && this.appleTeamId && this.appleKeyId && this.applePrivateKey,
     );
+  }
+
+  get facebookAppId(): string {
+    return process.env.FACEBOOK_APP_ID ?? '';
+  }
+
+  get facebookAppSecret(): string {
+    return process.env.FACEBOOK_APP_SECRET ?? '';
+  }
+
+  get facebookCallbackUrl(): string {
+    return process.env.FACEBOOK_CALLBACK_URL ?? 'http://localhost:3001/auth/facebook/callback';
+  }
+
+  get facebookAuthEnabled(): boolean {
+    return Boolean(this.facebookAppId && this.facebookAppSecret);
+  }
+
+  get smtpHost(): string {
+    return process.env.SMTP_HOST ?? '';
+  }
+
+  get smtpPort(): number {
+    return Number(process.env.SMTP_PORT ?? 587);
+  }
+
+  get smtpSecure(): boolean {
+    return process.env.SMTP_SECURE === 'true';
+  }
+
+  get smtpUser(): string {
+    return process.env.SMTP_USER ?? '';
+  }
+
+  get smtpPass(): string {
+    return process.env.SMTP_PASS ?? '';
+  }
+
+  get mailFrom(): string {
+    const name = process.env.MAIL_FROM_NAME ?? 'Prizren Smart City';
+    const email = process.env.MAIL_FROM ?? 'noreply@prizren.city';
+    return `${name} <${email}>`;
+  }
+
+  get requireAdmin2fa(): boolean {
+    return process.env.REQUIRE_ADMIN_2FA === 'true';
+  }
+
+  get oauthStateCookieName(): string {
+    return 'oauth_state';
   }
 }

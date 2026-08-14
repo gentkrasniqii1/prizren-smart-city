@@ -13,8 +13,10 @@ import {
 import type {
   AuthResponse,
   LoginRequest,
+  LoginResponse,
   PublicUser,
   RegisterRequest,
+  RegisterResponse,
 } from '@prizren/shared-types';
 import {
   apiFetch,
@@ -22,15 +24,19 @@ import {
   isAccessTokenExpiringSoon,
   refreshAccessToken,
 } from '@/lib/api';
-import { getAccessToken, setAccessToken } from '@/lib/auth-token';
+import { getAccessToken, hasSessionHint, setAccessToken, setSessionHint } from '@/lib/auth-token';
 
 type AuthContextValue = {
   user: PublicUser | null;
   loading: boolean;
-  login: (payload: LoginRequest) => Promise<void>;
-  register: (payload: RegisterRequest) => Promise<void>;
+  login: (
+    payload: LoginRequest,
+  ) => Promise<{ requiresTwoFactor: true; challengeToken: string } | void>;
+  register: (payload: RegisterRequest) => Promise<RegisterResponse>;
+  completeTwoFactor: (challengeToken: string, code: string) => Promise<void>;
   logout: () => Promise<void>;
-  refreshSession: () => Promise<boolean>;
+  /** `force` refreshes even without a stored session hint (OAuth callback). */
+  refreshSession: (options?: { force?: boolean }) => Promise<boolean>;
   /** Refresh access token if missing/near expiry; keeps user logged in when possible. */
   ensureSession: () => Promise<boolean>;
 };
@@ -88,24 +94,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return me;
   }, [scheduleProactiveRefresh]);
 
-  const refreshSession = useCallback(async () => {
-    // Always go through the shared single-flight refresh (avoids cookie rotation races)
-    const accessToken = await refreshAccessToken();
-    if (!accessToken) {
-      setUser(null);
-      clearProactiveRefresh();
-      return false;
-    }
-    try {
-      await loadMe();
-      return true;
-    } catch {
-      setAccessToken(null);
-      setUser(null);
-      clearProactiveRefresh();
-      return false;
-    }
-  }, [loadMe, clearProactiveRefresh]);
+  const refreshSession = useCallback(
+    async ({ force = false } = {}) => {
+      // Always go through the shared single-flight refresh (avoids cookie rotation races)
+      const accessToken = await refreshAccessToken({ force });
+      if (!accessToken) {
+        setUser(null);
+        clearProactiveRefresh();
+        return false;
+      }
+      try {
+        await loadMe();
+        return true;
+      } catch {
+        setAccessToken(null);
+        setUser(null);
+        clearProactiveRefresh();
+        return false;
+      }
+    },
+    [loadMe, clearProactiveRefresh],
+  );
 
   const ensureSession = useCallback(async () => {
     const token = await ensureAccessToken();
@@ -131,6 +140,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [user, loadMe, scheduleProactiveRefresh, clearProactiveRefresh]);
 
   useEffect(() => {
+    // Anonymous visitors have no session to restore — public pages must not call /auth/refresh.
+    if (!hasSessionHint()) {
+      setLoading(false);
+      return;
+    }
     let cancelled = false;
     void (async () => {
       await refreshSession();
@@ -146,31 +160,45 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const login = useCallback(
     async (payload: LoginRequest) => {
-      const data = await apiFetch<AuthResponse>('/auth/login', {
+      const data = await apiFetch<LoginResponse>('/auth/login', {
         method: 'POST',
         body: payload,
         skipRefresh: true,
       });
+      if ('requiresTwoFactor' in data && data.requiresTwoFactor) {
+        return { requiresTwoFactor: true as const, challengeToken: data.challengeToken };
+      }
+      const auth = data as AuthResponse;
+      setAccessToken(auth.accessToken);
+      setSessionHint(true);
+      setUser(auth.user);
+      scheduleProactiveRefresh();
+    },
+    [scheduleProactiveRefresh],
+  );
+
+  const completeTwoFactor = useCallback(
+    async (challengeToken: string, code: string) => {
+      const data = await apiFetch<AuthResponse>('/auth/2fa/verify', {
+        method: 'POST',
+        body: { challengeToken, code },
+        skipRefresh: true,
+      });
       setAccessToken(data.accessToken);
+      setSessionHint(true);
       setUser(data.user);
       scheduleProactiveRefresh();
     },
     [scheduleProactiveRefresh],
   );
 
-  const register = useCallback(
-    async (payload: RegisterRequest) => {
-      const data = await apiFetch<AuthResponse>('/auth/register', {
-        method: 'POST',
-        body: payload,
-        skipRefresh: true,
-      });
-      setAccessToken(data.accessToken);
-      setUser(data.user);
-      scheduleProactiveRefresh();
-    },
-    [scheduleProactiveRefresh],
-  );
+  const register = useCallback(async (payload: RegisterRequest) => {
+    return apiFetch<RegisterResponse>('/auth/register', {
+      method: 'POST',
+      body: payload,
+      skipRefresh: true,
+    });
+  }, []);
 
   const logout = useCallback(async () => {
     clearProactiveRefresh();
@@ -184,6 +212,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     } finally {
       setAccessToken(null);
+      setSessionHint(false);
       setUser(null);
     }
   }, [clearProactiveRefresh]);
@@ -194,11 +223,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       loading,
       login,
       register,
+      completeTwoFactor,
       logout,
       refreshSession,
       ensureSession,
     }),
-    [user, loading, login, register, logout, refreshSession, ensureSession],
+    [user, loading, login, register, completeTwoFactor, logout, refreshSession, ensureSession],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

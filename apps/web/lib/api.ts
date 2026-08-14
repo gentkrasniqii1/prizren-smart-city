@@ -1,4 +1,4 @@
-import { getAccessToken, setAccessToken } from './auth-token';
+import { getAccessToken, hasSessionHint, setAccessToken, setSessionHint } from './auth-token';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001';
 
@@ -64,8 +64,13 @@ export function isAccessTokenExpiringSoon(
 /**
  * Single-flight refresh using the httpOnly cookie.
  * All callers (apiFetch 401, AuthProvider, wizard pre-submit) must use this.
+ * Skipped without a session hint so anonymous visitors never hit /auth/refresh;
+ * pass `force` right after an OAuth redirect, where the cookie exists but the hint does not.
  */
-export async function refreshAccessToken(): Promise<string | null> {
+export async function refreshAccessToken({ force = false } = {}): Promise<string | null> {
+  if (!force && !hasSessionHint()) {
+    return null;
+  }
   if (!refreshPromise) {
     refreshPromise = (async () => {
       let res: Response;
@@ -75,15 +80,18 @@ export async function refreshAccessToken(): Promise<string | null> {
           credentials: 'include',
         });
       } catch {
+        // Keep the hint: a network failure says nothing about the session.
         setAccessToken(null);
         return null;
       }
       if (!res.ok) {
         setAccessToken(null);
+        setSessionHint(false);
         return null;
       }
       const data = (await res.json()) as { accessToken: string };
       setAccessToken(data.accessToken);
+      setSessionHint(true);
       return data.accessToken;
     })().finally(() => {
       refreshPromise = null;
@@ -128,8 +136,6 @@ export async function apiFetch<T>(path: string, options: RequestOptions = {}): P
     let token = getAccessToken();
     if ((!token || isAccessTokenExpiringSoon(token)) && !skipRefresh) {
       token = await refreshAccessToken();
-    } else if (!token && skipRefresh) {
-      token = getAccessToken();
     }
     if (token) {
       finalHeaders.set('Authorization', `Bearer ${token}`);
@@ -152,7 +158,7 @@ export async function apiFetch<T>(path: string, options: RequestOptions = {}): P
     throw err;
   }
 
-  if (response.status === 401 && auth && !skipRefresh) {
+  if (response.status === 401 && auth && !skipRefresh && hasSessionHint()) {
     const nextToken = await refreshAccessToken();
     if (nextToken) {
       return apiFetch<T>(path, { ...options, skipRefresh: true, networkRetries: 0 });
