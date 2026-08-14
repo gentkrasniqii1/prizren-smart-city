@@ -1,4 +1,5 @@
-import { IsEmail, IsOptional, IsString, MinLength, MaxLength } from 'class-validator';
+import { IsBoolean, IsEmail, IsOptional, IsString, MaxLength, MinLength } from 'class-validator';
+import { Transform } from 'class-transformer';
 
 export class RegisterDto {
   @IsEmail()
@@ -11,8 +12,22 @@ export class RegisterDto {
 
   @IsString()
   @MinLength(2)
-  @MaxLength(120)
-  name!: string;
+  @MaxLength(80)
+  firstName!: string;
+
+  @IsString()
+  @MinLength(2)
+  @MaxLength(80)
+  lastName!: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(40)
+  phone?: string;
+
+  @Transform(({ value }) => value === true || value === 'true')
+  @IsBoolean()
+  acceptedTerms!: boolean;
 
   /** Honeypot — must stay empty. */
   @IsOptional()

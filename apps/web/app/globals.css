@@ -4,6 +4,7 @@
 
 /**
  * Design tokens — keep in sync with lib/design-tokens.ts and tailwind.config.ts
+ * Light + dark (class="dark" via next-themes). Brand: stone / mosque / river.
  */
 :root {
   /* Neutrals (stone) */
@@ -47,16 +48,26 @@
 
   --background: var(--color-stone-50);
   --foreground: var(--color-stone-950);
+  --card: #ffffff;
+  --card-foreground: var(--color-stone-950);
+  --popover: #ffffff;
+  --popover-foreground: var(--color-stone-950);
   --primary: var(--color-mosque-600);
   --primary-foreground: var(--color-stone-50);
   --primary-hover: var(--color-mosque-700);
+  --secondary: var(--color-stone-100);
+  --secondary-foreground: var(--color-stone-900);
   --accent: var(--color-river-500);
   --accent-foreground: var(--color-stone-50);
   --muted: var(--color-stone-100);
   --muted-foreground: var(--color-stone-600);
+  --destructive: #b91c1c;
+  --destructive-foreground: #fef2f2;
   --border: var(--color-stone-200);
+  --input: var(--color-stone-200);
   --ring: var(--color-mosque-700);
 
+  --radius: 0.625rem;
   --radius-sm: 0.375rem;
   --radius-md: 0.625rem;
   --radius-lg: 1rem;
@@ -70,6 +81,59 @@
   --motion-normal: 200ms;
   --motion-slow: 320ms;
   --motion-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.dark {
+  --background: #12161c;
+  --foreground: #f3efe8;
+  --card: #1a2029;
+  --card-foreground: #f3efe8;
+  --popover: #1a2029;
+  --popover-foreground: #f3efe8;
+  --primary: #6798cf;
+  --primary-foreground: #0f1720;
+  --primary-hover: #98bbe0;
+  --secondary: #232a35;
+  --secondary-foreground: #f3efe8;
+  --accent: #56b7a7;
+  --accent-foreground: #0f2725;
+  --muted: #232a35;
+  --muted-foreground: #b8a48a;
+  --destructive: #f87171;
+  --destructive-foreground: #450a0a;
+  --border: #2e3642;
+  --input: #2e3642;
+  --ring: #98bbe0;
+
+  --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.35);
+  --shadow-md: 0 8px 24px rgb(0 0 0 / 0.4);
+  --shadow-lg: 0 18px 48px rgb(0 0 0 / 0.5);
+
+  /* Remap stone scale for dark surfaces (keeps existing class usage readable) */
+  --color-stone-50: #12161c;
+  --color-stone-100: #1a2029;
+  --color-stone-200: #2e3642;
+  --color-stone-300: #3d4654;
+  --color-stone-400: #6b7280;
+  --color-stone-500: #9ca3af;
+  --color-stone-600: #b8a48a;
+  --color-stone-700: #d4c5b0;
+  --color-stone-800: #e6ddd0;
+  --color-stone-900: #f3efe8;
+  --color-stone-950: #faf8f5;
+
+  --color-mosque-50: #19253a;
+  --color-mosque-100: #1e2f47;
+  --color-mosque-700: #98bbe0;
+  --color-mosque-800: #c2d7ed;
+  --color-mosque-900: #dde9f5;
+  --color-mosque-950: #f0f5fb;
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
 }
 
 html {

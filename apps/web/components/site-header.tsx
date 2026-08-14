@@ -11,6 +11,7 @@ import { LanguageSwitcher } from '@/components/language-switcher';
 import { NotificationBell } from '@/components/layout/notification-bell';
 import { PageContainer } from '@/components/layout/page-container';
 import { UserMenu } from '@/components/layout/user-menu';
+import { ThemeToggle } from '@/components/theme-toggle';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
@@ -18,8 +19,8 @@ function navLinkClass(active: boolean) {
   return cn(
     'rounded-md px-2.5 py-1.5 text-sm font-medium transition',
     active
-      ? 'bg-mosque-100 text-mosque-900'
-      : 'text-stone-700 hover:bg-stone-100 hover:text-stone-950',
+      ? 'bg-muted text-foreground'
+      : 'text-muted-foreground hover:bg-muted hover:text-foreground',
   );
 }
 
@@ -69,7 +70,7 @@ export function SiteHeader() {
   ];
 
   return (
-    <header className="sticky top-0 z-40 border-b border-stone-200/80 bg-stone-50/90 backdrop-blur-md">
+    <header className="sticky top-0 z-40 border-b border-border/80 bg-background/90 backdrop-blur-md">
       <a
         href="#main-content"
         className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded-md focus:bg-mosque-800 focus:px-3 focus:py-2 focus:text-sm focus:text-white"
@@ -100,6 +101,7 @@ export function SiteHeader() {
         </nav>
 
         <div className="hidden items-center gap-1 md:flex">
+          <ThemeToggle />
           {!loading && user ? (
             <>
               <NotificationBell />
@@ -123,6 +125,7 @@ export function SiteHeader() {
         {/* Mobile top bar: language + menu (primary actions live in bottom nav) */}
         <div className="flex items-center gap-1 md:hidden">
           {!loading && user ? <NotificationBell /> : null}
+          <ThemeToggle />
           <LanguageSwitcher />
           <Button
             type="button"
@@ -145,7 +148,7 @@ export function SiteHeader() {
       {open ? (
         <nav
           id={menuId}
-          className="border-t border-stone-200 bg-stone-50 md:hidden"
+          className="border-t border-border bg-muted md:hidden"
           aria-label={t('mainNav')}
         >
           <PageContainer className="flex flex-col gap-1 py-3 pb-bottom-nav">
@@ -181,7 +184,7 @@ export function SiteHeader() {
               </div>
             ) : null}
             {!loading && user ? (
-              <div className="mt-2 border-t border-stone-200 pt-2">
+              <div className="mt-2 border-t border-border pt-2">
                 <UserMenu />
               </div>
             ) : null}

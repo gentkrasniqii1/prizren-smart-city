@@ -34,7 +34,7 @@ export function ReportCard({
     <>
       <div
         className={cn(
-          'relative shrink-0 overflow-hidden bg-stone-200',
+          'relative shrink-0 overflow-hidden bg-muted',
           compact ? 'h-16 w-16 rounded-md' : 'aspect-[16/10] w-full',
         )}
       >
@@ -46,7 +46,7 @@ export function ReportCard({
             sizes={compact ? '64px' : '(max-width: 768px) 100vw, 360px'}
           />
         ) : (
-          <div className="flex h-full items-center justify-center text-[10px] text-stone-500">
+          <div className="flex h-full items-center justify-center text-[10px] text-muted-foreground">
             {t('noPhoto')}
           </div>
         )}
@@ -64,13 +64,13 @@ export function ReportCard({
         </div>
         <p
           className={cn(
-            'mt-1.5 font-medium text-stone-900',
+            'mt-1.5 font-medium text-foreground',
             compact ? 'line-clamp-2 text-sm' : 'line-clamp-2 text-sm',
           )}
         >
           {excerpt(report.description, compact ? 80 : 120)}
         </p>
-        <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-stone-500">
+        <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
           {report.categoryName ? <span>{report.categoryName}</span> : null}
           <span className="inline-flex items-center gap-1">
             <MapPin className="h-3 w-3" aria-hidden />
@@ -91,8 +91,8 @@ export function ReportCard({
   );
 
   const className = cn(
-    'w-full border-b border-stone-100 text-left transition duration-fast ease-product',
-    selected ? 'bg-mosque-50' : 'bg-white hover:bg-stone-50',
+    'w-full border-b border-border text-left transition duration-fast ease-product',
+    selected ? 'bg-mosque-50 dark:bg-mosque-900/30' : 'bg-card hover:bg-muted/60',
     compact ? 'flex gap-3 p-3' : 'block',
   );
 

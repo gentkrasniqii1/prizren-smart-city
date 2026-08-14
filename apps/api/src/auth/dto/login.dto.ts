@@ -1,4 +1,5 @@
-import { IsEmail, IsOptional, IsString, MinLength, MaxLength } from 'class-validator';
+import { IsBoolean, IsEmail, IsOptional, IsString, MaxLength, MinLength } from 'class-validator';
+import { Transform } from 'class-transformer';
 
 export class LoginDto {
   @IsEmail()
@@ -8,6 +9,11 @@ export class LoginDto {
   @MinLength(8)
   @MaxLength(128)
   password!: string;
+
+  @IsOptional()
+  @Transform(({ value }) => value === true || value === 'true')
+  @IsBoolean()
+  rememberMe?: boolean;
 
   /** Honeypot — must stay empty. */
   @IsOptional()

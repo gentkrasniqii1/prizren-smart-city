@@ -1,5 +1,6 @@
 'use client';
 
+import { Loader2 } from 'lucide-react';
 import { forwardRef, type ButtonHTMLAttributes, type ReactNode } from 'react';
 import { cn } from '@/lib/utils';
 
@@ -8,12 +9,12 @@ type Size = 'sm' | 'md' | 'lg';
 
 const variants: Record<Variant, string> = {
   primary:
-    'bg-primary text-primary-foreground hover:bg-primary-hover shadow-sm disabled:opacity-60',
+    'bg-primary text-primary-foreground hover:bg-primary-hover active:brightness-95 shadow-sm disabled:opacity-60',
   secondary:
-    'border border-stone-300 bg-white text-stone-900 hover:bg-stone-50 disabled:opacity-60',
-  ghost: 'text-stone-800 hover:bg-stone-100 disabled:opacity-60',
-  destructive: 'bg-red-700 text-white hover:bg-red-800 disabled:opacity-60',
-  icon: 'border border-stone-300 bg-white text-stone-800 hover:bg-stone-50 disabled:opacity-60 p-0',
+    'border border-border bg-card text-foreground hover:bg-muted active:bg-muted/80 disabled:opacity-60',
+  ghost: 'text-foreground hover:bg-muted active:bg-muted/80 disabled:opacity-60',
+  destructive: 'bg-destructive text-destructive-foreground hover:opacity-90 disabled:opacity-60',
+  icon: 'border border-border bg-card text-foreground hover:bg-muted disabled:opacity-60 p-0',
 };
 
 const sizes: Record<Size, string> = {
@@ -31,25 +32,38 @@ const iconSizes: Record<Size, string> = {
 type Props = ButtonHTMLAttributes<HTMLButtonElement> & {
   variant?: Variant;
   size?: Size;
+  loading?: boolean;
   children: ReactNode;
 };
 
 export const Button = forwardRef<HTMLButtonElement, Props>(function Button(
-  { variant = 'primary', size = 'md', className, children, type = 'button', ...rest },
+  {
+    variant = 'primary',
+    size = 'md',
+    loading = false,
+    className,
+    children,
+    type = 'button',
+    disabled,
+    ...rest
+  },
   ref,
 ) {
   return (
     <button
       ref={ref}
       type={type}
+      disabled={disabled || loading}
+      aria-busy={loading || undefined}
       className={cn(
-        'inline-flex items-center justify-center gap-2 font-medium transition duration-fast ease-product focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-mosque-700',
+        'inline-flex items-center justify-center gap-2 font-medium transition duration-fast ease-product focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring',
         variants[variant],
         variant === 'icon' ? iconSizes[size] : sizes[size],
         className,
       )}
       {...rest}
     >
+      {loading ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : null}
       {children}
     </button>
   );

@@ -1,24 +1,30 @@
 import {
+  Body,
   Controller,
   Get,
   HttpCode,
   HttpStatus,
   Post,
+  Query,
   Req,
   Res,
-  Body,
   UseGuards,
 } from '@nestjs/common';
-import { AuthGuard } from '@nestjs/passport';
 import { Throttle } from '@nestjs/throttler';
-import { Request, Response } from 'express';
-import type { AuthResponse } from '@prizren/shared-types';
+import { CookieOptions, Request, Response } from 'express';
 import { AuthService } from './auth.service';
 import { ConfigService } from './config.service';
+import { OauthService, type OAuthProvider } from './oauth.service';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
+import { ForgotPasswordDto } from './dto/forgot-password.dto';
+import { ResetPasswordDto } from './dto/reset-password.dto';
+import { VerifyEmailDto } from './dto/verify-email.dto';
+import { ResendVerificationDto } from './dto/resend-verification.dto';
+import { TwoFactorLoginDto } from './dto/two-factor.dto';
+import { TotpCodeDto } from './dto/totp-code.dto';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
-import { GoogleEnabledGuard } from './guards/google-enabled.guard';
+import { CurrentUser, AuthUser } from './decorators/current-user.decorator';
 import { rejectIfHoneypotFilled } from '../common/honeypot';
 
 @Controller('auth')
@@ -26,15 +32,19 @@ export class AuthController {
   constructor(
     private readonly authService: AuthService,
     private readonly config: ConfigService,
+    private readonly oauth: OauthService,
   ) {}
+
+  @Get('providers')
+  providers() {
+    return this.oauth.providersStatus();
+  }
 
   @Post('register')
   @Throttle({ default: { limit: 5, ttl: 60_000 } })
-  async register(@Body() dto: RegisterDto, @Res({ passthrough: true }) res: Response) {
+  async register(@Body() dto: RegisterDto) {
     rejectIfHoneypotFilled(dto.website);
-    const { auth, refreshToken } = await this.authService.register(dto);
-    this.setRefreshCookie(res, refreshToken);
-    return auth;
+    return this.authService.register(dto);
   }
 
   @Post('login')
@@ -42,9 +52,139 @@ export class AuthController {
   @Throttle({ default: { limit: 5, ttl: 60_000 } })
   async login(@Body() dto: LoginDto, @Res({ passthrough: true }) res: Response) {
     rejectIfHoneypotFilled(dto.website);
-    const { auth, refreshToken } = await this.authService.login(dto);
-    this.setRefreshCookie(res, refreshToken);
-    return auth;
+    const result = await this.authService.login(dto);
+    if (result.kind === '2fa') {
+      return { requiresTwoFactor: true, challengeToken: result.challengeToken };
+    }
+    this.setRefreshCookie(res, result.refreshToken, result.refreshDays);
+    return result.auth;
+  }
+
+  @Post('2fa/verify')
+  @HttpCode(HttpStatus.OK)
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
+  async verifyTwoFactor(@Body() dto: TwoFactorLoginDto, @Res({ passthrough: true }) res: Response) {
+    const result = await this.authService.verifyTwoFactorLogin(dto.challengeToken, dto.code);
+    this.setRefreshCookie(res, result.refreshToken, result.refreshDays);
+    return result.auth;
+  }
+
+  @Post('2fa/setup')
+  @UseGuards(JwtAuthGuard)
+  startTotp(@CurrentUser() user: AuthUser) {
+    return this.authService.startTotpSetup(user.id);
+  }
+
+  @Post('2fa/confirm')
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(JwtAuthGuard)
+  confirmTotp(@CurrentUser() user: AuthUser, @Body() dto: TotpCodeDto) {
+    return this.authService.confirmTotpSetup(user.id, dto.code);
+  }
+
+  @Post('2fa/disable')
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(JwtAuthGuard)
+  disableTotp(@CurrentUser() user: AuthUser, @Body() dto: TotpCodeDto) {
+    return this.authService.disableTotp(user.id, dto.code);
+  }
+
+  @Post('forgot-password')
+  @HttpCode(HttpStatus.OK)
+  @Throttle({ default: { limit: 5, ttl: 60_000 } })
+  async forgotPassword(@Body() dto: ForgotPasswordDto) {
+    rejectIfHoneypotFilled(dto.website);
+    return this.authService.forgotPassword(dto.email);
+  }
+
+  @Post('reset-password')
+  @HttpCode(HttpStatus.OK)
+  @Throttle({ default: { limit: 5, ttl: 60_000 } })
+  resetPassword(@Body() dto: ResetPasswordDto) {
+    return this.authService.resetPassword(dto.token, dto.password);
+  }
+
+  @Post('verify-email')
+  @HttpCode(HttpStatus.OK)
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
+  async verifyEmail(@Body() dto: VerifyEmailDto, @Res({ passthrough: true }) res: Response) {
+    const result = await this.authService.verifyEmail(dto.token);
+    this.setRefreshCookie(res, result.refreshToken, result.refreshDays);
+    return result.auth;
+  }
+
+  @Post('resend-verification')
+  @HttpCode(HttpStatus.OK)
+  @Throttle({ default: { limit: 3, ttl: 60_000 } })
+  async resendVerification(@Body() dto: ResendVerificationDto) {
+    rejectIfHoneypotFilled(dto.website);
+    return this.authService.requestEmailVerification(dto.email);
+  }
+
+  @Get('google')
+  @Throttle({ default: { limit: 20, ttl: 60_000 } })
+  startGoogle(@Res() res: Response) {
+    return this.startOauth(res, 'google');
+  }
+
+  @Get('google/callback')
+  async googleCallback(
+    @Query('code') code: string | undefined,
+    @Query('state') state: string | undefined,
+    @Query('error') error: string | undefined,
+    @Req() req: Request,
+    @Res() res: Response,
+  ) {
+    return this.finishOauth(res, req, 'google', { code, state, error });
+  }
+
+  @Get('apple')
+  @Throttle({ default: { limit: 20, ttl: 60_000 } })
+  startApple(@Res() res: Response) {
+    return this.startOauth(res, 'apple');
+  }
+
+  @Post('apple/callback')
+  async appleCallbackPost(
+    @Body()
+    body: { code?: string; state?: string; error?: string; user?: string; id_token?: string },
+    @Req() req: Request,
+    @Res() res: Response,
+  ) {
+    return this.finishOauth(res, req, 'apple', {
+      code: body.code,
+      state: body.state,
+      error: body.error,
+      user: body.user,
+    });
+  }
+
+  @Get('apple/callback')
+  async appleCallbackGet(
+    @Query('code') code: string | undefined,
+    @Query('state') state: string | undefined,
+    @Query('error') error: string | undefined,
+    @Req() req: Request,
+    @Res() res: Response,
+  ) {
+    return this.finishOauth(res, req, 'apple', { code, state, error });
+  }
+
+  @Get('facebook')
+  @Throttle({ default: { limit: 20, ttl: 60_000 } })
+  startFacebook(@Res() res: Response) {
+    return this.startOauth(res, 'facebook');
+  }
+
+  @Get('facebook/callback')
+  async facebookCallback(
+    @Query('code') code: string | undefined,
+    @Query('state') state: string | undefined,
+    @Query('error') error: string | undefined,
+    @Req() req: Request,
+    @Res() res: Response,
+  ) {
+    return this.finishOauth(res, req, 'facebook', { code, state, error });
   }
 
   @Get('google/status')
@@ -52,30 +192,12 @@ export class AuthController {
     return { enabled: this.config.googleAuthEnabled };
   }
 
-  @Get('google')
-  @Throttle({ default: { limit: 20, ttl: 60_000 } })
-  @UseGuards(GoogleEnabledGuard, AuthGuard('google'))
-  googleAuth() {
-    // Passport redirects to Google
-  }
-
-  @Get('google/callback')
-  @UseGuards(GoogleEnabledGuard, AuthGuard('google'))
-  googleCallback(
-    @Req() req: Request & { user: { auth: AuthResponse; refreshToken: string } },
-    @Res() res: Response,
-  ) {
-    const session = req.user;
-    this.setRefreshCookie(res, session.refreshToken);
-    return res.redirect(`${this.config.webOrigin}/auth/callback`);
-  }
-
   @Post('refresh')
   @HttpCode(HttpStatus.OK)
   async refresh(@Req() req: Request, @Res({ passthrough: true }) res: Response) {
     const raw = req.cookies?.[this.config.refreshCookieName] as string | undefined;
     const { accessToken, refreshToken } = await this.authService.refresh(raw);
-    this.setRefreshCookie(res, refreshToken);
+    this.setRefreshCookie(res, refreshToken, this.config.refreshExpiresDays);
     return { accessToken };
   }
 
@@ -89,8 +211,75 @@ export class AuthController {
     return { ok: true };
   }
 
-  private setRefreshCookie(res: Response, token: string) {
-    const maxAgeMs = this.config.refreshExpiresDays * 24 * 60 * 60 * 1000;
+  private startOauth(res: Response, provider: OAuthProvider) {
+    this.oauth.assertEnabled(provider);
+    const { state, nonce } = this.oauth.buildState(provider);
+    res.cookie(this.config.oauthStateCookieName, state, this.oauthCookieOptions());
+    return res.redirect(this.oauth.authorizationUrl(provider, state, nonce));
+  }
+
+  private async finishOauth(
+    res: Response,
+    req: Request,
+    provider: OAuthProvider,
+    payload: { code?: string; state?: string; error?: string; user?: string },
+  ) {
+    const loginUrl = `${this.config.webOrigin}/login`;
+    if (payload.error) {
+      return res.redirect(`${loginUrl}?oauth_error=cancelled`);
+    }
+    const cookieState = req.cookies?.[this.config.oauthStateCookieName] as string | undefined;
+    res.clearCookie(this.config.oauthStateCookieName, { path: '/' });
+    if (!payload.state || !cookieState || payload.state !== cookieState) {
+      return res.redirect(`${loginUrl}?oauth_error=state`);
+    }
+    const parsed = this.oauth.parseState(payload.state);
+    if (!parsed || parsed.provider !== provider) {
+      return res.redirect(`${loginUrl}?oauth_error=state`);
+    }
+    if (!payload.code) {
+      return res.redirect(`${loginUrl}?oauth_error=missing_code`);
+    }
+
+    try {
+      const profile =
+        provider === 'google'
+          ? await this.oauth.exchangeGoogle(payload.code)
+          : provider === 'apple'
+            ? await this.oauth.exchangeApple(payload.code, parsed.nonce, payload.user)
+            : await this.oauth.exchangeFacebook(payload.code);
+
+      const session = await this.authService.loginWithOAuth(profile);
+      this.setRefreshCookie(res, session.refreshToken, session.refreshDays);
+      return res.redirect(`${this.config.webOrigin}/auth/callback`);
+    } catch (err) {
+      const code = this.oauthErrorCode(err);
+      return res.redirect(`${loginUrl}?oauth_error=${code}`);
+    }
+  }
+
+  private oauthErrorCode(err: unknown): string {
+    const message =
+      err && typeof err === 'object' && 'message' in err
+        ? String((err as { message: string }).message)
+        : '';
+    if (message.includes('ACCOUNT_EXISTS_PASSWORD')) return 'account_exists';
+    if (message.includes('EMAIL_REQUIRED')) return 'email_required';
+    return 'failed';
+  }
+
+  private oauthCookieOptions(): CookieOptions {
+    return {
+      httpOnly: true,
+      secure: this.config.isProduction,
+      sameSite: 'lax',
+      path: '/',
+      maxAge: 10 * 60 * 1000,
+    };
+  }
+
+  private setRefreshCookie(res: Response, token: string, days: number) {
+    const maxAgeMs = days * 24 * 60 * 60 * 1000;
     res.cookie(this.config.refreshCookieName, token, {
       httpOnly: true,
       secure: this.config.isProduction,

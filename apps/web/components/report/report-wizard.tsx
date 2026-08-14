@@ -1,9 +1,10 @@
 'use client';
 
 import dynamic from 'next/dynamic';
+import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Bot, MapPin } from 'lucide-react';
+import { Bot, CheckCircle2, MapPin } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import type { CategoryDto, ReportDto } from '@prizren/shared-types';
 import { ApiError, apiFetch } from '@/lib/api';
@@ -15,6 +16,7 @@ import { StepIndicator } from '@/components/report/step-indicator';
 import { RemoteImage } from '@/components/remote-image';
 import { useToast } from '@/components/toast-provider';
 import { Button } from '@/components/ui/button';
+import { StatusBadge } from '@/components/ui/badge';
 import { FieldError } from '@/components/ui/field-error';
 import { Label, Select, Textarea } from '@/components/ui/field';
 import { Spinner } from '@/components/ui/spinner';
@@ -58,6 +60,7 @@ export function ReportWizard() {
   const [formError, setFormError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [geoBusy, setGeoBusy] = useState(false);
+  const [created, setCreated] = useState<ReportDto | null>(null);
 
   const steps = useMemo(() => STEP_IDS.map((id) => ({ id, label: t(`steps.${id}`) })), [t]);
 
@@ -174,7 +177,7 @@ export function ReportWizard() {
         networkRetries: 1,
       });
       toast.push(t('successToast'), 'success');
-      router.push(`/reports/${report.id}`);
+      setCreated(report);
     } catch (err) {
       setFormError(err instanceof ApiError ? err.message : t('submitFailed'));
     } finally {
@@ -192,15 +195,62 @@ export function ReportWizard() {
     );
   }
 
+  if (created) {
+    return (
+      <main className="pb-bottom-nav pt-6 sm:pt-8">
+        <PageContainer width="narrow">
+          <div
+            className="motion-fade-in rounded-xl border border-border bg-card p-6 text-center sm:p-10"
+            role="status"
+          >
+            <CheckCircle2 className="mx-auto h-12 w-12 text-river-600" aria-hidden />
+            <h1 className="mt-4 font-display text-h1 tracking-tight text-foreground sm:text-3xl">
+              {t('successTitle')}
+            </h1>
+            <p className="mt-2 text-muted-foreground">{t('successBody')}</p>
+
+            <dl className="mx-auto mt-6 max-w-sm space-y-3 rounded-lg border border-border bg-muted/40 p-4 text-left text-sm">
+              <div className="flex items-center justify-between gap-3">
+                <dt className="text-muted-foreground">{t('successId')}</dt>
+                <dd className="font-mono text-xs font-medium text-foreground sm:text-sm">
+                  {created.id}
+                </dd>
+              </div>
+              <div className="flex items-center justify-between gap-3">
+                <dt className="text-muted-foreground">{t('successStatus')}</dt>
+                <dd>
+                  <StatusBadge status={created.status} />
+                </dd>
+              </div>
+            </dl>
+
+            <p className="mt-4 text-sm text-muted-foreground">{t('successAiNote')}</p>
+
+            <div className="mt-8 flex flex-col gap-2 sm:flex-row sm:justify-center">
+              <Link href={`/reports/${created.id}`}>
+                <Button className="w-full sm:w-auto">{t('successViewReport')}</Button>
+              </Link>
+              <Link href="/reports">
+                <Button variant="secondary" className="w-full sm:w-auto">
+                  {t('successBackToList')}
+                </Button>
+              </Link>
+            </div>
+          </div>
+        </PageContainer>
+      </main>
+    );
+  }
+
   return (
     <main className="pb-bottom-nav pt-6 sm:pt-8">
       <PageContainer width="narrow">
-        <h1 className="font-display text-h1 tracking-tight text-stone-950 sm:text-3xl">
+        <h1 className="font-display text-h1 tracking-tight text-foreground sm:text-3xl">
           {t('title')}
         </h1>
-        <p className="mt-2 text-stone-600">{t('subtitle')}</p>
+        <p className="mt-2 text-muted-foreground">{t('subtitle')}</p>
 
-        <div className="mt-8 rounded-xl border border-stone-200 bg-white p-4 sm:p-6">
+        <div className="mt-8 rounded-xl border border-border bg-card p-4 sm:p-6">
           <StepIndicator steps={steps} current={step} />
 
           <div key={step} className="motion-fade-in mt-8">
@@ -224,7 +274,7 @@ export function ReportWizard() {
                     }
                     placeholder={t('descriptionPlaceholder')}
                   />
-                  <p id="report-description-hint" className="mt-1.5 text-xs text-stone-500">
+                  <p id="report-description-hint" className="mt-1.5 text-xs text-muted-foreground">
                     {t('descriptionHint')}
                   </p>
                   <FieldError id="report-description-error" message={fieldErrors.description} />
@@ -236,7 +286,7 @@ export function ReportWizard() {
               <div className="space-y-3">
                 <div>
                   <Label>{t('photoLabel')}</Label>
-                  <p className="mt-1 text-sm text-stone-600">{t('photoIntro')}</p>
+                  <p className="mt-1 text-sm text-muted-foreground">{t('photoIntro')}</p>
                 </div>
                 <PhotoUploader
                   preview={preview}
@@ -260,10 +310,10 @@ export function ReportWizard() {
               <div className="space-y-4">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div>
-                    <p id="report-location-label" className="text-label text-stone-700">
+                    <p id="report-location-label" className="text-label text-foreground">
                       {t('locationLabel')}
                     </p>
-                    <p className="mt-1 text-sm text-stone-600">{t('locationIntro')}</p>
+                    <p className="mt-1 text-sm text-muted-foreground">{t('locationIntro')}</p>
                   </div>
                   <Button
                     type="button"
@@ -289,7 +339,7 @@ export function ReportWizard() {
                   />
                 </div>
                 <FieldError id="report-location-error" message={fieldErrors.location} />
-                <p className="text-xs text-stone-500">
+                <p className="text-xs text-muted-foreground">
                   {lat !== null && lng !== null
                     ? t('coords', { lat: lat.toFixed(5), lng: lng.toFixed(5) })
                     : t('locationHint')}
@@ -324,7 +374,7 @@ export function ReportWizard() {
                       </option>
                     ))}
                   </Select>
-                  <p className="mt-1.5 text-xs text-stone-500">{t('categoryHint')}</p>
+                  <p className="mt-1.5 text-xs text-muted-foreground">{t('categoryHint')}</p>
                 </div>
 
                 <div className="rounded-lg border border-mosque-200 bg-mosque-50/70 p-4">
@@ -345,17 +395,17 @@ export function ReportWizard() {
 
             {step === 4 ? (
               <div className="space-y-5">
-                <p className="text-sm text-stone-600">{t('reviewIntro')}</p>
+                <p className="text-sm text-muted-foreground">{t('reviewIntro')}</p>
 
-                <dl className="space-y-4 rounded-lg border border-stone-200 bg-stone-50/80 p-4 text-sm">
+                <dl className="space-y-4 rounded-lg border border-border bg-muted/80 p-4 text-sm">
                   <div>
-                    <dt className="text-caption uppercase tracking-wide text-stone-500">
+                    <dt className="text-caption uppercase tracking-wide text-muted-foreground">
                       {t('steps.describe')}
                     </dt>
-                    <dd className="mt-1 whitespace-pre-wrap text-stone-900">{description}</dd>
+                    <dd className="mt-1 whitespace-pre-wrap text-foreground">{description}</dd>
                   </div>
                   <div>
-                    <dt className="text-caption uppercase tracking-wide text-stone-500">
+                    <dt className="text-caption uppercase tracking-wide text-muted-foreground">
                       {t('steps.photo')}
                     </dt>
                     <dd className="mt-2">
@@ -371,10 +421,10 @@ export function ReportWizard() {
                     </dd>
                   </div>
                   <div>
-                    <dt className="text-caption uppercase tracking-wide text-stone-500">
+                    <dt className="text-caption uppercase tracking-wide text-muted-foreground">
                       {t('steps.location')}
                     </dt>
-                    <dd className="mt-1 text-stone-900">
+                    <dd className="mt-1 text-foreground">
                       {lat !== null && lng !== null
                         ? t('coords', { lat: lat.toFixed(5), lng: lng.toFixed(5) })
                         : '—'}
@@ -382,16 +432,16 @@ export function ReportWizard() {
                     </dd>
                   </div>
                   <div>
-                    <dt className="text-caption uppercase tracking-wide text-stone-500">
+                    <dt className="text-caption uppercase tracking-wide text-muted-foreground">
                       {t('steps.category')}
                     </dt>
-                    <dd className="mt-1 text-stone-900">
+                    <dd className="mt-1 text-foreground">
                       {selectedCategory?.name ?? t('categoryNone')}
                     </dd>
                   </div>
                 </dl>
 
-                <div className="rounded-lg border border-stone-200 bg-white p-4 text-sm text-stone-600">
+                <div className="rounded-lg border border-border bg-card p-4 text-sm text-muted-foreground">
                   {t('afterSubmit')}
                 </div>
               </div>
@@ -418,7 +468,7 @@ export function ReportWizard() {
             </p>
           ) : null}
 
-          <div className="sticky bottom-0 z-10 -mx-4 mt-8 border-t border-stone-100 bg-white/95 px-4 py-4 backdrop-blur-sm sm:static sm:mx-0 sm:bg-transparent sm:px-0 sm:backdrop-blur-none">
+          <div className="sticky bottom-0 z-10 -mx-4 mt-8 border-t border-border bg-card/95 px-4 py-4 backdrop-blur-sm sm:static sm:mx-0 sm:bg-transparent sm:px-0 sm:backdrop-blur-none">
             <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-between">
               <Button
                 type="button"

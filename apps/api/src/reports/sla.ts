@@ -13,6 +13,7 @@ export const OPEN_REPORT_STATUSES: ReportStatus[] = [
   ReportStatus.IN_REVIEW,
   ReportStatus.ASSIGNED,
   ReportStatus.IN_PROGRESS,
+  ReportStatus.WAITING_FOR_INFORMATION,
 ];
 
 /** Reports due within this window count as "due soon". */

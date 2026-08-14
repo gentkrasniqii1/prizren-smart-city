@@ -5,8 +5,10 @@ export const REPORT_STATUSES = [
   'IN_REVIEW',
   'ASSIGNED',
   'IN_PROGRESS',
+  'WAITING_FOR_INFORMATION',
   'RESOLVED',
   'REJECTED',
+  'DUPLICATE',
 ] as const;
 
 export type ReportStatusKey = (typeof REPORT_STATUSES)[number];
@@ -20,16 +22,20 @@ const STATUS_LABELS: Record<AppLocale, Record<ReportStatusKey, string>> = {
     IN_REVIEW: 'Në shqyrtim',
     ASSIGNED: 'I caktuar',
     IN_PROGRESS: 'Në progres',
+    WAITING_FOR_INFORMATION: 'Në pritje të informacionit',
     RESOLVED: 'I zgjidhur',
     REJECTED: 'I refuzuar',
+    DUPLICATE: 'Duplikat',
   },
   en: {
     PENDING: 'Pending',
     IN_REVIEW: 'Under review',
     ASSIGNED: 'Assigned',
     IN_PROGRESS: 'In progress',
+    WAITING_FOR_INFORMATION: 'Waiting for information',
     RESOLVED: 'Resolved',
     REJECTED: 'Rejected',
+    DUPLICATE: 'Duplicate',
   },
 };
 

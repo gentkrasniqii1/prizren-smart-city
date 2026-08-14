@@ -5,10 +5,17 @@ import { useTranslations } from 'next-intl';
 import { cn } from '@/lib/utils';
 import type { ReportStatusKey } from '@/lib/labels';
 
-const PIPELINE: ReportStatusKey[] = ['PENDING', 'IN_REVIEW', 'ASSIGNED', 'IN_PROGRESS', 'RESOLVED'];
+const PIPELINE: ReportStatusKey[] = [
+  'PENDING',
+  'IN_REVIEW',
+  'ASSIGNED',
+  'IN_PROGRESS',
+  'WAITING_FOR_INFORMATION',
+  'RESOLVED',
+];
 
 function pipelineIndex(status: string): number {
-  if (status === 'REJECTED') return -1;
+  if (status === 'REJECTED' || status === 'DUPLICATE') return -1;
   const i = PIPELINE.indexOf(status as ReportStatusKey);
   return i >= 0 ? i : 0;
 }

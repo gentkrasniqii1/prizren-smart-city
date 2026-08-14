@@ -30,22 +30,36 @@ test.describe('Phase 10 citizen → admin flow', () => {
   test('register → create report → admin updates status', async ({ request, page }) => {
     const ts = Date.now();
     const citizenEmail = `e2e_citizen_${ts}@test.local`;
-    const password = 'password123';
+    const password = 'Password1!';
 
-    // 1) Register via UI
     await page.goto(`${WEB_URL}/register`);
-    await page.getByLabel('Emri').fill('E2E Citizen');
+    await page.getByLabel('Emri').fill('E2E');
+    await page.getByLabel('Mbiemri').fill('Citizen');
     await page.getByLabel('Email').fill(citizenEmail);
-    await page.getByLabel('Fjalëkalimi').fill(password);
+    await page.getByLabel('Fjalëkalimi', { exact: true }).fill(password);
+    await page.getByLabel('Konfirmo fjalëkalimin').fill(password);
+    await page.getByRole('checkbox').check();
     await page.getByRole('button', { name: /Krijo llogari/i }).click();
-    await expect(page).toHaveURL(/\/account/, { timeout: 20_000 });
+    await expect(page).toHaveURL(/\/verify-email/, { timeout: 20_000 });
 
-    // Access token from refresh cookie path used by apiFetch — login via API for multipart
-    const loginRes = await request.post(`${API_URL}/auth/login`, {
-      data: { email: citizenEmail, password },
+    const registerRes = await request.post(`${API_URL}/auth/register`, {
+      data: {
+        email: `e2e_api_${ts}@test.local`,
+        password,
+        firstName: 'E2E',
+        lastName: 'Citizen',
+        acceptedTerms: true,
+      },
     });
-    expect(loginRes.ok()).toBeTruthy();
-    const loginBody = (await loginRes.json()) as { accessToken: string };
+    expect(registerRes.ok(), await registerRes.text()).toBeTruthy();
+    const registered = (await registerRes.json()) as { email: string; devVerifyToken?: string };
+    expect(registered.devVerifyToken).toBeTruthy();
+
+    const verifyRes = await request.post(`${API_URL}/auth/verify-email`, {
+      data: { token: registered.devVerifyToken },
+    });
+    expect(verifyRes.ok(), await verifyRes.text()).toBeTruthy();
+    const loginBody = (await verifyRes.json()) as { accessToken: string };
     const citizenToken = loginBody.accessToken;
 
     // 2) Create report (API multipart — photo + location)

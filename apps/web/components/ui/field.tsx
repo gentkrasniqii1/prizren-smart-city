@@ -7,12 +7,13 @@ import type {
 import { cn } from '@/lib/utils';
 
 const fieldBase =
-  'mt-1 w-full min-h-11 rounded-md border bg-white px-3 py-2.5 text-base text-stone-900 outline-none transition duration-fast ease-product placeholder:text-stone-400 disabled:cursor-not-allowed disabled:bg-stone-100 disabled:text-stone-500 sm:min-h-10 sm:py-2 sm:text-sm';
+  'mt-1 w-full min-h-11 rounded-md border bg-card px-3 py-2.5 text-base text-foreground outline-none transition duration-fast ease-product placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:bg-muted disabled:text-muted-foreground sm:min-h-10 sm:py-2 sm:text-sm';
 
 const fieldOk =
-  'border-stone-300 hover:border-stone-400 focus:border-mosque-500 focus:ring-2 focus:ring-mosque-200';
+  'border-input hover:border-stone-400 focus:border-primary focus:ring-2 focus:ring-mosque-200 dark:focus:ring-mosque-800';
 
-const fieldErr = 'border-red-400 focus:border-red-500 focus:ring-2 focus:ring-red-100';
+const fieldErr =
+  'border-destructive focus:border-destructive focus:ring-2 focus:ring-red-100 dark:focus:ring-red-950';
 
 type FieldState = {
   invalid?: boolean;
@@ -28,7 +29,7 @@ export function Label({
   className?: string;
 }) {
   return (
-    <label htmlFor={htmlFor} className={cn('block text-label text-stone-700', className)}>
+    <label htmlFor={htmlFor} className={cn('block text-label text-muted-foreground', className)}>
       {children}
     </label>
   );
@@ -59,6 +60,36 @@ export function Select({
       aria-invalid={invalid || undefined}
       {...rest}
     />
+  );
+}
+
+export function Checkbox({
+  id,
+  checked,
+  onChange,
+  children,
+  className,
+}: {
+  id: string;
+  checked: boolean;
+  onChange: (checked: boolean) => void;
+  children: ReactNode;
+  className?: string;
+}) {
+  return (
+    <label
+      htmlFor={id}
+      className={cn('flex cursor-pointer items-start gap-2.5 text-sm', className)}
+    >
+      <input
+        id={id}
+        type="checkbox"
+        checked={checked}
+        onChange={(e) => onChange(e.target.checked)}
+        className="mt-0.5 h-4 w-4 shrink-0 rounded border-input text-primary accent-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+      />
+      <span className="text-foreground">{children}</span>
+    </label>
   );
 }
 

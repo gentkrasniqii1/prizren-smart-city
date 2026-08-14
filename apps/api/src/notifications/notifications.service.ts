@@ -63,7 +63,20 @@ export class NotificationsService {
         channel: n.channel,
         read: n.read,
         createdAt: n.createdAt.toISOString(),
-        message: n.type === 'STATUS_CHANGED' ? 'Statusi i raportit tënd u përditësua.' : n.type,
+        message:
+          n.type === 'STATUS_CHANGED'
+            ? 'Statusi i raportit tënd u përditësua.'
+            : n.type === 'REPORT_RECEIVED'
+              ? 'Raporti juaj u pranua.'
+              : n.type === 'REPORT_ASSIGNED'
+                ? 'Raporti juaj është caktuar për shqyrtim.'
+                : n.type === 'REPORT_IN_PROGRESS'
+                  ? 'Raporti juaj është në trajtim.'
+                  : n.type === 'REPORT_RESOLVED'
+                    ? 'Raporti juaj u zgjidh.'
+                    : n.type === 'INFO_REQUESTED'
+                      ? 'Administratori juaj ka kërkuar informacion shtesë.'
+                      : n.type,
       })),
       meta: {
         page,

@@ -1,14 +1,15 @@
 'use client';
 
 import Link from 'next/link';
-import { FormEvent, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
+import { toast } from 'sonner';
 import { ApiError } from '@/lib/api';
 import { useAuth } from '@/components/auth-provider';
 import { AuthShell } from '@/components/auth/auth-shell';
-import { GoogleSignInButton } from '@/components/google-sign-in-button';
-import { FieldError } from '@/components/ui';
+import { OAuthButtons } from '@/components/auth/oauth-buttons';
+import { FieldError, Checkbox } from '@/components/ui';
 import { Button } from '@/components/ui/button';
 import { Input, Label } from '@/components/ui/field';
 
@@ -17,13 +18,33 @@ type FieldErrors = { email?: string; password?: string };
 export default function LoginPage() {
   const t = useTranslations('Auth');
   const router = useRouter();
+  const search = useSearchParams();
   const { login } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [rememberMe, setRememberMe] = useState(false);
   const [website, setWebsite] = useState('');
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [formError, setFormError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    const oauth = search.get('oauth_error');
+    if (oauth) {
+      const map: Record<string, string> = {
+        cancelled: t('oauthCancelled'),
+        state: t('oauthState'),
+        account_exists: t('oauthAccountExists'),
+        email_required: t('oauthEmailRequired'),
+        failed: t('oauthFailed'),
+        missing_code: t('oauthFailed'),
+      };
+      setFormError(map[oauth] ?? t('oauthFailed'));
+    }
+    if (search.get('reset') === '1') {
+      toast.success(t('resetSuccess'));
+    }
+  }, [search, t]);
 
   function validate(): FieldErrors {
     const next: FieldErrors = {};
@@ -34,7 +55,7 @@ export default function LoginPage() {
     return next;
   }
 
-  async function onSubmit(e: FormEvent) {
+  async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setFormError(null);
     const next = validate();
@@ -42,9 +63,23 @@ export default function LoginPage() {
     if (Object.keys(next).length > 0) return;
     setSubmitting(true);
     try {
-      await login({ email: email.trim(), password, website });
+      const result = await login({
+        email: email.trim(),
+        password,
+        rememberMe,
+        website,
+      });
+      if (result?.requiresTwoFactor) {
+        sessionStorage.setItem('psc.2fa', result.challengeToken);
+        router.push('/auth/two-factor');
+        return;
+      }
       router.push('/account');
     } catch (err) {
+      if (err instanceof ApiError && err.message === 'EMAIL_NOT_VERIFIED') {
+        router.push(`/verify-email?email=${encodeURIComponent(email.trim())}`);
+        return;
+      }
       setFormError(err instanceof ApiError ? err.message : t('loginFailed'));
     } finally {
       setSubmitting(false);
@@ -52,25 +87,14 @@ export default function LoginPage() {
   }
 
   return (
-    <AuthShell
-      imageSrc="/images/prizren/sinan-pasha.jpg"
-      imageAlt={t('loginPanelAlt')}
-      panelTitle={t('loginPanelTitle')}
-      panelBody={t('loginPanelBody')}
-    >
-      <h1 className="font-display text-3xl font-semibold tracking-tight text-stone-950">
-        {t('loginTitle')}
-      </h1>
-      <p className="mt-2 text-stone-600">{t('loginSubtitle')}</p>
+    <AuthShell imageSrc="/images/prizren/sinan-pasha.jpg" imageAlt={t('loginPanelAlt')}>
+      <p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+        {t('welcomeBack')}
+      </p>
+      <h1 className="mt-1 text-h1 tracking-tight text-foreground">{t('loginTitle')}</h1>
+      <p className="mt-2 text-sm text-muted-foreground">{t('loginSubtitle')}</p>
 
-      <div className="mt-8 space-y-4">
-        <GoogleSignInButton label={t('google')} />
-        <p className="text-center text-xs uppercase tracking-wider text-stone-400">
-          {t('orEmail')}
-        </p>
-      </div>
-
-      <form onSubmit={onSubmit} className="mt-4 space-y-4" noValidate>
+      <form onSubmit={onSubmit} className="relative mt-8 space-y-4" noValidate>
         <div>
           <Label htmlFor="login-email">{t('email')}</Label>
           <Input
@@ -102,6 +126,18 @@ export default function LoginPage() {
           <FieldError message={fieldErrors.password} />
         </div>
 
+        <div className="flex items-center justify-between gap-3">
+          <Checkbox id="remember" checked={rememberMe} onChange={setRememberMe}>
+            {t('rememberMe')}
+          </Checkbox>
+          <Link
+            href="/forgot-password"
+            className="text-sm font-medium text-primary hover:underline"
+          >
+            {t('forgotPassword')}
+          </Link>
+        </div>
+
         <div aria-hidden className="absolute -left-[9999px] h-0 w-0 overflow-hidden">
           <label>
             Website
@@ -117,23 +153,40 @@ export default function LoginPage() {
         </div>
 
         {formError ? (
-          <p className="text-sm text-red-700" role="alert">
+          <p className="text-sm text-destructive" role="alert">
             {formError}
           </p>
         ) : null}
 
-        <Button type="submit" className="w-full" disabled={submitting}>
+        <Button type="submit" className="w-full" size="lg" loading={submitting}>
           {submitting ? t('loggingIn') : t('submitLogin')}
         </Button>
       </form>
 
-      <p className="mt-6 text-sm text-stone-600">
+      <div className="my-6 flex items-center gap-3">
+        <span className="h-px flex-1 bg-border" />
+        <span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+          {t('orContinue')}
+        </span>
+        <span className="h-px flex-1 bg-border" />
+      </div>
+
+      <OAuthButtons disabled={submitting} />
+
+      <p className="mt-6 text-sm text-muted-foreground">
         {t('noAccount')}{' '}
-        <Link href="/register" className="font-medium text-mosque-800 underline">
-          {t('registerTitle')}
+        <Link href="/register" className="font-medium text-primary hover:underline">
+          {t('registerCta')}
         </Link>
       </p>
-      <p className="mt-4 text-xs leading-relaxed text-stone-500">{t('trustNote')}</p>
+      <p className="mt-8 flex gap-4 text-xs text-muted-foreground">
+        <Link href="/privacy" className="hover:underline">
+          {t('privacy')}
+        </Link>
+        <Link href="/terms" className="hover:underline">
+          {t('terms')}
+        </Link>
+      </p>
     </AuthShell>
   );
 }

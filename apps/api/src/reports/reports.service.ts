@@ -32,6 +32,7 @@ import { UpdateReportStatusDto } from './dto/update-report-status.dto';
 import { computeDueAt } from './sla';
 import { REPORT_STATUS_CHANGED_EVENT, StatusChangedEvent } from '../events/status-changed.event';
 import { assertValidImageUpload } from '../uploads/image-validation';
+import { RoutingService } from '../routing/routing.service';
 
 const STAFF_ROLES: Role[] = [Role.DEPARTMENT_STAFF, Role.DEPARTMENT_ADMIN, Role.SUPER_ADMIN];
 const AI_ADMIN_ROLES: Role[] = [Role.DEPARTMENT_ADMIN, Role.SUPER_ADMIN];
@@ -49,6 +50,7 @@ export class ReportsService {
     private readonly cloudinary: CloudinaryService,
     private readonly aiClassification: AiClassificationService,
     private readonly events: EventEmitter2,
+    private readonly routing: RoutingService,
   ) {}
 
   async create(
@@ -63,16 +65,7 @@ export class ReportsService {
       photoUrl = await this.cloudinary.uploadImage(file.buffer, publicId);
     }
 
-    let departmentId: string | undefined;
-    if (fields.categoryId) {
-      const category = await this.prisma.category.findUnique({
-        where: { id: fields.categoryId },
-      });
-      if (!category) {
-        throw new BadRequestException('Invalid categoryId');
-      }
-      departmentId = category.departmentId;
-    }
+    const routed = await this.routing.routeByCategory(fields.categoryId);
 
     const report = await this.prisma.report.create({
       data: {
@@ -82,7 +75,8 @@ export class ReportsService {
         lng: fields.lng,
         address: fields.address,
         categoryId: fields.categoryId,
-        departmentId,
+        departmentId: routed?.departmentId,
+        priority: routed?.defaultPriority ?? null,
         photoUrl,
         status: ReportStatus.PENDING,
       },

@@ -12,9 +12,11 @@ import { CategoriesModule } from './categories/categories.module';
 import { UploadsModule } from './uploads/uploads.module';
 import { AnalyticsModule } from './analytics/analytics.module';
 import { DepartmentsModule } from './departments/departments.module';
+import { InstitutionsModule } from './institutions/institutions.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { TransparencyModule } from './transparency/transparency.module';
 import { AuditModule } from './audit/audit.module';
+import { RealtimeModule } from './realtime/realtime.module';
 
 @Module({
   imports: [
@@ -37,9 +39,11 @@ import { AuditModule } from './audit/audit.module';
     UploadsModule,
     AnalyticsModule,
     DepartmentsModule,
+    InstitutionsModule,
     NotificationsModule,
     TransparencyModule,
     AuditModule,
+    RealtimeModule,
   ],
   controllers: [HealthController],
   providers: [

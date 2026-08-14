@@ -5,6 +5,6 @@ export { StatCard } from './stat-card';
 export { EmptyState } from './empty-state';
 export { ErrorBanner } from './error-banner';
 export { FieldError } from './field-error';
-export { Input, Label, Select, Textarea } from './field';
+export { Input, Label, Select, Textarea, Checkbox } from './field';
 export { Skeleton } from './skeleton';
 export { Spinner } from './spinner';

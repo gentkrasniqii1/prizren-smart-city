@@ -8,7 +8,10 @@ export function Card({
 }: HTMLAttributes<HTMLDivElement> & { children: ReactNode }) {
   return (
     <div
-      className={cn('rounded-xl border border-stone-200 bg-white shadow-sm', className)}
+      className={cn(
+        'rounded-xl border border-border bg-card text-card-foreground shadow-sm',
+        className,
+      )}
       {...rest}
     >
       {children}
@@ -26,9 +29,9 @@ export function CardHeader({
   className?: string;
 }) {
   return (
-    <div className={cn('border-b border-stone-100 px-5 py-4', className)}>
-      <h2 className="font-display text-xl font-semibold text-stone-950">{title}</h2>
-      {description ? <p className="mt-1 text-sm text-stone-600">{description}</p> : null}
+    <div className={cn('border-b border-border px-5 py-4', className)}>
+      <h2 className="font-display text-xl font-semibold text-foreground">{title}</h2>
+      {description ? <p className="mt-1 text-sm text-muted-foreground">{description}</p> : null}
     </div>
   );
 }

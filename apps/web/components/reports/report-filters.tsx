@@ -77,7 +77,7 @@ export function ReportFilters({
         </Label>
         <div className="relative">
           <Search
-            className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-stone-400"
+            className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
             aria-hidden
           />
           <Input
@@ -118,7 +118,7 @@ export function ReportFilters({
 
       <div id={panelId} className={cn(!open && 'hidden', 'lg:block')}>
         <div className="mb-2 hidden items-center justify-between lg:flex">
-          <p className="text-sm font-medium text-stone-700">{t('filtersHeading')}</p>
+          <p className="text-sm font-medium text-foreground">{t('filtersHeading')}</p>
           {activeAdvanced > 0 ? (
             <Button type="button" variant="ghost" size="sm" onClick={clearAdvanced}>
               {t('clearFilters')}
