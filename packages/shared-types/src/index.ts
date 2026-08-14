@@ -1,7 +1,14 @@
 export type Role = 'CITIZEN' | 'DEPARTMENT_STAFF' | 'DEPARTMENT_ADMIN' | 'SUPER_ADMIN';
 
 export type ReportStatus =
-  'PENDING' | 'IN_REVIEW' | 'ASSIGNED' | 'IN_PROGRESS' | 'RESOLVED' | 'REJECTED';
+  | 'PENDING'
+  | 'IN_REVIEW'
+  | 'ASSIGNED'
+  | 'IN_PROGRESS'
+  | 'WAITING_FOR_INFORMATION'
+  | 'RESOLVED'
+  | 'REJECTED'
+  | 'DUPLICATE';
 
 export type Priority = 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
 
@@ -25,7 +32,12 @@ export interface PublicUser {
   id: string;
   email: string;
   name: string;
+  firstName?: string | null;
+  lastName?: string | null;
+  phone?: string | null;
   role: Role;
+  emailVerified: boolean;
+  totpEnabled: boolean;
   createdAt: string;
 }
 
@@ -40,16 +52,79 @@ export interface AuthResponse extends AuthTokensResponse {
 export interface RegisterRequest {
   email: string;
   password: string;
-  name: string;
+  firstName: string;
+  lastName: string;
+  phone?: string;
+  acceptedTerms: boolean;
   /** Honeypot — leave empty */
   website?: string;
+}
+
+export interface RegisterResponse {
+  ok: true;
+  email: string;
+  requiresEmailVerification: true;
+  /** Present only in development when SMTP is not configured. */
+  devVerifyToken?: string;
 }
 
 export interface LoginRequest {
   email: string;
   password: string;
+  rememberMe?: boolean;
   /** Honeypot — leave empty */
   website?: string;
+}
+
+export interface TwoFactorRequiredResponse {
+  requiresTwoFactor: true;
+  challengeToken: string;
+}
+
+export type LoginResponse = AuthResponse | TwoFactorRequiredResponse;
+
+export interface OAuthProvidersStatus {
+  google: boolean;
+  apple: boolean;
+  facebook: boolean;
+}
+
+export interface ForgotPasswordRequest {
+  email: string;
+  website?: string;
+}
+
+export interface ResetPasswordRequest {
+  token: string;
+  password: string;
+}
+
+export interface VerifyEmailRequest {
+  token: string;
+}
+
+export interface TwoFactorVerifyRequest {
+  challengeToken: string;
+  code: string;
+  trustDevice?: boolean;
+}
+
+export interface InstitutionDto {
+  id: string;
+  name: string;
+  slug: string;
+  type: string;
+  contact: string | null;
+  active: boolean;
+}
+
+export interface DepartmentDto {
+  id: string;
+  name: string;
+  contact: string | null;
+  slaHours?: number;
+  institutionId?: string | null;
+  institutionName?: string | null;
 }
 
 export interface ReportDto {
@@ -110,12 +185,6 @@ export interface UpdateAiClassificationRequest {
   confidence?: number;
   summary?: string;
   recommendedDepartment?: string;
-}
-
-export interface DepartmentDto {
-  id: string;
-  name: string;
-  contact: string | null;
 }
 
 export interface AnalyticsSummary {

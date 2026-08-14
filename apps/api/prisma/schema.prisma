@@ -8,20 +8,32 @@ datasource db {
 }
 
 model User {
-  id            String         @id @default(uuid())
-  email         String         @unique
-  passwordHash  String?
-  googleId      String?        @unique
-  name          String
-  role          Role           @default(CITIZEN)
-  createdAt     DateTime       @default(now())
-  reports       Report[]
-  votes         Vote[]
-  comments      Comment[]
-  notifications Notification[]
-  auditLogs     AuditLog[]
-  departments   Department[]   @relation("DepartmentStaff")
-  refreshTokens RefreshToken[]
+  id               String         @id @default(uuid())
+  email            String         @unique
+  passwordHash     String?
+  googleId         String?        @unique
+  appleId          String?        @unique
+  facebookId       String?        @unique
+  name             String
+  firstName        String?
+  lastName         String?
+  phone            String?
+  role             Role           @default(CITIZEN)
+  emailVerified    Boolean        @default(false)
+  emailVerifiedAt  DateTime?
+  totpSecretEnc    String?
+  totpEnabled      Boolean        @default(false)
+  failedLoginCount Int            @default(0)
+  lockedUntil      DateTime?
+  createdAt        DateTime       @default(now())
+  reports          Report[]
+  votes            Vote[]
+  comments         Comment[]
+  notifications    Notification[]
+  auditLogs        AuditLog[]
+  departments      Department[]   @relation("DepartmentStaff")
+  refreshTokens    RefreshToken[]
+  authTokens       AuthToken[]
 }
 
 model RefreshToken {
@@ -36,6 +48,25 @@ model RefreshToken {
   @@index([userId])
 }
 
+model AuthToken {
+  id        String        @id @default(uuid())
+  userId    String
+  user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      AuthTokenType
+  tokenHash String        @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime      @default(now())
+
+  @@index([userId, type])
+}
+
+enum AuthTokenType {
+  EMAIL_VERIFY
+  PASSWORD_RESET
+  TWO_FACTOR
+}
+
 enum Role {
   CITIZEN
   DEPARTMENT_STAFF
@@ -43,33 +74,49 @@ enum Role {
   SUPER_ADMIN
 }
 
+model Institution {
+  id          String       @id @default(uuid())
+  name        String
+  slug        String       @unique
+  type        String
+  contact     String?
+  active      Boolean      @default(true)
+  createdAt   DateTime     @default(now())
+  departments Department[]
+}
+
 model Department {
-  id         String     @id @default(uuid())
-  name       String
-  contact    String?
-  categories Category[]
-  reports    Report[]
-  staff      User[]     @relation("DepartmentStaff")
+  id            String       @id @default(uuid())
+  name          String
+  contact       String?
+  slaHours      Int          @default(48)
+  institutionId String?
+  institution   Institution? @relation(fields: [institutionId], references: [id])
+  categories    Category[]
+  reports       Report[]
+  staff         User[]       @relation("DepartmentStaff")
 }
 
 model Category {
-  id           String     @id @default(uuid())
-  name         String
-  departmentId String
-  department   Department @relation(fields: [departmentId], references: [id])
-  reports      Report[]
+  id              String     @id @default(uuid())
+  name            String
+  departmentId    String
+  department      Department @relation(fields: [departmentId], references: [id])
+  slaHours        Int        @default(48)
+  defaultPriority Priority   @default(MEDIUM)
+  reports         Report[]
 }
 
 model Report {
-  id               String         @id @default(uuid())
+  id               String          @id @default(uuid())
   userId           String
-  user             User           @relation(fields: [userId], references: [id])
+  user             User            @relation(fields: [userId], references: [id])
   categoryId       String?
-  category         Category?      @relation(fields: [categoryId], references: [id])
+  category         Category?       @relation(fields: [categoryId], references: [id])
   departmentId     String?
-  department       Department?    @relation(fields: [departmentId], references: [id])
+  department       Department?     @relation(fields: [departmentId], references: [id])
   description      String
-  status           ReportStatus   @default(PENDING)
+  status           ReportStatus    @default(PENDING)
   priority         Priority?
   lat              Float
   lng              Float
@@ -81,12 +128,12 @@ model Report {
   aiClassification Json?
   aiConfidence     Float?
   duplicateOfId    String?
-  duplicateOf      Report?        @relation("ReportDuplicates", fields: [duplicateOfId], references: [id])
-  duplicates       Report[]       @relation("ReportDuplicates")
+  duplicateOf      Report?         @relation("ReportDuplicates", fields: [duplicateOfId], references: [id])
+  duplicates       Report[]        @relation("ReportDuplicates")
   assignedStaffId  String?
   dueAt            DateTime?
-  createdAt        DateTime       @default(now())
-  updatedAt        DateTime       @updatedAt
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
   statusHistory    StatusHistory[]
   votes            Vote[]
   comments         Comment[]
@@ -97,8 +144,10 @@ enum ReportStatus {
   IN_REVIEW
   ASSIGNED
   IN_PROGRESS
+  WAITING_FOR_INFORMATION
   RESOLVED
   REJECTED
+  DUPLICATE
 }
 
 enum Priority {

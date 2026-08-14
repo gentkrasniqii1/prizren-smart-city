@@ -6,6 +6,7 @@ import { ReportsService } from './reports.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { CloudinaryService } from '../uploads/cloudinary.service';
 import { AiClassificationService } from '../ai/ai-classification.service';
+import { RoutingService } from '../routing/routing.service';
 
 describe('ReportsService.updateStatus', () => {
   let prisma: {
@@ -32,6 +33,7 @@ describe('ReportsService.updateStatus', () => {
       { uploadImage: vi.fn() } as unknown as CloudinaryService,
       { classifyReportPhoto: vi.fn() } as unknown as AiClassificationService,
       events as unknown as EventEmitter2,
+      { routeByCategory: vi.fn() } as unknown as RoutingService,
     );
   });
 
