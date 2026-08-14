@@ -12,12 +12,14 @@ import {
 import type { AppLocale } from '@/i18n/request';
 
 const STATUS_CLASS: Record<ReportStatusKey, string> = {
-  PENDING: 'bg-stone-200 text-stone-900',
+  PENDING: 'bg-stone-200 text-stone-900 dark:bg-stone-300 dark:text-stone-950',
   IN_REVIEW: 'bg-mosque-200 text-mosque-950',
   ASSIGNED: 'bg-stone-300 text-stone-950',
   IN_PROGRESS: 'bg-amber-200 text-amber-950',
+  WAITING_FOR_INFORMATION: 'bg-orange-200 text-orange-950',
   RESOLVED: 'bg-river-200 text-river-950',
   REJECTED: 'bg-red-200 text-red-950',
+  DUPLICATE: 'bg-stone-200 text-stone-800',
 };
 
 const PRIORITY_CLASS: Record<ReportPriorityKey, string> = {

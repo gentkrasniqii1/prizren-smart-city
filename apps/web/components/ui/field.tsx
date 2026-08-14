@@ -63,6 +63,36 @@ export function Select({
   );
 }
 
+export function Checkbox({
+  id,
+  checked,
+  onChange,
+  children,
+  className,
+}: {
+  id: string;
+  checked: boolean;
+  onChange: (checked: boolean) => void;
+  children: ReactNode;
+  className?: string;
+}) {
+  return (
+    <label
+      htmlFor={id}
+      className={cn('flex cursor-pointer items-start gap-2.5 text-sm', className)}
+    >
+      <input
+        id={id}
+        type="checkbox"
+        checked={checked}
+        onChange={(e) => onChange(e.target.checked)}
+        className="mt-0.5 h-4 w-4 shrink-0 rounded border-input text-primary accent-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+      />
+      <span className="text-foreground">{children}</span>
+    </label>
+  );
+}
+
 export function Textarea({
   className,
   invalid,
