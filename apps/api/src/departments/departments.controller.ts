@@ -10,8 +10,22 @@ export class DepartmentsController {
   async list(): Promise<DepartmentDto[]> {
     const rows = await this.prisma.department.findMany({
       orderBy: { name: 'asc' },
-      select: { id: true, name: true, contact: true },
+      select: {
+        id: true,
+        name: true,
+        contact: true,
+        slaHours: true,
+        institutionId: true,
+        institution: { select: { name: true } },
+      },
     });
-    return rows;
+    return rows.map((row) => ({
+      id: row.id,
+      name: row.name,
+      contact: row.contact,
+      slaHours: row.slaHours,
+      institutionId: row.institutionId,
+      institutionName: row.institution?.name ?? null,
+    }));
   }
 }
