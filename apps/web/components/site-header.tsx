@@ -148,7 +148,7 @@ export function SiteHeader() {
       {open ? (
         <nav
           id={menuId}
-          className="border-t border-stone-200 bg-stone-50 md:hidden"
+          className="border-t border-border bg-muted md:hidden"
           aria-label={t('mainNav')}
         >
           <PageContainer className="flex flex-col gap-1 py-3 pb-bottom-nav">
@@ -184,7 +184,7 @@ export function SiteHeader() {
               </div>
             ) : null}
             {!loading && user ? (
-              <div className="mt-2 border-t border-stone-200 pt-2">
+              <div className="mt-2 border-t border-border pt-2">
                 <UserMenu />
               </div>
             ) : null}

@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Bell, FilePlus2, FileText, LayoutDashboard, LogOut, Map } from 'lucide-react';
 import { useLocale, useTranslations } from 'next-intl';
@@ -20,9 +20,17 @@ import { UserAvatar } from '@/components/user-avatar';
 import { Button, EmptyState, ErrorBanner, Skeleton, Spinner, StatCard } from '@/components/ui';
 import { getRoleLabel } from '@/lib/labels';
 import { cn } from '@/lib/utils';
+import { TwoFactorSettings } from '@/components/account/two-factor-settings';
+import { useRealtimeReports } from '@/lib/use-realtime-reports';
 import type { AppLocale } from '@/i18n/request';
 
-const OPEN_STATUSES = new Set(['PENDING', 'IN_REVIEW', 'ASSIGNED', 'IN_PROGRESS']);
+const OPEN_STATUSES = new Set([
+  'PENDING',
+  'IN_REVIEW',
+  'ASSIGNED',
+  'IN_PROGRESS',
+  'WAITING_FOR_INFORMATION',
+]);
 
 type ReportFilter = 'all' | 'open' | 'resolved';
 
@@ -89,6 +97,23 @@ export function AccountDashboard() {
       cancelled = true;
     };
   }, [authLoading, user, t]);
+
+  const refreshLive = useCallback(() => {
+    void apiFetch<PaginatedReports>('/reports/mine?limit=50', { auth: true })
+      .then((res) => {
+        setReports(res.data);
+        setTotalReports(res.meta.total);
+      })
+      .catch(() => undefined);
+    void apiFetch<PaginatedNotifications>('/notifications?limit=5', { auth: true })
+      .then((res) => {
+        setNotifications(res.data);
+        setUnreadCount(res.meta.unreadCount);
+      })
+      .catch(() => undefined);
+  }, []);
+
+  useRealtimeReports(refreshLive, Boolean(user) && !authLoading);
 
   useEffect(() => {
     if (authLoading || !user) return;
@@ -162,7 +187,7 @@ export function AccountDashboard() {
             <UserAvatar name={user.name} size={56} />
             <div>
               <p className="text-sm text-stone-500">{t('greeting')}</p>
-              <h1 className="font-display text-h1 tracking-tight text-stone-950 sm:text-3xl">
+              <h1 className="text-h1 tracking-tight text-foreground sm:text-3xl">
                 {t('welcome', { name: firstName })}
               </h1>
               <p className="mt-1 text-sm text-stone-600">
@@ -396,6 +421,7 @@ export function AccountDashboard() {
                 {t('logout')}
               </Button>
             </section>
+            <TwoFactorSettings enabled={Boolean(user.totpEnabled)} />
           </aside>
         </div>
       </PageContainer>
