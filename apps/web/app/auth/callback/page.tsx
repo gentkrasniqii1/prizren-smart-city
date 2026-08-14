@@ -12,7 +12,7 @@ export default function AuthCallbackPage() {
 
   useEffect(() => {
     void (async () => {
-      const ok = await refreshSession();
+      const ok = await refreshSession({ force: true });
       router.replace(ok ? '/account' : '/login');
     })();
   }, [refreshSession, router]);
