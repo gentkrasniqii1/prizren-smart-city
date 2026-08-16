@@ -81,6 +81,19 @@
   --motion-normal: 200ms;
   --motion-slow: 320ms;
   --motion-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+
+  /*
+   * Theme-invariant tokens for content pinned to a fixed surface regardless of
+   * the active site theme (hero/photo overlays, the transparency accent band,
+   * chips that stay literal white). Values are literal hex, NOT `var(--color-*)`
+   * aliases — the `stone`/`mosque` scales are intentionally remapped inside
+   * `.dark` for normal theme-aware UI surfaces/text, and a var() alias would
+   * inherit that remap too. These must never be redefined in `.dark`.
+   */
+  --overlay-surface: #19253a; /* fixed dark navy band background (mosque-950, light-mode value) */
+  --overlay-foreground: #faf8f5; /* light text on fixed dark surfaces/photos (stone-50, light-mode value) */
+  --overlay-foreground-muted: #e6ddd0; /* secondary light text on fixed dark surfaces (stone-200, light-mode value) */
+  --chip-foreground: #27211c; /* dark text on a chip that stays literal white (stone-950, light-mode value) */
 }
 
 .dark {
@@ -141,8 +154,17 @@ html {
   text-size-adjust: 100%;
 }
 
-html,
-body {
+/*
+ * Horizontal-overflow guard lives on <html> only. Setting `overflow-x` on both
+ * <html> AND <body> makes the browser treat `overflow-y` as `auto` on BOTH
+ * elements (per the CSS overflow spec's visible->auto conversion rule), which
+ * creates two competing scroll containers for the page. That breaks the sticky
+ * header's containing-block calculation — especially across Next.js client-side
+ * route changes — causing it to flicker/disappear mid-scroll. Scoping this to
+ * <html> keeps a single scrolling element (`document.scrollingElement`) while
+ * still clipping any accidental horizontal overflow from descendants.
+ */
+html {
   max-width: 100%;
   overflow-x: clip;
 }
