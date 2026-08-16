@@ -222,6 +222,24 @@ export interface AnalyticsByStatusItem {
   count: number;
 }
 
+export interface AnalyticsByDepartmentItem {
+  departmentId: string | null;
+  department: string;
+  count: number;
+}
+
+export interface AnalyticsOverTimeItem {
+  date: string;
+  count: number;
+}
+
+export interface MyReportStats {
+  total: number;
+  open: number;
+  inProgress: number;
+  resolved: number;
+}
+
 export interface AssignReportRequest {
   departmentId?: string | null;
   assignedStaffId?: string | null;

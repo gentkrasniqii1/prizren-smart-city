@@ -27,6 +27,16 @@ export class AnalyticsController {
     return this.analyticsService.byStatus(query);
   }
 
+  @Get('by-department')
+  byDepartment(@Query() query: AnalyticsQueryDto) {
+    return this.analyticsService.byDepartment(query);
+  }
+
+  @Get('over-time')
+  overTime(@Query() query: AnalyticsQueryDto) {
+    return this.analyticsService.overTime(query);
+  }
+
   @Get('sla')
   sla(@Query() query: AnalyticsQueryDto) {
     return this.analyticsService.sla(query);
