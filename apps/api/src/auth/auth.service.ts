@@ -265,7 +265,9 @@ export class AuthService {
         hours: RESET_HOURS,
       });
       const resetUrl = `${this.config.webOrigin}/reset-password?token=${encodeURIComponent(raw)}`;
-      await this.mail.sendPasswordResetEmail(user.email, resetUrl);
+      await this.safeSendMail('password-reset', () =>
+        this.mail.sendPasswordResetEmail(user.email, resetUrl),
+      );
     }
     return { ok: true };
   }
@@ -468,7 +470,9 @@ export class AuthService {
       hours: VERIFY_HOURS,
     });
     const verifyUrl = `${this.config.webOrigin}/verify-email?token=${encodeURIComponent(raw)}`;
-    await this.mail.sendVerificationEmail(user.email, verifyUrl);
+    await this.safeSendMail('verification', () =>
+      this.mail.sendVerificationEmail(user.email, verifyUrl),
+    );
     return raw;
   }
 
@@ -529,15 +533,19 @@ export class AuthService {
     await new Promise((resolve) => setTimeout(resolve, 40));
   }
 
-  // The password itself was already committed to the DB — a mail provider
-  // hiccup (e.g. sandbox restrictions) must not turn a successful change/reset
-  // into a 500 for the caller.
-  private async notifyPasswordChanged(email: string): Promise<void> {
+  // The underlying DB write (password change, token issuance, etc.) was already
+  // committed — a mail provider hiccup (e.g. Resend sandbox restrictions, a
+  // network blip) must never turn an otherwise-successful request into a 500.
+  private async safeSendMail(context: string, send: () => Promise<void>): Promise<void> {
     try {
-      await this.mail.sendPasswordChangedEmail(email);
+      await send();
     } catch (err) {
-      this.logger.error(`Failed to send password-changed email to ${email}`, err);
+      this.logger.error(`Failed to send ${context} email`, err);
     }
+  }
+
+  private async notifyPasswordChanged(email: string): Promise<void> {
+    await this.safeSendMail('password-changed', () => this.mail.sendPasswordChangedEmail(email));
   }
 
   private async issueAuth(
