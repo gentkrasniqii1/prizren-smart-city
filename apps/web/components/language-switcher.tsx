@@ -19,7 +19,7 @@ export function LanguageSwitcher() {
 
   return (
     <div
-      className="inline-flex items-center rounded-md border border-stone-300 bg-white p-0.5 text-xs font-semibold"
+      className="inline-flex items-center rounded-md border border-border bg-card p-0.5 text-xs font-semibold"
       role="group"
       aria-label={t('language')}
     >
@@ -29,7 +29,7 @@ export function LanguageSwitcher() {
         onClick={() => setLocale('sq')}
         aria-pressed={locale === 'sq'}
         lang="sq"
-        className={`min-h-10 min-w-10 rounded px-2.5 py-2 ${locale === 'sq' ? 'bg-mosque-700 text-white' : 'text-stone-600 hover:bg-stone-50'}`}
+        className={`min-h-10 min-w-10 rounded px-2.5 py-2 ${locale === 'sq' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-muted'}`}
       >
         SQ
       </button>
@@ -39,7 +39,7 @@ export function LanguageSwitcher() {
         onClick={() => setLocale('en')}
         aria-pressed={locale === 'en'}
         lang="en"
-        className={`min-h-10 min-w-10 rounded px-2.5 py-2 ${locale === 'en' ? 'bg-mosque-700 text-white' : 'text-stone-600 hover:bg-stone-50'}`}
+        className={`min-h-10 min-w-10 rounded px-2.5 py-2 ${locale === 'en' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-muted'}`}
       >
         EN
       </button>

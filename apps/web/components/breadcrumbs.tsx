@@ -2,7 +2,7 @@ import Link from 'next/link';
 
 export function Breadcrumbs({ items }: { items: { href?: string; label: string }[] }) {
   return (
-    <nav aria-label="Breadcrumb" className="mb-4 text-sm text-stone-500">
+    <nav aria-label="Breadcrumb" className="mb-4 text-sm text-stone-600">
       <ol className="flex flex-wrap items-center gap-1.5">
         {items.map((item, i) => {
           const last = i === items.length - 1;
