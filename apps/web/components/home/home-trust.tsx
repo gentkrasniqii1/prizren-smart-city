@@ -42,7 +42,7 @@ export async function HomeTrust({ stats }: { stats: TransparencyStats | null }) 
   ];
 
   return (
-    <Section className="border-b border-stone-200 bg-white py-10 sm:py-12">
+    <Section className="border-b border-stone-200 bg-card py-10 sm:py-12">
       <PageContainer>
         <ul className="grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
           {items.map((item, i) => {

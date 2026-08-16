@@ -131,9 +131,9 @@ export function AddressSearch({
           />
         ) : null}
       </div>
-      <p className="mt-1.5 text-xs text-stone-500">{t('addressHint')}</p>
+      <p className="mt-1.5 text-xs text-stone-600">{t('addressHint')}</p>
       {error ? (
-        <p className="mt-1.5 text-xs text-red-700" role="status">
+        <p className="mt-1.5 text-xs text-red-700 dark:text-red-400" role="status">
           {error}
         </p>
       ) : null}
@@ -142,7 +142,7 @@ export function AddressSearch({
         <ul
           id={listId}
           role="listbox"
-          className="absolute z-20 mt-1 max-h-56 w-full overflow-auto rounded-md border border-stone-200 bg-white py-1 shadow-lift"
+          className="absolute z-20 mt-1 max-h-56 w-full overflow-auto rounded-md border border-stone-200 bg-card py-1 shadow-lift"
         >
           {results.map((item) => (
             <li key={item.place_id} role="option" aria-selected={false}>
@@ -164,7 +164,7 @@ export function AddressSearch({
       ) : null}
 
       {open && !busy && query.trim().length >= 3 && results.length === 0 && !error ? (
-        <p className="mt-1.5 text-xs text-stone-500" role="status">
+        <p className="mt-1.5 text-xs text-stone-600" role="status">
           {t('addressSearchEmpty')}
         </p>
       ) : null}

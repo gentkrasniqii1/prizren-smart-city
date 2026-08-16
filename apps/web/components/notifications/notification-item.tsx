@@ -41,7 +41,7 @@ export function NotificationItem({
       <span
         className={cn(
           'mt-0.5 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full',
-          unread ? 'bg-mosque-700 text-white' : 'bg-stone-100 text-stone-500',
+          unread ? 'bg-primary text-primary-foreground' : 'bg-stone-100 text-stone-500',
         )}
         aria-hidden
       >
@@ -56,7 +56,7 @@ export function NotificationItem({
         >
           {notification.message ?? notification.type}
         </p>
-        <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-xs text-stone-500">
+        <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-xs text-stone-600">
           <time dateTime={notification.createdAt}>
             {relativeTime(notification.createdAt, locale)}
           </time>

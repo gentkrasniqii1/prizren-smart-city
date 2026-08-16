@@ -29,7 +29,7 @@ function DistributionList({
 }) {
   const max = Math.max(...items.map((i) => i.count), 1);
   if (items.length === 0) {
-    return <p className="mt-3 text-sm text-stone-500">{emptyLabel}</p>;
+    return <p className="mt-3 text-sm text-stone-600">{emptyLabel}</p>;
   }
   return (
     <ul className="mt-4 space-y-3">
@@ -170,13 +170,13 @@ export function TransparencyView() {
             </section>
 
             <section className="mt-10 grid gap-6 md:grid-cols-2">
-              <div className="rounded-xl border border-stone-200 bg-white p-5">
+              <div className="rounded-xl border border-stone-200 bg-card p-5">
                 <h2 className="font-display text-lg tracking-tight text-stone-950">
                   {t('byStatus')}
                 </h2>
                 <DistributionList items={statusItems} emptyLabel={t('noData')} />
               </div>
-              <div className="rounded-xl border border-stone-200 bg-white p-5">
+              <div className="rounded-xl border border-stone-200 bg-card p-5">
                 <h2 className="font-display text-lg tracking-tight text-stone-950">
                   {t('byCategory')}
                 </h2>
@@ -213,13 +213,13 @@ export function TransparencyView() {
               </Link>
               <Link
                 href="/report"
-                className="inline-flex items-center justify-center rounded-md border border-stone-300 bg-white px-4 py-2.5 text-sm font-medium text-stone-900 hover:bg-stone-50"
+                className="inline-flex items-center justify-center rounded-md border border-stone-300 bg-card px-4 py-2.5 text-sm font-medium text-stone-900 hover:bg-muted"
               >
                 {t('ctaReport')}
               </Link>
             </div>
 
-            <p className="mt-6 text-xs text-stone-500">{t('privacyNote')}</p>
+            <p className="mt-6 text-xs text-stone-600">{t('privacyNote')}</p>
           </>
         ) : null}
       </PageContainer>

@@ -26,19 +26,19 @@ export function AuthShell({
           priority
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/55 to-black/35" />
-        <div className="absolute inset-0 bg-mosque-950/25" />
+        <div className="absolute inset-0 bg-overlay-surface/25" />
         <div className="relative z-10 flex h-full flex-col justify-end p-10 xl:p-14">
           <div className="max-w-lg rounded-xl bg-black/35 p-6 backdrop-blur-sm ring-1 ring-white/10">
-            <Link href="/" className="inline-flex items-center gap-3 text-white">
+            <Link href="/" className="inline-flex items-center gap-3 text-overlay-foreground">
               <BrandMark className="h-11 w-11 shrink-0" />
               <span className="text-sm font-semibold uppercase tracking-[0.18em]">
                 Prizren Smart City
               </span>
             </Link>
-            <p className="mt-8 font-display text-4xl leading-tight tracking-tight text-white xl:text-5xl">
+            <p className="mt-8 font-display text-4xl leading-tight tracking-tight text-overlay-foreground xl:text-5xl">
               Raporto. Ndiq. Ndrysho.
             </p>
-            <p className="mt-4 max-w-md text-base leading-relaxed text-stone-100">
+            <p className="mt-4 max-w-md text-base leading-relaxed text-overlay-muted">
               Platformë qytetare për problemet urbane — raportim, transparencë dhe ndjekje të
               rasteve.
             </p>
@@ -57,10 +57,10 @@ export function AuthShell({
           />
           <div className="absolute inset-0 bg-gradient-to-t from-background via-black/50 to-black/40" />
           <div className="absolute inset-x-0 bottom-0 p-4">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-white">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-overlay-foreground">
               Prizren Smart City
             </p>
-            <p className="font-display text-xl text-white">Raporto. Ndiq. Ndrysho.</p>
+            <p className="font-display text-xl text-overlay-foreground">Raporto. Ndiq. Ndrysho.</p>
           </div>
         </div>
 

@@ -32,7 +32,7 @@ export function SectionHeading({
       <h2
         className={cn(
           'font-display text-h2 tracking-tight sm:text-[1.75rem]',
-          dark ? 'text-stone-50' : 'text-stone-950',
+          dark ? 'text-overlay-foreground' : 'text-stone-950',
           eyebrow && 'mt-2',
         )}
       >
@@ -42,7 +42,7 @@ export function SectionHeading({
         <p
           className={cn(
             'mt-3 text-base sm:text-lg',
-            dark ? 'text-mosque-100/90' : 'text-stone-600',
+            dark ? 'text-overlay-muted' : 'text-stone-600',
           )}
         >
           {description}

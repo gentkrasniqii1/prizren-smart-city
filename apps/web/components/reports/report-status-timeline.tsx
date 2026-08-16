@@ -67,9 +67,9 @@ export function ReportStatusTimeline({
                 <span
                   className={cn(
                     'relative z-10 flex h-6 w-6 shrink-0 items-center justify-center rounded-full border text-[10px] font-semibold',
-                    done && 'border-mosque-700 bg-mosque-700 text-white',
-                    active && 'border-mosque-700 bg-white text-mosque-800 ring-2 ring-mosque-200',
-                    upcoming && 'border-stone-300 bg-white text-stone-400',
+                    done && 'border-primary bg-primary text-primary-foreground',
+                    active && 'border-mosque-700 bg-card text-mosque-800 ring-2 ring-mosque-200',
+                    upcoming && 'border-stone-300 bg-card text-stone-600',
                   )}
                   aria-current={active ? 'step' : undefined}
                 >
@@ -79,7 +79,7 @@ export function ReportStatusTimeline({
                   <p
                     className={cn(
                       'text-sm font-medium',
-                      active ? 'text-stone-950' : done ? 'text-stone-800' : 'text-stone-400',
+                      active ? 'text-stone-950' : done ? 'text-stone-800' : 'text-stone-600',
                     )}
                   >
                     {t(`timeline.${step}`)}

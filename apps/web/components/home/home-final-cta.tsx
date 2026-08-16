@@ -20,15 +20,17 @@ export async function HomeFinalCta() {
           className="object-cover"
         />
         <div
-          className="absolute inset-0 bg-gradient-to-t from-stone-950/90 via-stone-950/65 to-stone-950/35"
+          className="absolute inset-0 bg-gradient-to-t from-overlay-surface/90 via-overlay-surface/65 to-overlay-surface/35"
           aria-hidden
         />
         <PageContainer className="relative flex min-h-[22rem] flex-col items-start justify-end pb-14 pt-20 sm:min-h-[26rem] sm:pb-16">
           <Reveal>
-            <h2 className="max-w-2xl font-display text-3xl font-semibold tracking-tight text-stone-50 sm:text-4xl">
+            <h2 className="max-w-2xl font-display text-3xl font-semibold tracking-tight text-overlay-foreground sm:text-4xl">
               {t('final.title')}
             </h2>
-            <p className="mt-3 max-w-xl text-base text-stone-200 sm:text-lg">{t('final.body')}</p>
+            <p className="mt-3 max-w-xl text-base text-overlay-muted sm:text-lg">
+              {t('final.body')}
+            </p>
             <div className="mt-8 flex flex-col gap-3 sm:flex-row">
               <Link href="/report">
                 <Button size="lg" className="w-full sm:w-auto">
@@ -39,7 +41,7 @@ export async function HomeFinalCta() {
                 <Button
                   size="lg"
                   variant="secondary"
-                  className="w-full border-white/35 bg-white/95 sm:w-auto"
+                  className="w-full border-white/35 bg-white/95 text-chip-foreground sm:w-auto"
                 >
                   {t('ctaBrowse')}
                 </Button>
