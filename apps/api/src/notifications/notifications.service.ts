@@ -1,5 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { OnEvent } from '@nestjs/event-emitter';
+import { ConfigService } from '../auth/config.service';
+import { MailService } from '../mail/mail.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { REPORT_STATUS_CHANGED_EVENT, StatusChangedEvent } from '../events/status-changed.event';
 
@@ -7,15 +9,17 @@ import { REPORT_STATUS_CHANGED_EVENT, StatusChangedEvent } from '../events/statu
 export class NotificationsService {
   private readonly logger = new Logger(NotificationsService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly mail: MailService,
+    private readonly config: ConfigService,
+  ) {}
 
   @OnEvent(REPORT_STATUS_CHANGED_EVENT)
   async handleStatusChanged(event: StatusChangedEvent) {
     if (event.ownerUserId === event.changedByUserId) {
       return;
     }
-
-    const message = `Statusi i raportit u ndryshua: ${event.oldStatus} → ${event.newStatus}`;
 
     await this.prisma.notification.create({
       data: {
@@ -27,10 +31,25 @@ export class NotificationsService {
       },
     });
 
-    // Email channel stub until SMTP is configured (Phase 8)
-    this.logger.log(
-      `[email-stub] To user ${event.ownerUserId}: ${message} (report ${event.reportId})`,
-    );
+    const owner = await this.prisma.user.findUnique({
+      where: { id: event.ownerUserId },
+      select: { email: true },
+    });
+    if (owner) {
+      try {
+        await this.mail.sendReportStatusChangedEmail(owner.email, {
+          oldStatus: event.oldStatus,
+          newStatus: event.newStatus,
+          reportUrl: `${this.config.webOrigin}/reports/${event.reportId}`,
+        });
+      } catch (err) {
+        this.logger.error(
+          `Failed to send status-changed email for report ${event.reportId}: ${
+            err instanceof Error ? err.message : err
+          }`,
+        );
+      }
+    }
   }
 
   async listForUser(userId: string, opts: { unreadOnly?: boolean; page?: number; limit?: number }) {

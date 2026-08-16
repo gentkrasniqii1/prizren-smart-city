@@ -153,22 +153,42 @@ export class AuthService {
     return { ...issued, refreshDays };
   }
 
-  async loginWithOAuth(
-    profile: OAuthProfile,
-  ): Promise<{ auth: AuthResponse; refreshToken: string; refreshDays: number }> {
+  async loginWithOAuth(profile: OAuthProfile): Promise<{
+    auth: AuthResponse;
+    refreshToken: string;
+    refreshDays: number;
+    linkedAccount: boolean;
+  }> {
     const providerIdField = this.providerIdField(profile.provider);
     let user = await this.prisma.user.findFirst({
       where: { [providerIdField]: profile.providerId },
     });
+
+    let linkedAccount = false;
 
     if (!user && profile.email) {
       const byEmail = await this.prisma.user.findUnique({
         where: { email: profile.email.toLowerCase().trim() },
       });
       if (byEmail) {
-        if (byEmail.passwordHash && !byEmail[providerIdField]) {
+        const existingProviderId = byEmail[providerIdField];
+        // Email matches an existing account, but it's already linked to a
+        // *different* provider account (rare — e.g. a stale/changed provider id).
+        if (existingProviderId && existingProviderId !== profile.providerId) {
           throw new ConflictException('ACCOUNT_EXISTS_PASSWORD');
         }
+
+        const hasPassword = Boolean(byEmail.passwordHash);
+        // Google verifies the email address itself, so it's safe to auto-link
+        // an existing password account without an extra confirmation step.
+        const canAutoLink = hasPassword && profile.provider === 'google' && profile.emailVerified;
+
+        if (hasPassword && !existingProviderId && !canAutoLink) {
+          throw new ConflictException('ACCOUNT_EXISTS_PASSWORD');
+        }
+
+        linkedAccount = canAutoLink;
+
         user = await this.prisma.user.update({
           where: { id: byEmail.id },
           data: {
@@ -203,7 +223,7 @@ export class AuthService {
 
     const refreshDays = this.config.refreshExpiresDays;
     const issued = await this.issueAuth(user, refreshDays);
-    return { ...issued, refreshDays };
+    return { ...issued, refreshDays, linkedAccount };
   }
 
   async requestEmailVerification(email: string): Promise<{ ok: true }> {
@@ -319,9 +339,12 @@ export class AuthService {
     return { ok: true };
   }
 
-  async refresh(
-    rawToken: string | undefined,
-  ): Promise<{ accessToken: string; refreshToken: string }> {
+  async refresh(rawToken: string | undefined): Promise<{
+    accessToken: string;
+    refreshToken: string;
+    refreshDays: number;
+    persistent: boolean;
+  }> {
     if (!rawToken) {
       throw new UnauthorizedException('Refresh token missing');
     }
@@ -341,11 +364,20 @@ export class AuthService {
       data: { revokedAt: new Date() },
     });
 
+    const dayMs = 24 * 60 * 60 * 1000;
     const remainingMs = stored.expiresAt.getTime() - Date.now();
-    const remainingDays = Math.max(1, Math.ceil(remainingMs / (24 * 60 * 60 * 1000)));
+    const remainingDays = Math.max(1, Math.ceil(remainingMs / dayMs));
+
+    // The original refresh token's total lifetime tells us whether "remember me" was
+    // checked at login (there's no separate column for it), so rotation keeps the
+    // same cookie persistence instead of silently upgrading/downgrading the session.
+    const totalDays = (stored.expiresAt.getTime() - stored.createdAt.getTime()) / dayMs;
+    const midpointDays = (this.config.refreshExpiresDays + this.config.rememberMeExpiresDays) / 2;
+    const persistent = totalDays > midpointDays;
+
     const accessToken = await this.signAccessToken(stored.user);
     const refreshToken = await this.createRefreshToken(stored.user.id, remainingDays);
-    return { accessToken, refreshToken };
+    return { accessToken, refreshToken, refreshDays: remainingDays, persistent };
   }
 
   async logout(rawToken: string | undefined): Promise<void> {

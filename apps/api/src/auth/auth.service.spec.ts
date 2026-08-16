@@ -35,6 +35,7 @@ describe('AuthService', () => {
   let prisma: {
     user: {
       findUnique: ReturnType<typeof vi.fn>;
+      findFirst: ReturnType<typeof vi.fn>;
       create: ReturnType<typeof vi.fn>;
       update: ReturnType<typeof vi.fn>;
     };
@@ -61,6 +62,7 @@ describe('AuthService', () => {
     prisma = {
       user: {
         findUnique: vi.fn(),
+        findFirst: vi.fn(),
         create: vi.fn(),
         update: vi.fn(),
       },
@@ -169,6 +171,74 @@ describe('AuthService', () => {
     await expect(
       service.login({ email: 'citizen@test.local', password: 'wrong-password' }),
     ).rejects.toBeInstanceOf(UnauthorizedException);
+  });
+
+  describe('loginWithOAuth', () => {
+    it('auto-links a verified Google profile to an existing password account', async () => {
+      prisma.user.findFirst.mockResolvedValue(null); // no user with this googleId yet
+      prisma.user.findUnique.mockResolvedValue({ ...user, googleId: null }); // matched by email
+      prisma.user.update.mockResolvedValue({ ...user, googleId: 'google-sub-1' });
+
+      const result = await service.loginWithOAuth({
+        provider: 'google',
+        providerId: 'google-sub-1',
+        email: 'citizen@test.local',
+        name: 'Citizen Test',
+        emailVerified: true,
+      });
+
+      expect(result.linkedAccount).toBe(true);
+      expect(prisma.user.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ googleId: 'google-sub-1' }),
+        }),
+      );
+    });
+
+    it('does not report a link on a subsequent login with the already-linked googleId', async () => {
+      prisma.user.findFirst.mockResolvedValue({ ...user, googleId: 'google-sub-1' });
+
+      const result = await service.loginWithOAuth({
+        provider: 'google',
+        providerId: 'google-sub-1',
+        email: 'citizen@test.local',
+        name: 'Citizen Test',
+        emailVerified: true,
+      });
+
+      expect(result.linkedAccount).toBe(false);
+      expect(prisma.user.findUnique).not.toHaveBeenCalled();
+    });
+
+    it('rejects when the email is already linked to a different googleId', async () => {
+      prisma.user.findFirst.mockResolvedValue(null);
+      prisma.user.findUnique.mockResolvedValue({ ...user, googleId: 'other-google-sub' });
+
+      await expect(
+        service.loginWithOAuth({
+          provider: 'google',
+          providerId: 'google-sub-1',
+          email: 'citizen@test.local',
+          name: 'Citizen Test',
+          emailVerified: true,
+        }),
+      ).rejects.toBeInstanceOf(ConflictException);
+    });
+
+    it('still rejects non-Google providers matching an existing password account', async () => {
+      prisma.user.findFirst.mockResolvedValue(null);
+      prisma.user.findUnique.mockResolvedValue({ ...user, facebookId: null });
+
+      await expect(
+        service.loginWithOAuth({
+          provider: 'facebook',
+          providerId: 'fb-sub-1',
+          email: 'citizen@test.local',
+          name: 'Citizen Test',
+          emailVerified: true,
+        }),
+      ).rejects.toBeInstanceOf(ConflictException);
+    });
   });
 
   it('maps users to PublicUser via toPublicUser', () => {

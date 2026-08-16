@@ -7,6 +7,8 @@ import { PrismaService } from '../prisma/prisma.service';
 import { CloudinaryService } from '../uploads/cloudinary.service';
 import { AiClassificationService } from '../ai/ai-classification.service';
 import { RoutingService } from '../routing/routing.service';
+import { MailService } from '../mail/mail.service';
+import { ConfigService } from '../auth/config.service';
 
 describe('ReportsService.updateStatus', () => {
   let prisma: {
@@ -34,6 +36,8 @@ describe('ReportsService.updateStatus', () => {
       { classifyReportPhoto: vi.fn() } as unknown as AiClassificationService,
       events as unknown as EventEmitter2,
       { routeByCategory: vi.fn() } as unknown as RoutingService,
+      { sendReportReceivedEmail: vi.fn() } as unknown as MailService,
+      { webOrigin: 'http://localhost:3000' } as unknown as ConfigService,
     );
   });
 

@@ -56,7 +56,8 @@ export class AuthController {
     if (result.kind === '2fa') {
       return { requiresTwoFactor: true, challengeToken: result.challengeToken };
     }
-    this.setRefreshCookie(res, result.refreshToken, result.refreshDays);
+    // "Remember me" unchecked => session cookie (cleared when the browser closes).
+    this.setRefreshCookie(res, result.refreshToken, result.refreshDays, Boolean(dto.rememberMe));
     return result.auth;
   }
 
@@ -196,8 +197,10 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   async refresh(@Req() req: Request, @Res({ passthrough: true }) res: Response) {
     const raw = req.cookies?.[this.config.refreshCookieName] as string | undefined;
-    const { accessToken, refreshToken } = await this.authService.refresh(raw);
-    this.setRefreshCookie(res, refreshToken, this.config.refreshExpiresDays);
+    const { accessToken, refreshToken, refreshDays, persistent } =
+      await this.authService.refresh(raw);
+    // Preserve the original "remember me" choice across token rotation.
+    this.setRefreshCookie(res, refreshToken, refreshDays, persistent);
     return { accessToken };
   }
 
@@ -251,7 +254,11 @@ export class AuthController {
 
       const session = await this.authService.loginWithOAuth(profile);
       this.setRefreshCookie(res, session.refreshToken, session.refreshDays);
-      return res.redirect(`${this.config.webOrigin}/auth/callback`);
+      const callbackUrl = new URL(`${this.config.webOrigin}/auth/callback`);
+      if (session.linkedAccount) {
+        callbackUrl.searchParams.set('linked', provider);
+      }
+      return res.redirect(callbackUrl.toString());
     } catch (err) {
       const code = this.oauthErrorCode(err);
       return res.redirect(`${loginUrl}?oauth_error=${code}`);
@@ -278,15 +285,22 @@ export class AuthController {
     };
   }
 
-  private setRefreshCookie(res: Response, token: string, days: number) {
-    const maxAgeMs = days * 24 * 60 * 60 * 1000;
-    res.cookie(this.config.refreshCookieName, token, {
+  /**
+   * `persistent = false` sets a session cookie (no Max-Age/Expires) so the browser
+   * drops it on close — used when "remember me" is unchecked. Defaults to persistent
+   * for flows without a remember-me choice (email verification, OAuth, 2FA).
+   */
+  private setRefreshCookie(res: Response, token: string, days: number, persistent = true) {
+    const options: CookieOptions = {
       httpOnly: true,
       secure: this.config.isProduction,
       sameSite: 'lax',
       path: '/auth',
-      maxAge: maxAgeMs,
-    });
+    };
+    if (persistent) {
+      options.maxAge = days * 24 * 60 * 60 * 1000;
+    }
+    res.cookie(this.config.refreshCookieName, token, options);
   }
 
   private clearRefreshCookie(res: Response) {

@@ -217,14 +217,6 @@ export default function RegisterPage() {
         </Button>
       </form>
 
-      <div className="my-6 flex items-center gap-3">
-        <span className="h-px flex-1 bg-border" />
-        <span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
-          {t('orContinue')}
-        </span>
-        <span className="h-px flex-1 bg-border" />
-      </div>
-
       <OAuthButtons disabled={submitting} />
 
       <p className="mt-6 text-sm text-muted-foreground">

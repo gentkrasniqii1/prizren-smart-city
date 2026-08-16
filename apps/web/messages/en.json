@@ -162,6 +162,7 @@
     "oauthAccountExists": "This email already has a password account. Sign in with email, then link the provider from your account.",
     "oauthEmailRequired": "The provider did not share an email, so an account cannot be created.",
     "oauthFailed": "Provider sign-in failed. Please try again.",
+    "oauthLinked": "Your account is now linked with Google.",
     "forgotTitle": "Forgot your password?",
     "forgotBody": "Enter your email and we will send a link to restore your account.",
     "sendResetLink": "Send the link",

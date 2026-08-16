@@ -1,4 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { Resend } from 'resend';
 import * as nodemailer from 'nodemailer';
 import type { Transporter } from 'nodemailer';
 import { ConfigService } from '../auth/config.service';
@@ -10,13 +11,29 @@ type MailPayload = {
   html: string;
 };
 
+const STATUS_LABELS_SQ: Record<string, string> = {
+  PENDING: 'Në pritje',
+  IN_REVIEW: 'Në shqyrtim',
+  ASSIGNED: 'I caktuar',
+  IN_PROGRESS: 'Në progres',
+  RESOLVED: 'I zgjidhur',
+  REJECTED: 'I refuzuar',
+};
+
+function statusLabel(status: string): string {
+  return STATUS_LABELS_SQ[status] ?? status;
+}
+
 @Injectable()
 export class MailService {
   private readonly logger = new Logger(MailService.name);
+  private resend: Resend | null = null;
   private transporter: Transporter | null = null;
 
   constructor(private readonly config: ConfigService) {
-    if (this.config.smtpHost) {
+    if (this.config.resendApiKey) {
+      this.resend = new Resend(this.config.resendApiKey);
+    } else if (this.config.smtpHost) {
       this.transporter = nodemailer.createTransport({
         host: this.config.smtpHost,
         port: this.config.smtpPort,
@@ -30,7 +47,7 @@ export class MailService {
   }
 
   get configured(): boolean {
-    return Boolean(this.transporter);
+    return Boolean(this.resend || this.transporter);
   }
 
   async sendVerificationEmail(to: string, verifyUrl: string): Promise<void> {
@@ -75,6 +92,52 @@ export class MailService {
     });
   }
 
+  async sendReportReceivedEmail(
+    to: string,
+    params: { reportId: string; description: string; reportUrl: string },
+  ): Promise<void> {
+    const excerpt =
+      params.description.length > 140 ? `${params.description.slice(0, 140)}…` : params.description;
+    await this.send({
+      to,
+      subject: 'Raporti u pranua — Prizren Smart City',
+      text: `Raporti yt u pranua me sukses.\n\n"${excerpt}"\n\nShiko statusin këtu:\n${params.reportUrl}`,
+      html: this.layout(
+        'Raporti u pranua',
+        `<p>Faleminderit! Raporti yt u regjistrua dhe do të shqyrtohet së shpejti.</p>
+         <p style="padding:12px 16px;background:#f5f0e8;border-radius:8px;color:#4a3f33">${this.escapeHtml(excerpt)}</p>
+         <p><a href="${params.reportUrl}" style="display:inline-block;padding:12px 20px;background:#335f9b;color:#faf8f5;border-radius:8px;text-decoration:none;font-weight:600">Shiko raportin</a></p>`,
+      ),
+    });
+  }
+
+  async sendReportStatusChangedEmail(
+    to: string,
+    params: { oldStatus: string; newStatus: string; reportUrl: string },
+  ): Promise<void> {
+    const oldLabel = statusLabel(params.oldStatus);
+    const newLabel = statusLabel(params.newStatus);
+    await this.send({
+      to,
+      subject: 'Statusi i raportit u ndryshua — Prizren Smart City',
+      text: `Statusi i raportit tënd ndryshoi: ${oldLabel} → ${newLabel}\n\nShiko detajet këtu:\n${params.reportUrl}`,
+      html: this.layout(
+        'Statusi u përditësua',
+        `<p>Statusi i raportit tënd ndryshoi:</p>
+         <p style="font-size:16px"><strong>${this.escapeHtml(oldLabel)}</strong> → <strong>${this.escapeHtml(newLabel)}</strong></p>
+         <p><a href="${params.reportUrl}" style="display:inline-block;padding:12px 20px;background:#335f9b;color:#faf8f5;border-radius:8px;text-decoration:none;font-weight:600">Shiko raportin</a></p>`,
+      ),
+    });
+  }
+
+  private escapeHtml(value: string): string {
+    return value
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+
   private layout(title: string, body: string): string {
     return `<!doctype html>
 <html><body style="margin:0;background:#faf8f5;font-family:system-ui,sans-serif;color:#27211c">
@@ -87,10 +150,26 @@ export class MailService {
   }
 
   private async send(payload: MailPayload): Promise<void> {
+    if (this.resend) {
+      const { error } = await this.resend.emails.send({
+        from: this.config.mailFrom,
+        to: payload.to,
+        subject: payload.subject,
+        text: payload.text,
+        html: payload.html,
+      });
+      if (error) {
+        this.logger.error(`Resend failed to send to ${payload.to}: ${error.message}`);
+        throw new Error(`Failed to send email via Resend: ${error.message}`);
+      }
+      return;
+    }
+
     if (!this.transporter) {
       this.logger.warn(`[mail-dev] To ${payload.to} | ${payload.subject}\n${payload.text}`);
       return;
     }
+
     await this.transporter.sendMail({
       from: this.config.mailFrom,
       to: payload.to,

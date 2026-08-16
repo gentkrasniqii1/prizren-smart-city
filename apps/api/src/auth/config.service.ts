@@ -98,6 +98,10 @@ export class ConfigService {
     return Boolean(this.facebookAppId && this.facebookAppSecret);
   }
 
+  get resendApiKey(): string {
+    return process.env.RESEND_API_KEY ?? '';
+  }
+
   get smtpHost(): string {
     return process.env.SMTP_HOST ?? '';
   }
@@ -120,7 +124,8 @@ export class ConfigService {
 
   get mailFrom(): string {
     const name = process.env.MAIL_FROM_NAME ?? 'Prizren Smart City';
-    const email = process.env.MAIL_FROM ?? 'noreply@prizren.city';
+    // Resend's shared sender until a custom domain is verified.
+    const email = process.env.MAIL_FROM ?? 'onboarding@resend.dev';
     return `${name} <${email}>`;
   }
 
