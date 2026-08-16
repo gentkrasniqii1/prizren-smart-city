@@ -21,6 +21,8 @@ import { Button, EmptyState, ErrorBanner, Skeleton, Spinner, StatCard } from '@/
 import { getRoleLabel } from '@/lib/labels';
 import { cn } from '@/lib/utils';
 import { TwoFactorSettings } from '@/components/account/two-factor-settings';
+import { ProfileSettings } from '@/components/account/profile-settings';
+import { ChangePasswordForm } from '@/components/account/change-password-form';
 import { useRealtimeReports } from '@/lib/use-realtime-reports';
 import type { AppLocale } from '@/i18n/request';
 
@@ -186,7 +188,7 @@ export function AccountDashboard() {
           <div className="flex items-start gap-4">
             <UserAvatar name={user.name} size={56} />
             <div>
-              <p className="text-sm text-stone-500">{t('greeting')}</p>
+              <p className="text-sm text-stone-600">{t('greeting')}</p>
               <h1 className="text-h1 tracking-tight text-foreground sm:text-3xl">
                 {t('welcome', { name: firstName })}
               </h1>
@@ -205,7 +207,7 @@ export function AccountDashboard() {
             </Link>
             <Link
               href="/notifications"
-              className="inline-flex items-center justify-center gap-2 rounded-md border border-stone-300 bg-white px-3 py-1.5 text-sm font-medium text-stone-900 transition hover:bg-stone-50"
+              className="inline-flex items-center justify-center gap-2 rounded-md border border-stone-300 bg-card px-3 py-1.5 text-sm font-medium text-stone-900 transition hover:bg-muted"
             >
               <Bell className="h-4 w-4" aria-hidden />
               {t('ctaNotifications')}
@@ -262,7 +264,7 @@ export function AccountDashboard() {
                 <p className="mt-1 text-sm text-stone-600">{t('reportsSubtitle')}</p>
               </div>
               <div
-                className="inline-flex rounded-md border border-stone-200 bg-white p-0.5"
+                className="inline-flex rounded-md border border-stone-200 bg-card p-0.5"
                 role="group"
                 aria-label={t('filterLabel')}
               >
@@ -280,8 +282,8 @@ export function AccountDashboard() {
                     className={cn(
                       'rounded px-2.5 py-1 text-xs font-medium transition',
                       filter === key
-                        ? 'bg-mosque-700 text-white'
-                        : 'text-stone-600 hover:bg-stone-50',
+                        ? 'bg-primary text-primary-foreground'
+                        : 'text-stone-600 hover:bg-muted',
                     )}
                     aria-pressed={filter === key}
                   >
@@ -316,7 +318,7 @@ export function AccountDashboard() {
                 }
               />
             ) : (
-              <ul className="mt-4 overflow-hidden rounded-xl border border-stone-200 bg-white">
+              <ul className="mt-4 overflow-hidden rounded-xl border border-stone-200 bg-card">
                 {visibleReports.map((report) => (
                   <li key={report.id}>
                     <ReportCard report={report} compact />
@@ -326,7 +328,7 @@ export function AccountDashboard() {
             )}
 
             {!reportsLoading && totalReports > reports.length ? (
-              <p className="mt-3 text-xs text-stone-500">
+              <p className="mt-3 text-xs text-stone-600">
                 {t('showingOf', { shown: reports.length, total: totalReports })}
               </p>
             ) : null}
@@ -336,7 +338,7 @@ export function AccountDashboard() {
           <aside className="space-y-6 lg:sticky lg:top-24">
             <section
               aria-labelledby="account-notif-heading"
-              className="rounded-xl border border-stone-200 bg-white p-5"
+              className="rounded-xl border border-stone-200 bg-card p-5"
             >
               <div className="flex items-center justify-between gap-2">
                 <h2
@@ -358,7 +360,7 @@ export function AccountDashboard() {
                   <Skeleton className="h-12 w-full" />
                 </div>
               ) : notifications.length === 0 ? (
-                <p className="mt-3 text-sm text-stone-500">{t('notifEmpty')}</p>
+                <p className="mt-3 text-sm text-stone-600">{t('notifEmpty')}</p>
               ) : (
                 <ul className="-mx-2 mt-3 divide-y divide-stone-100 overflow-hidden rounded-lg border border-stone-100">
                   {notifications.map((n) => (
@@ -378,7 +380,7 @@ export function AccountDashboard() {
             <section
               id="profile"
               aria-labelledby="account-profile-heading"
-              className="scroll-mt-24 rounded-xl border border-stone-200 bg-white p-5"
+              className="scroll-mt-24 rounded-xl border border-stone-200 bg-card p-5"
             >
               <h2
                 id="account-profile-heading"
@@ -386,29 +388,14 @@ export function AccountDashboard() {
               >
                 {t('profileHeading')}
               </h2>
-              <dl className="mt-4 space-y-3 text-sm">
-                <div>
-                  <dt className="text-stone-500">{t('profileName')}</dt>
-                  <dd className="font-medium text-stone-900">{user.name}</dd>
-                </div>
-                <div>
-                  <dt className="text-stone-500">{t('profileEmail')}</dt>
-                  <dd className="font-medium text-stone-900">{user.email}</dd>
-                </div>
-                <div>
-                  <dt className="text-stone-500">{t('profileRole')}</dt>
-                  <dd className="font-medium text-stone-900">{getRoleLabel(user.role, locale)}</dd>
-                </div>
-                <div>
-                  <dt className="text-stone-500">{t('profileSince')}</dt>
-                  <dd className="font-medium text-stone-900">
-                    {new Date(user.createdAt).toLocaleDateString(
-                      locale === 'en' ? 'en-GB' : 'sq-AL',
-                      { year: 'numeric', month: 'long', day: 'numeric' },
-                    )}
-                  </dd>
-                </div>
-              </dl>
+              <ProfileSettings
+                user={user}
+                roleLabel={getRoleLabel(user.role, locale)}
+                memberSince={new Date(user.createdAt).toLocaleDateString(
+                  locale === 'en' ? 'en-GB' : 'sq-AL',
+                  { year: 'numeric', month: 'long', day: 'numeric' },
+                )}
+              />
 
               <Button
                 type="button"
@@ -421,6 +408,7 @@ export function AccountDashboard() {
                 {t('logout')}
               </Button>
             </section>
+            <ChangePasswordForm user={user} />
             <TwoFactorSettings enabled={Boolean(user.totpEnabled)} />
           </aside>
         </div>
@@ -433,7 +421,7 @@ function QuickLink({ href, icon: Icon, label }: { href: string; icon: typeof Map
   return (
     <Link
       href={href}
-      className="inline-flex items-center gap-1.5 rounded-md border border-stone-200 bg-white px-3 py-1.5 text-xs font-medium text-stone-700 transition hover:border-mosque-300 hover:text-mosque-800"
+      className="inline-flex items-center gap-1.5 rounded-md border border-stone-200 bg-card px-3 py-1.5 text-xs font-medium text-stone-700 transition hover:border-mosque-300 hover:text-mosque-800"
     >
       <Icon className="h-3.5 w-3.5" aria-hidden />
       {label}

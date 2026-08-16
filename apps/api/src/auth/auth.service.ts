@@ -3,6 +3,7 @@ import {
   ConflictException,
   ForbiddenException,
   Injectable,
+  Logger,
   UnauthorizedException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
@@ -35,6 +36,8 @@ const STAFF_ROLES: Role[] = [Role.DEPARTMENT_STAFF, Role.DEPARTMENT_ADMIN, Role.
 
 @Injectable()
 export class AuthService {
+  private readonly logger = new Logger(AuthService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly jwt: JwtService,
@@ -284,7 +287,49 @@ export class AuthService {
         data: { revokedAt: new Date() },
       }),
     ]);
-    await this.mail.sendPasswordChangedEmail(user.email);
+    await this.notifyPasswordChanged(user.email);
+    return { ok: true };
+  }
+
+  async changePassword(
+    userId: string,
+    currentPassword: string,
+    newPassword: string,
+  ): Promise<{ ok: true }> {
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (!user) {
+      throw new UnauthorizedException();
+    }
+    if (!user.passwordHash) {
+      throw new BadRequestException(
+        'This account signs in with a provider (Google/Apple/Facebook) and has no password. Use "Forgot password" to set one.',
+      );
+    }
+    const valid = await bcrypt.compare(currentPassword, user.passwordHash);
+    if (!valid) {
+      throw new UnauthorizedException('Current password is incorrect');
+    }
+    const policy = passwordPolicyErrors(newPassword);
+    if (policy.length > 0) {
+      throw new BadRequestException(`Password does not meet requirements: ${policy.join(', ')}`);
+    }
+    const unchanged = await bcrypt.compare(newPassword, user.passwordHash);
+    if (unchanged) {
+      throw new BadRequestException('New password must be different from the current password');
+    }
+
+    const passwordHash = await bcrypt.hash(newPassword, BCRYPT_ROUNDS);
+    await this.prisma.$transaction([
+      this.prisma.user.update({
+        where: { id: user.id },
+        data: { passwordHash, failedLoginCount: 0, lockedUntil: null },
+      }),
+      this.prisma.refreshToken.updateMany({
+        where: { userId: user.id, revokedAt: null },
+        data: { revokedAt: new Date() },
+      }),
+    ]);
+    await this.notifyPasswordChanged(user.email);
     return { ok: true };
   }
 
@@ -403,6 +448,7 @@ export class AuthService {
       role: user.role,
       emailVerified: user.emailVerified,
       totpEnabled: user.totpEnabled,
+      hasPassword: Boolean(user.passwordHash),
       createdAt: user.createdAt.toISOString(),
     };
   }
@@ -481,6 +527,17 @@ export class AuthService {
 
   private async dummyCompare(): Promise<void> {
     await new Promise((resolve) => setTimeout(resolve, 40));
+  }
+
+  // The password itself was already committed to the DB — a mail provider
+  // hiccup (e.g. sandbox restrictions) must not turn a successful change/reset
+  // into a 500 for the caller.
+  private async notifyPasswordChanged(email: string): Promise<void> {
+    try {
+      await this.mail.sendPasswordChangedEmail(email);
+    } catch (err) {
+      this.logger.error(`Failed to send password-changed email to ${email}`, err);
+    }
   }
 
   private async issueAuth(

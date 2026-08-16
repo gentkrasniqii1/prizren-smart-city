@@ -35,6 +35,8 @@ type AuthContextValue = {
   register: (payload: RegisterRequest) => Promise<RegisterResponse>;
   completeTwoFactor: (challengeToken: string, code: string) => Promise<void>;
   logout: () => Promise<void>;
+  /** Patch the cached user locally after a profile mutation (avoids a refetch). */
+  updateUser: (user: PublicUser) => void;
   /** `force` refreshes even without a stored session hint (OAuth callback). */
   refreshSession: (options?: { force?: boolean }) => Promise<boolean>;
   /** Refresh access token if missing/near expiry; keeps user logged in when possible. */
@@ -217,6 +219,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [clearProactiveRefresh]);
 
+  const updateUser = useCallback((next: PublicUser) => {
+    setUser(next);
+  }, []);
+
   const value = useMemo(
     () => ({
       user,
@@ -225,10 +231,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       register,
       completeTwoFactor,
       logout,
+      updateUser,
       refreshSession,
       ensureSession,
     }),
-    [user, loading, login, register, completeTwoFactor, logout, refreshSession, ensureSession],
+    [
+      user,
+      loading,
+      login,
+      register,
+      completeTwoFactor,
+      logout,
+      updateUser,
+      refreshSession,
+      ensureSession,
+    ],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

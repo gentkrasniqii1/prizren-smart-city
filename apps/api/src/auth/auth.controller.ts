@@ -21,6 +21,7 @@ import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
 import { VerifyEmailDto } from './dto/verify-email.dto';
 import { ResendVerificationDto } from './dto/resend-verification.dto';
+import { ChangePasswordDto } from './dto/change-password.dto';
 import { TwoFactorLoginDto } from './dto/two-factor.dto';
 import { TotpCodeDto } from './dto/totp-code.dto';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
@@ -103,6 +104,26 @@ export class AuthController {
   @Throttle({ default: { limit: 5, ttl: 60_000 } })
   resetPassword(@Body() dto: ResetPasswordDto) {
     return this.authService.resetPassword(dto.token, dto.password);
+  }
+
+  @Post('change-password')
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(JwtAuthGuard)
+  @Throttle({ default: { limit: 5, ttl: 60_000 } })
+  async changePassword(
+    @CurrentUser() user: AuthUser,
+    @Body() dto: ChangePasswordDto,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const result = await this.authService.changePassword(
+      user.id,
+      dto.currentPassword,
+      dto.newPassword,
+    );
+    // All refresh tokens were just revoked server-side — drop the cookie too so the
+    // browser doesn't keep trying (now-invalid) silent refreshes with it.
+    this.clearRefreshCookie(res);
+    return result;
   }
 
   @Post('verify-email')

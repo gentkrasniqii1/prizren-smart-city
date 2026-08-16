@@ -20,6 +20,7 @@ import { RolesGuard } from '../auth/guards/roles.guard';
 import { getClientIp } from '../common/client-ip';
 import { AuditService } from '../audit/audit.service';
 import { UpdateUserRoleDto } from './dto/update-user-role.dto';
+import { UpdateProfileDto } from './dto/update-profile.dto';
 
 @Controller('users')
 @UseGuards(JwtAuthGuard)
@@ -40,6 +41,40 @@ export class UsersController {
       throw new NotFoundException('User not found');
     }
     return this.authService.toPublicUser(user);
+  }
+
+  @Patch('me')
+  async updateMe(
+    @CurrentUser() authUser: AuthUser,
+    @Body() dto: UpdateProfileDto,
+    @Req() req: Request,
+  ) {
+    if (!authUser) {
+      throw new NotFoundException('User not found');
+    }
+    const firstName = dto.firstName.trim();
+    const lastName = dto.lastName.trim();
+    const phone = dto.phone?.trim() || null;
+
+    const updated = await this.prisma.user.update({
+      where: { id: authUser.id },
+      data: {
+        firstName,
+        lastName,
+        phone,
+        name: `${firstName} ${lastName}`.trim(),
+      },
+    });
+
+    await this.audit.log({
+      userId: authUser.id,
+      action: 'user.profile_update',
+      entityType: 'User',
+      entityId: authUser.id,
+      ipAddress: getClientIp(req),
+    });
+
+    return this.authService.toPublicUser(updated);
   }
 
   @Get('staff')
