@@ -1,12 +1,8 @@
 'use client';
 
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { toast } from 'sonner';
-import type { OAuthProvidersStatus } from '@prizren/shared-types';
 import { Button } from '@/components/ui/button';
-
-type Provider = keyof OAuthProvidersStatus;
 
 function GoogleIcon() {
   return (
@@ -31,87 +27,51 @@ function GoogleIcon() {
   );
 }
 
-function AppleIcon() {
-  return (
-    <svg width="16" height="18" viewBox="0 0 16 20" aria-hidden className="fill-current">
-      <path d="M13.3 10.6c0-2.1 1.7-3.1 1.8-3.2-1-1.4-2.5-1.6-3-1.6-1.3-.1-2.5.8-3.1.8-.7 0-1.7-.7-2.8-.7-1.4 0-2.8.8-3.5 2.1-1.5 2.6-.4 6.5 1.1 8.6.7 1 1.6 2.2 2.7 2.1 1.1 0 1.5-.7 2.8-.7s1.6.7 2.8.7c1.2 0 1.9-1 2.6-2 .8-1.2 1.2-2.3 1.2-2.4-.1 0-2.3-.9-2.3-3.5zM11.2 4.3c.6-.7 1-1.7.9-2.7-1 .1-2.1.6-2.7 1.4-.6.7-1.1 1.7-.9 2.7 1 .1 2-.6 2.7-1.4z" />
-    </svg>
-  );
-}
-
-function FacebookIcon() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden>
-      <path
-        fill="#1877F2"
-        d="M24 12.07C24 5.41 18.63 0 12 0S0 5.41 0 12.07C0 18.1 4.39 23.09 10.13 24v-8.44H7.08v-3.49h3.05V9.41c0-3.02 1.8-4.7 4.54-4.7 1.32 0 2.7.24 2.7.24v2.97h-1.52c-1.5 0-1.97.93-1.97 1.89v2.26h3.34l-.53 3.49h-2.81V24C19.61 23.09 24 18.1 24 12.07z"
-      />
-    </svg>
-  );
-}
-
 export function OAuthButtons({ disabled }: { disabled?: boolean }) {
   const t = useTranslations('Auth');
   const api = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001';
-  const [status, setStatus] = useState<OAuthProvidersStatus>({
-    google: process.env.NEXT_PUBLIC_GOOGLE_AUTH_ENABLED === 'true',
-    apple: false,
-    facebook: false,
-  });
-  const [busy, setBusy] = useState<Provider | null>(null);
+  const [enabled, setEnabled] = useState(process.env.NEXT_PUBLIC_GOOGLE_AUTH_ENABLED === 'true');
+  const [busy, setBusy] = useState(false);
 
   useEffect(() => {
     void fetch(`${api}/auth/providers`)
       .then((r) => r.json())
-      .then((data: Partial<OAuthProvidersStatus>) => {
-        setStatus({
-          google: Boolean(data.google),
-          apple: Boolean(data.apple),
-          facebook: Boolean(data.facebook),
-        });
+      .then((data: { google?: boolean }) => {
+        setEnabled(Boolean(data.google));
       })
       .catch(() => {
-        /* keep defaults */
+        /* keep default */
       });
   }, [api]);
 
-  function start(provider: Provider) {
+  if (!enabled) return null;
+
+  function start() {
     if (disabled || busy) return;
-    if (!status[provider]) {
-      toast.error(t('oauthNotConfigured'));
-      return;
-    }
-    setBusy(provider);
-    window.location.href = `${api}/auth/${provider}`;
+    setBusy(true);
+    window.location.href = `${api}/auth/google`;
   }
 
-  const items: { id: Provider; label: string; connecting: string; icon: ReactNode }[] = [
-    { id: 'google', label: t('google'), connecting: t('googleConnecting'), icon: <GoogleIcon /> },
-    { id: 'apple', label: t('apple'), connecting: t('appleConnecting'), icon: <AppleIcon /> },
-    {
-      id: 'facebook',
-      label: t('facebook'),
-      connecting: t('facebookConnecting'),
-      icon: <FacebookIcon />,
-    },
-  ];
-
   return (
-    <div className="space-y-2.5">
-      {items.map((item) => (
-        <Button
-          key={item.id}
-          type="button"
-          variant="secondary"
-          className="w-full min-h-11"
-          loading={busy === item.id}
-          disabled={disabled || Boolean(busy)}
-          onClick={() => start(item.id)}
-        >
-          {busy === item.id ? null : item.icon}
-          {busy === item.id ? item.connecting : item.label}
-        </Button>
-      ))}
-    </div>
+    <>
+      <div className="my-6 flex items-center gap-3">
+        <span className="h-px flex-1 bg-border" />
+        <span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+          {t('orContinue')}
+        </span>
+        <span className="h-px flex-1 bg-border" />
+      </div>
+      <Button
+        type="button"
+        variant="secondary"
+        className="w-full min-h-11"
+        loading={busy}
+        disabled={disabled || busy}
+        onClick={start}
+      >
+        {busy ? null : <GoogleIcon />}
+        {busy ? t('googleConnecting') : t('google')}
+      </Button>
+    </>
   );
 }

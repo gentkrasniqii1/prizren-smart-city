@@ -162,6 +162,7 @@
     "oauthAccountExists": "Ky email ka tashmë llogari me fjalëkalim. Hyr me email, pastaj lidhe ofruesin nga llogaria.",
     "oauthEmailRequired": "Ofruesi nuk dërgoi email. Nuk mund të krijohet llogaria.",
     "oauthFailed": "Hyrja me ofruesin dështoi. Provo përsëri.",
+    "oauthLinked": "Llogaria u lidh me Google.",
     "forgotTitle": "Harruat fjalëkalimin?",
     "forgotBody": "Shkruaj email-in dhe do të të dërgojmë një lidhje për rikthimin e llogarisë.",
     "sendResetLink": "Dërgo lidhjen",
