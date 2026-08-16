@@ -2,6 +2,7 @@ import {
   BadRequestException,
   ForbiddenException,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
@@ -15,6 +16,8 @@ import type {
   VoteCountResponse,
 } from '@prizren/shared-types';
 import { AuthUser } from '../auth/decorators/current-user.decorator';
+import { ConfigService } from '../auth/config.service';
+import { MailService } from '../mail/mail.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { CloudinaryService } from '../uploads/cloudinary.service';
 import { AiClassificationService } from '../ai/ai-classification.service';
@@ -45,12 +48,16 @@ type ReportWithRelations = Report & {
 
 @Injectable()
 export class ReportsService {
+  private readonly logger = new Logger(ReportsService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly cloudinary: CloudinaryService,
     private readonly aiClassification: AiClassificationService,
     private readonly events: EventEmitter2,
     private readonly routing: RoutingService,
+    private readonly mail: MailService,
+    private readonly config: ConfigService,
   ) {}
 
   async create(
@@ -96,6 +103,20 @@ export class ReportsService {
       lng: fields.lng,
       categoryId: fields.categoryId ?? null,
     });
+
+    try {
+      await this.mail.sendReportReceivedEmail(user.email, {
+        reportId: report.id,
+        description: fields.description,
+        reportUrl: `${this.config.webOrigin}/reports/${report.id}`,
+      });
+    } catch (err) {
+      this.logger.error(
+        `Failed to send report-received email for report ${report.id}: ${
+          err instanceof Error ? err.message : err
+        }`,
+      );
+    }
 
     return this.toDto(classified ?? report, { includeUserId: true });
   }
