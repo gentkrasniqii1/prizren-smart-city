@@ -41,6 +41,7 @@ export class NotificationsService {
           oldStatus: event.oldStatus,
           newStatus: event.newStatus,
           reportUrl: `${this.config.webOrigin}/reports/${event.reportId}`,
+          note: event.note,
         });
       } catch (err) {
         this.logger.error(

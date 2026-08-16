@@ -9,5 +9,6 @@ export class StatusChangedEvent {
     public readonly oldStatus: ReportStatus,
     public readonly newStatus: ReportStatus,
     public readonly changedByUserId: string,
+    public readonly note?: string,
   ) {}
 }

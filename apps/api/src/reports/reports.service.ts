@@ -10,6 +10,7 @@ import { Prisma, Priority, Report, ReportStatus, Role } from '@prisma/client';
 import type {
   AIClassification,
   CommentDto,
+  MyReportStats,
   PaginatedComments,
   PaginatedReports,
   ReportDto,
@@ -39,6 +40,13 @@ import { RoutingService } from '../routing/routing.service';
 
 const STAFF_ROLES: Role[] = [Role.DEPARTMENT_STAFF, Role.DEPARTMENT_ADMIN, Role.SUPER_ADMIN];
 const AI_ADMIN_ROLES: Role[] = [Role.DEPARTMENT_ADMIN, Role.SUPER_ADMIN];
+const OPEN_STATUSES: ReportStatus[] = [
+  ReportStatus.PENDING,
+  ReportStatus.IN_REVIEW,
+  ReportStatus.ASSIGNED,
+  ReportStatus.IN_PROGRESS,
+  ReportStatus.WAITING_FOR_INFORMATION,
+];
 
 type ReportWithRelations = Report & {
   category?: { name: string } | null;
@@ -310,6 +318,21 @@ export class ReportsService {
     };
   }
 
+  // Full DB-side aggregate for the citizen dashboard's stat cards — unlike the
+  // paginated `/reports/mine` list (capped for display), these counts must
+  // reflect ALL of the user's reports, not just the current page.
+  async myStats(userId: string): Promise<MyReportStats> {
+    const [total, open, inProgress, resolved] = await Promise.all([
+      this.prisma.report.count({ where: { userId } }),
+      this.prisma.report.count({ where: { userId, status: { in: OPEN_STATUSES } } }),
+      this.prisma.report.count({
+        where: { userId, status: { in: [ReportStatus.ASSIGNED, ReportStatus.IN_PROGRESS] } },
+      }),
+      this.prisma.report.count({ where: { userId, status: ReportStatus.RESOLVED } }),
+    ]);
+    return { total, open, inProgress, resolved };
+  }
+
   async updateStatus(
     id: string,
     user: AuthUser,
@@ -383,7 +406,14 @@ export class ReportsService {
 
     this.events.emit(
       REPORT_STATUS_CHANGED_EVENT,
-      new StatusChangedEvent(updated.id, existing.userId, existing.status, dto.status, user.id),
+      new StatusChangedEvent(
+        updated.id,
+        existing.userId,
+        existing.status,
+        dto.status,
+        user.id,
+        dto.note,
+      ),
     );
 
     return this.toDto(updated, { includeUserId: true });

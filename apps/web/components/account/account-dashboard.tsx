@@ -6,12 +6,14 @@ import { useRouter } from 'next/navigation';
 import { Bell, FilePlus2, FileText, LayoutDashboard, LogOut, Map } from 'lucide-react';
 import { useLocale, useTranslations } from 'next-intl';
 import type {
+  MyReportStats,
   NotificationDto,
   PaginatedNotifications,
   PaginatedReports,
   ReportDto,
 } from '@prizren/shared-types';
 import { ApiError, apiFetch } from '@/lib/api';
+import { usePolling } from '@/lib/use-polling';
 import { useAuth } from '@/components/auth-provider';
 import { PageContainer } from '@/components/layout/page-container';
 import { ReportCard } from '@/components/reports/report-card';
@@ -23,7 +25,6 @@ import { cn } from '@/lib/utils';
 import { TwoFactorSettings } from '@/components/account/two-factor-settings';
 import { ProfileSettings } from '@/components/account/profile-settings';
 import { ChangePasswordForm } from '@/components/account/change-password-form';
-import { useRealtimeReports } from '@/lib/use-realtime-reports';
 import type { AppLocale } from '@/i18n/request';
 
 const OPEN_STATUSES = new Set([
@@ -40,18 +41,6 @@ function isStaffRole(role?: string) {
   return role === 'DEPARTMENT_STAFF' || role === 'DEPARTMENT_ADMIN' || role === 'SUPER_ADMIN';
 }
 
-function computeStats(reports: ReportDto[]) {
-  let open = 0;
-  let resolved = 0;
-  let inProgress = 0;
-  for (const r of reports) {
-    if (r.status === 'RESOLVED') resolved += 1;
-    else if (OPEN_STATUSES.has(r.status)) open += 1;
-    if (r.status === 'IN_PROGRESS' || r.status === 'ASSIGNED') inProgress += 1;
-  }
-  return { open, resolved, inProgress };
-}
-
 export function AccountDashboard() {
   const t = useTranslations('Account');
   const locale = useLocale() as AppLocale;
@@ -60,6 +49,12 @@ export function AccountDashboard() {
 
   const [reports, setReports] = useState<ReportDto[]>([]);
   const [totalReports, setTotalReports] = useState(0);
+  const [stats, setStats] = useState<MyReportStats>({
+    total: 0,
+    open: 0,
+    inProgress: 0,
+    resolved: 0,
+  });
   const [reportsLoading, setReportsLoading] = useState(true);
   const [reportsError, setReportsError] = useState<string | null>(null);
   const [filter, setFilter] = useState<ReportFilter>('all');
@@ -81,12 +76,14 @@ export function AccountDashboard() {
       setReportsLoading(true);
       setReportsError(null);
       try {
-        const res = await apiFetch<PaginatedReports>('/reports/mine?limit=50', {
-          auth: true,
-        });
+        const [res, statsRes] = await Promise.all([
+          apiFetch<PaginatedReports>('/reports/mine?limit=50', { auth: true }),
+          apiFetch<MyReportStats>('/reports/mine/stats', { auth: true }),
+        ]);
         if (cancelled) return;
         setReports(res.data);
         setTotalReports(res.meta.total);
+        setStats(statsRes);
       } catch (err) {
         if (!cancelled) {
           setReportsError(err instanceof ApiError ? err.message : t('reportsLoadError'));
@@ -107,6 +104,9 @@ export function AccountDashboard() {
         setTotalReports(res.meta.total);
       })
       .catch(() => undefined);
+    void apiFetch<MyReportStats>('/reports/mine/stats', { auth: true })
+      .then((res) => setStats(res))
+      .catch(() => undefined);
     void apiFetch<PaginatedNotifications>('/notifications?limit=5', { auth: true })
       .then((res) => {
         setNotifications(res.data);
@@ -115,7 +115,9 @@ export function AccountDashboard() {
       .catch(() => undefined);
   }, []);
 
-  useRealtimeReports(refreshLive, Boolean(user) && !authLoading);
+  // New reports and status changes (e.g. staff resolving an issue) should
+  // appear here without a manual page refresh.
+  usePolling(refreshLive, 20_000, Boolean(user) && !authLoading);
 
   useEffect(() => {
     if (authLoading || !user) return;
@@ -150,8 +152,6 @@ export function AccountDashboard() {
     const el = document.querySelector(hash);
     if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }, [authLoading, user, reportsLoading]);
-
-  const stats = useMemo(() => computeStats(reports), [reports]);
 
   const visibleReports = useMemo(() => {
     if (filter === 'open') return reports.filter((r) => OPEN_STATUSES.has(r.status));
