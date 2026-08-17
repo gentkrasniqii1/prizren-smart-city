@@ -74,47 +74,152 @@ enum Role {
   SUPER_ADMIN
 }
 
+/// How Prizren Smart City exchanges incident data with an external organization.
+/// Defaults to MANUAL until an adapter/credentials are configured (Phase 7/8).
+enum IntegrationType {
+  EMAIL
+  REST_API
+  WEBHOOK
+  SFTP
+  MANUAL
+  MOCK
+}
+
+/// Lifecycle of an organization's integration — starts NOT_CONFIGURED, can be
+/// exercised via MOCK/TEST before going ACTIVE. Never implies a real connection
+/// exists until explicitly wired up in Phase 7/8.
+enum IntegrationStatus {
+  NOT_CONFIGURED
+  MOCK
+  TEST
+  ACTIVE
+  DISABLED
+}
+
+/// External organization ("Organization" in the Master Spec) — a municipal
+/// institution or utility that incidents can be routed/assigned to. Kept as
+/// `Institution` (not renamed) for backward compatibility with existing code.
 model Institution {
-  id          String       @id @default(uuid())
-  name        String
-  slug        String       @unique
-  type        String
-  contact     String?
-  active      Boolean      @default(true)
-  createdAt   DateTime     @default(now())
-  departments Department[]
+  id                String            @id @default(uuid())
+  name              String
+  slug              String            @unique
+  type              String
+  contact           String?
+  active            Boolean           @default(true)
+  integrationType   IntegrationType   @default(MANUAL)
+  integrationStatus IntegrationStatus @default(NOT_CONFIGURED)
+  createdAt         DateTime          @default(now())
+  departments       Department[]
+  reports           Report[]
+  routingRules      RoutingRule[]
 }
 
 model Department {
-  id            String       @id @default(uuid())
+  id            String        @id @default(uuid())
   name          String
   contact       String?
-  slaHours      Int          @default(48)
+  slaHours      Int           @default(48)
   institutionId String?
-  institution   Institution? @relation(fields: [institutionId], references: [id])
+  institution   Institution?  @relation(fields: [institutionId], references: [id])
   categories    Category[]
   reports       Report[]
-  staff         User[]       @relation("DepartmentStaff")
+  staff         User[]        @relation("DepartmentStaff")
+  routingRules  RoutingRule[]
+  slaPolicies   SlaPolicy[]
 }
 
 model Category {
-  id              String     @id @default(uuid())
+  id              String        @id @default(uuid())
   name            String
   departmentId    String
-  department      Department @relation(fields: [departmentId], references: [id])
-  slaHours        Int        @default(48)
-  defaultPriority Priority   @default(MEDIUM)
+  department      Department    @relation(fields: [departmentId], references: [id])
+  slaHours        Int           @default(48)
+  defaultPriority Priority      @default(MEDIUM)
   reports         Report[]
+  routingRules    RoutingRule[]
+  slaPolicies     SlaPolicy[]
+}
+
+/// Deterministic routing rule ("category/subcategory/severity/zone/emergency
+/// status" -> department/organization), evaluated in `priority` order (lower
+/// number = evaluated first). Introduced as a domain model in Phase 1; the
+/// evaluation engine itself is wired up in Phase 3 — see RoutingService.
+/// Null fields act as wildcards (match any value) except `active`.
+model RoutingRule {
+  id            String       @id @default(uuid())
+  name          String
+  categoryId    String?
+  category      Category?    @relation(fields: [categoryId], references: [id])
+  subcategory   String?
+  severity      Priority?
+  zone          String?
+  /// null = matches emergency or non-emergency; true/false = must match exactly
+  isEmergency   Boolean?
+  departmentId  String?
+  department    Department?  @relation(fields: [departmentId], references: [id])
+  institutionId String?
+  institution   Institution? @relation(fields: [institutionId], references: [id])
+  /// Lower value = higher precedence when multiple rules match.
+  priority      Int          @default(100)
+  active        Boolean      @default(true)
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+
+  @@index([active, priority])
+  @@index([categoryId])
+  @@index([departmentId])
+  @@index([institutionId])
+}
+
+/// SLA policy — configurable response/resolution windows per priority level,
+/// optionally scoped to a department and/or category. Introduced as a domain
+/// model in Phase 1; wiring into due-date computation happens in Phase 5 —
+/// see reports/sla.ts (`computeDueAt` remains the fallback when no policy matches).
+model SlaPolicy {
+  id             String      @id @default(uuid())
+  name           String
+  priority       Priority
+  /// Minutes until first response is due.
+  responseTime   Int
+  /// Minutes until resolution is due.
+  resolutionTime Int
+  departmentId   String?
+  department     Department? @relation(fields: [departmentId], references: [id])
+  categoryId     String?
+  category       Category?   @relation(fields: [categoryId], references: [id])
+  active         Boolean     @default(true)
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+
+  @@index([active, priority])
+  @@index([departmentId])
+  @@index([categoryId])
+}
+
+/// Generic atomic counter table — used today for per-year public incident IDs
+/// (`report-<year>` -> sequence value). Kept generic so other sequences
+/// (e.g. per-organization external batch numbers) can reuse it later.
+model SequenceCounter {
+  id    String @id
+  value Int    @default(0)
 }
 
 model Report {
   id               String          @id @default(uuid())
+  /// Human-readable incident code, e.g. "PRZ-2026-000184". Generated atomically
+  /// on creation via SequenceCounter; immutable afterwards.
+  publicId         String          @unique
   userId           String
   user             User            @relation(fields: [userId], references: [id])
   categoryId       String?
   category         Category?       @relation(fields: [categoryId], references: [id])
+  subcategory      String?
   departmentId     String?
   department       Department?     @relation(fields: [departmentId], references: [id])
+  /// Responsible external organization, when routing selects one (distinct
+  /// from `departmentId`, which is always an internal municipal department).
+  institutionId    String?
+  institution      Institution?    @relation(fields: [institutionId], references: [id])
   description      String
   status           ReportStatus    @default(PENDING)
   priority         Priority?
@@ -130,13 +235,29 @@ model Report {
   duplicateOfId    String?
   duplicateOf      Report?         @relation("ReportDuplicates", fields: [duplicateOfId], references: [id])
   duplicates       Report[]        @relation("ReportDuplicates")
+  /// True once this report has been linked to a master/duplicate report.
+  isDuplicate      Boolean         @default(false)
   assignedStaffId  String?
+  /// Submission channel — WEB today; kept open for future MOBILE/KIOSK/API sources.
+  source           String          @default("WEB")
+  /// True when the report was submitted without exposing citizen identity downstream.
+  anonymous        Boolean         @default(false)
+  /// BCP-47-ish language tag of the citizen-entered text, e.g. "sq", "en".
+  language         String          @default("sq")
   dueAt            DateTime?
   createdAt        DateTime        @default(now())
   updatedAt        DateTime        @updatedAt
   statusHistory    StatusHistory[]
   votes            Vote[]
   comments         Comment[]
+
+  @@index([status])
+  @@index([categoryId])
+  @@index([departmentId])
+  @@index([institutionId])
+  @@index([userId])
+  @@index([createdAt])
+  @@index([dueAt])
 }
 
 enum ReportStatus {
@@ -198,14 +319,26 @@ model Notification {
   createdAt DateTime @default(now())
 }
 
+/// Immutable audit trail for administrative/state-changing actions across the
+/// platform. `entityType`/`entityId` generalize the Master Spec's `incidentId`
+/// to any entity (Report, User, Institution, RoutingRule, ...).
 model AuditLog {
   id         String   @id @default(uuid())
   userId     String
   user       User     @relation(fields: [userId], references: [id])
+  /// e.g. "USER", "SYSTEM", "EXTERNAL" — defaults to USER for existing call sites.
+  actorType  String   @default("USER")
   action     String
   entityType String
   entityId   String
+  oldValue   Json?
+  newValue   Json?
   metadata   Json?
   ipAddress  String?
+  userAgent  String?
   createdAt  DateTime @default(now())
+
+  @@index([entityType, entityId])
+  @@index([userId])
+  @@index([createdAt])
 }
