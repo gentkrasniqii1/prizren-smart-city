@@ -6,7 +6,7 @@ import { usePathname } from 'next/navigation';
 import { Menu, X } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useAuth } from '@/components/auth-provider';
-import { BrandWordmark } from '@/components/brand';
+import { Logo } from '@/components/brand/Logo';
 import { LanguageSwitcher } from '@/components/language-switcher';
 import { NotificationBell } from '@/components/layout/notification-bell';
 import { PageContainer } from '@/components/layout/page-container';
@@ -81,10 +81,10 @@ export function SiteHeader() {
       <PageContainer className="flex h-14 items-center justify-between gap-3 sm:h-16">
         <Link href="/" className="min-w-0 shrink" onClick={() => setOpen(false)}>
           <span className="md:hidden">
-            <BrandWordmark compact />
+            <Logo variant="full" size={32} compact />
           </span>
           <span className="hidden md:inline-flex">
-            <BrandWordmark />
+            <Logo variant="full" size={32} />
           </span>
         </Link>
 

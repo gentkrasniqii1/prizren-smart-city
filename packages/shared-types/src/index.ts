@@ -40,6 +40,8 @@ export interface PublicUser {
   totpEnabled: boolean;
   /** false for accounts created via Google/Apple/Facebook that never set a password. */
   hasPassword: boolean;
+  /** true if a Google account is linked (via direct OAuth signup or auto-linking). */
+  googleLinked: boolean;
   createdAt: string;
 }
 
