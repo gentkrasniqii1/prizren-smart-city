@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="sq">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Jashtë linje · Prizren Smart City</title>
+    <style>
+      html,
+      body {
+        margin: 0;
+        height: 100%;
+        background: #faf8f5;
+        color: #1c1917;
+        font-family:
+          -apple-system,
+          BlinkMacSystemFont,
+          'Segoe UI',
+          Roboto,
+          Helvetica,
+          Arial,
+          sans-serif;
+      }
+      .wrap {
+        min-height: 100%;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        padding: 32px 24px;
+        box-sizing: border-box;
+      }
+      .icon {
+        width: 64px;
+        height: 91px;
+        margin-bottom: 24px;
+      }
+      h1 {
+        font-size: 1.375rem;
+        margin: 0 0 8px;
+        color: #1c1917;
+      }
+      p {
+        font-size: 0.95rem;
+        color: #57534e;
+        max-width: 22rem;
+        margin: 0 0 24px;
+        line-height: 1.5;
+      }
+      button {
+        appearance: none;
+        border: none;
+        border-radius: 8px;
+        background: #335f9b;
+        color: #fff;
+        font-size: 0.95rem;
+        font-weight: 600;
+        padding: 10px 20px;
+        cursor: pointer;
+      }
+      button:hover {
+        background: #2a4e80;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <svg class="icon" viewBox="0 0 84 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path
+          fill="#335f9b"
+          fill-rule="evenodd"
+          clip-rule="evenodd"
+          d="M8 112L8 8H28C54 8 78 8 78 37C78 66 54 66 28 66L28 112H8Z
+             M33 58L33 52A4.5 4.5 0 0 1 42 52L42 58H33Z
+             M45 58L45 44A4.5 4.5 0 0 1 54 44L54 58H45Z
+             M57 58L57 52A4.5 4.5 0 0 1 66 52L66 58H57Z"
+        />
+      </svg>
+      <h1>Je jashtë linje</h1>
+      <p>Nuk ka lidhje interneti për momentin. Kontrollo lidhjen dhe provo përsëri.</p>
+      <button onclick="window.location.reload()">Provo përsëri</button>
+    </div>
+  </body>
+</html>

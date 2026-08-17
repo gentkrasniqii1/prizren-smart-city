@@ -5,6 +5,7 @@ import { getLocale, getMessages } from 'next-intl/server';
 import { AuthProvider } from '@/components/auth-provider';
 import { SiteShell } from '@/components/layout/site-shell';
 import { SentryInit } from '@/components/sentry-init';
+import { ServiceWorkerRegister } from '@/components/service-worker-register';
 import { ThemeProvider } from '@/components/theme-provider';
 import { ToastProvider } from '@/components/toast-provider';
 import { Toaster } from '@/components/ui/sonner';
@@ -51,11 +52,16 @@ export const metadata: Metadata = {
     title: 'Prizren Smart City',
     description: 'Raporto dhe ndiq problemet urbane në Prizren.',
   },
+  manifest: '/manifest.json',
   icons: {
     icon: [
-      { url: '/brand/favicon.svg', type: 'image/svg+xml' },
-      { url: '/brand/icon.svg', type: 'image/svg+xml' },
+      { url: '/favicon.ico', sizes: 'any' },
+      { url: '/favicon.svg', type: 'image/svg+xml' },
+      { url: '/icons/icon-192.png', sizes: '192x192', type: 'image/png' },
+      { url: '/icons/icon-512.png', sizes: '512x512', type: 'image/png' },
     ],
+    shortcut: ['/favicon.ico'],
+    apple: [{ url: '/apple-touch-icon.png', sizes: '180x180', type: 'image/png' }],
   },
 };
 
@@ -77,6 +83,7 @@ export default async function RootLayout({
             <AuthProvider>
               <ToastProvider>
                 <SentryInit />
+                <ServiceWorkerRegister />
                 <SiteShell>{children}</SiteShell>
                 <Toaster richColors closeButton position="bottom-right" />
               </ToastProvider>
