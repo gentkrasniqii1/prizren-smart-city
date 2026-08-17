@@ -91,7 +91,6 @@ export function PhotoUploader({
               size="sm"
               onClick={onClear}
               aria-label={t('photoRemove')}
-              className="bg-white"
             >
               <X className="h-4 w-4" aria-hidden />
             </Button>
@@ -126,15 +125,15 @@ export function PhotoUploader({
             'flex cursor-pointer flex-col items-center justify-center gap-3 rounded-lg border border-dashed px-4 py-12 text-center transition',
             dragging
               ? 'border-mosque-500 bg-mosque-50'
-              : 'border-stone-300 bg-stone-50 hover:border-mosque-400 hover:bg-white',
+              : 'border-stone-300 bg-stone-50 hover:border-mosque-400 hover:bg-card',
           )}
         >
-          <span className="inline-flex h-12 w-12 items-center justify-center rounded-full bg-white text-mosque-800 shadow-sm">
+          <span className="inline-flex h-12 w-12 items-center justify-center rounded-full bg-card text-mosque-800 shadow-sm">
             <ImagePlus className="h-5 w-5" aria-hidden />
           </span>
           <div>
             <p className="text-sm font-medium text-stone-900">{t('photoDropTitle')}</p>
-            <p id="report-photo-hint" className="mt-1 text-xs text-stone-500">
+            <p id="report-photo-hint" className="mt-1 text-xs text-stone-600">
               {t('photoHint')}
             </p>
           </div>

@@ -270,7 +270,7 @@ export function ReportDetailView() {
     return (
       <main className="py-16">
         <PageContainer width="narrow">
-          <p className="text-red-700" role="alert">
+          <p className="text-red-700 dark:text-red-400" role="alert">
             {error}
           </p>
           <Link
@@ -543,7 +543,7 @@ export function ReportDetailView() {
                 className="rounded-xl border border-mosque-200 bg-mosque-50/50 p-5"
               >
                 <div className="flex items-start gap-3">
-                  <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-mosque-700 text-white">
+                  <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground">
                     <Bot className="h-4 w-4" aria-hidden />
                   </span>
                   <div className="min-w-0 flex-1">
@@ -729,7 +729,7 @@ export function ReportDetailView() {
                 aria-busy="true"
               >
                 <div className="flex items-start gap-3">
-                  <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-mosque-700 text-white">
+                  <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground">
                     <Bot className="h-4 w-4 animate-pulse" aria-hidden />
                   </span>
                   <div>

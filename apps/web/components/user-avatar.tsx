@@ -8,7 +8,7 @@ export function UserAvatar({ name, size = 32 }: { name: string; size?: number })
 
   return (
     <span
-      className="inline-flex shrink-0 items-center justify-center rounded-full bg-mosque-700 font-semibold text-white"
+      className="inline-flex shrink-0 items-center justify-center rounded-full bg-primary font-semibold text-primary-foreground"
       style={{ width: size, height: size, fontSize: Math.max(11, size * 0.34) }}
       aria-hidden
     >

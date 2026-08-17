@@ -1,0 +1,27 @@
+{
+  "name": "Prizren Smart City",
+  "short_name": "Prizren SC",
+  "description": "Raporto dhe ndiq problemet urbane në Prizren — transparencë për qytetin.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "theme_color": "#19253a",
+  "background_color": "#faf8f5",
+  "lang": "sq",
+  "dir": "ltr",
+  "icons": [
+    {
+      "src": "/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

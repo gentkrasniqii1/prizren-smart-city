@@ -3,6 +3,7 @@ import {
   ConflictException,
   ForbiddenException,
   Injectable,
+  Logger,
   UnauthorizedException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
@@ -35,6 +36,8 @@ const STAFF_ROLES: Role[] = [Role.DEPARTMENT_STAFF, Role.DEPARTMENT_ADMIN, Role.
 
 @Injectable()
 export class AuthService {
+  private readonly logger = new Logger(AuthService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly jwt: JwtService,
@@ -262,7 +265,9 @@ export class AuthService {
         hours: RESET_HOURS,
       });
       const resetUrl = `${this.config.webOrigin}/reset-password?token=${encodeURIComponent(raw)}`;
-      await this.mail.sendPasswordResetEmail(user.email, resetUrl);
+      await this.safeSendMail('password-reset', () =>
+        this.mail.sendPasswordResetEmail(user.email, resetUrl),
+      );
     }
     return { ok: true };
   }
@@ -284,7 +289,49 @@ export class AuthService {
         data: { revokedAt: new Date() },
       }),
     ]);
-    await this.mail.sendPasswordChangedEmail(user.email);
+    await this.notifyPasswordChanged(user.email);
+    return { ok: true };
+  }
+
+  async changePassword(
+    userId: string,
+    currentPassword: string,
+    newPassword: string,
+  ): Promise<{ ok: true }> {
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (!user) {
+      throw new UnauthorizedException();
+    }
+    if (!user.passwordHash) {
+      throw new BadRequestException(
+        'This account signs in with a provider (Google/Apple/Facebook) and has no password. Use "Forgot password" to set one.',
+      );
+    }
+    const valid = await bcrypt.compare(currentPassword, user.passwordHash);
+    if (!valid) {
+      throw new UnauthorizedException('Current password is incorrect');
+    }
+    const policy = passwordPolicyErrors(newPassword);
+    if (policy.length > 0) {
+      throw new BadRequestException(`Password does not meet requirements: ${policy.join(', ')}`);
+    }
+    const unchanged = await bcrypt.compare(newPassword, user.passwordHash);
+    if (unchanged) {
+      throw new BadRequestException('New password must be different from the current password');
+    }
+
+    const passwordHash = await bcrypt.hash(newPassword, BCRYPT_ROUNDS);
+    await this.prisma.$transaction([
+      this.prisma.user.update({
+        where: { id: user.id },
+        data: { passwordHash, failedLoginCount: 0, lockedUntil: null },
+      }),
+      this.prisma.refreshToken.updateMany({
+        where: { userId: user.id, revokedAt: null },
+        data: { revokedAt: new Date() },
+      }),
+    ]);
+    await this.notifyPasswordChanged(user.email);
     return { ok: true };
   }
 
@@ -392,6 +439,14 @@ export class AuthService {
     });
   }
 
+  /** Revokes every active refresh token for the user — used by "log out of all devices". */
+  async logoutAll(userId: string): Promise<void> {
+    await this.prisma.refreshToken.updateMany({
+      where: { userId, revokedAt: null },
+      data: { revokedAt: new Date() },
+    });
+  }
+
   toPublicUser(user: User): PublicUser {
     return {
       id: user.id,
@@ -403,6 +458,8 @@ export class AuthService {
       role: user.role,
       emailVerified: user.emailVerified,
       totpEnabled: user.totpEnabled,
+      hasPassword: Boolean(user.passwordHash),
+      googleLinked: Boolean(user.googleId),
       createdAt: user.createdAt.toISOString(),
     };
   }
@@ -422,7 +479,9 @@ export class AuthService {
       hours: VERIFY_HOURS,
     });
     const verifyUrl = `${this.config.webOrigin}/verify-email?token=${encodeURIComponent(raw)}`;
-    await this.mail.sendVerificationEmail(user.email, verifyUrl);
+    await this.safeSendMail('verification', () =>
+      this.mail.sendVerificationEmail(user.email, verifyUrl),
+    );
     return raw;
   }
 
@@ -481,6 +540,21 @@ export class AuthService {
 
   private async dummyCompare(): Promise<void> {
     await new Promise((resolve) => setTimeout(resolve, 40));
+  }
+
+  // The underlying DB write (password change, token issuance, etc.) was already
+  // committed — a mail provider hiccup (e.g. Resend sandbox restrictions, a
+  // network blip) must never turn an otherwise-successful request into a 500.
+  private async safeSendMail(context: string, send: () => Promise<void>): Promise<void> {
+    try {
+      await send();
+    } catch (err) {
+      this.logger.error(`Failed to send ${context} email`, err);
+    }
+  }
+
+  private async notifyPasswordChanged(email: string): Promise<void> {
+    await this.safeSendMail('password-changed', () => this.mail.sendPasswordChangedEmail(email));
   }
 
   private async issueAuth(

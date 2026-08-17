@@ -6,13 +6,16 @@ import { useRouter } from 'next/navigation';
 import { Bell, FilePlus2, FileText, LayoutDashboard, LogOut, Map } from 'lucide-react';
 import { useLocale, useTranslations } from 'next-intl';
 import type {
+  MyReportStats,
   NotificationDto,
   PaginatedNotifications,
   PaginatedReports,
   ReportDto,
 } from '@prizren/shared-types';
 import { ApiError, apiFetch } from '@/lib/api';
+import { usePolling } from '@/lib/use-polling';
 import { useAuth } from '@/components/auth-provider';
+import { useToast } from '@/components/toast-provider';
 import { PageContainer } from '@/components/layout/page-container';
 import { ReportCard } from '@/components/reports/report-card';
 import { NotificationItem } from '@/components/notifications/notification-item';
@@ -21,7 +24,8 @@ import { Button, EmptyState, ErrorBanner, Skeleton, Spinner, StatCard } from '@/
 import { getRoleLabel } from '@/lib/labels';
 import { cn } from '@/lib/utils';
 import { TwoFactorSettings } from '@/components/account/two-factor-settings';
-import { useRealtimeReports } from '@/lib/use-realtime-reports';
+import { ProfileSettings } from '@/components/account/profile-settings';
+import { ChangePasswordForm } from '@/components/account/change-password-form';
 import type { AppLocale } from '@/i18n/request';
 
 const OPEN_STATUSES = new Set([
@@ -38,26 +42,22 @@ function isStaffRole(role?: string) {
   return role === 'DEPARTMENT_STAFF' || role === 'DEPARTMENT_ADMIN' || role === 'SUPER_ADMIN';
 }
 
-function computeStats(reports: ReportDto[]) {
-  let open = 0;
-  let resolved = 0;
-  let inProgress = 0;
-  for (const r of reports) {
-    if (r.status === 'RESOLVED') resolved += 1;
-    else if (OPEN_STATUSES.has(r.status)) open += 1;
-    if (r.status === 'IN_PROGRESS' || r.status === 'ASSIGNED') inProgress += 1;
-  }
-  return { open, resolved, inProgress };
-}
-
 export function AccountDashboard() {
   const t = useTranslations('Account');
   const locale = useLocale() as AppLocale;
   const router = useRouter();
   const { user, loading: authLoading, logout } = useAuth();
+  const toast = useToast();
+  const [loggingOutAll, setLoggingOutAll] = useState(false);
 
   const [reports, setReports] = useState<ReportDto[]>([]);
   const [totalReports, setTotalReports] = useState(0);
+  const [stats, setStats] = useState<MyReportStats>({
+    total: 0,
+    open: 0,
+    inProgress: 0,
+    resolved: 0,
+  });
   const [reportsLoading, setReportsLoading] = useState(true);
   const [reportsError, setReportsError] = useState<string | null>(null);
   const [filter, setFilter] = useState<ReportFilter>('all');
@@ -79,12 +79,14 @@ export function AccountDashboard() {
       setReportsLoading(true);
       setReportsError(null);
       try {
-        const res = await apiFetch<PaginatedReports>('/reports/mine?limit=50', {
-          auth: true,
-        });
+        const [res, statsRes] = await Promise.all([
+          apiFetch<PaginatedReports>('/reports/mine?limit=50', { auth: true }),
+          apiFetch<MyReportStats>('/reports/mine/stats', { auth: true }),
+        ]);
         if (cancelled) return;
         setReports(res.data);
         setTotalReports(res.meta.total);
+        setStats(statsRes);
       } catch (err) {
         if (!cancelled) {
           setReportsError(err instanceof ApiError ? err.message : t('reportsLoadError'));
@@ -105,6 +107,9 @@ export function AccountDashboard() {
         setTotalReports(res.meta.total);
       })
       .catch(() => undefined);
+    void apiFetch<MyReportStats>('/reports/mine/stats', { auth: true })
+      .then((res) => setStats(res))
+      .catch(() => undefined);
     void apiFetch<PaginatedNotifications>('/notifications?limit=5', { auth: true })
       .then((res) => {
         setNotifications(res.data);
@@ -113,7 +118,9 @@ export function AccountDashboard() {
       .catch(() => undefined);
   }, []);
 
-  useRealtimeReports(refreshLive, Boolean(user) && !authLoading);
+  // New reports and status changes (e.g. staff resolving an issue) should
+  // appear here without a manual page refresh.
+  usePolling(refreshLive, 20_000, Boolean(user) && !authLoading);
 
   useEffect(() => {
     if (authLoading || !user) return;
@@ -149,13 +156,28 @@ export function AccountDashboard() {
     if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }, [authLoading, user, reportsLoading]);
 
-  const stats = useMemo(() => computeStats(reports), [reports]);
-
   const visibleReports = useMemo(() => {
     if (filter === 'open') return reports.filter((r) => OPEN_STATUSES.has(r.status));
     if (filter === 'resolved') return reports.filter((r) => r.status === 'RESOLVED');
     return reports;
   }, [reports, filter]);
+
+  async function handleLogoutAll() {
+    if (typeof window !== 'undefined' && !window.confirm(t('logoutAllConfirm'))) return;
+    setLoggingOutAll(true);
+    try {
+      // Revokes every refresh token for this user server-side (including this
+      // session's) — the local logout() call below just clears client state to match.
+      await apiFetch('/auth/logout-all', { method: 'POST', auth: true });
+      toast.push(t('logoutAllSuccess'), 'success');
+    } catch (err) {
+      toast.push(err instanceof ApiError ? err.message : t('logoutAllFailed'), 'error');
+    } finally {
+      setLoggingOutAll(false);
+    }
+    await logout();
+    router.push('/login');
+  }
 
   if (authLoading || !user) {
     return (
@@ -186,7 +208,7 @@ export function AccountDashboard() {
           <div className="flex items-start gap-4">
             <UserAvatar name={user.name} size={56} />
             <div>
-              <p className="text-sm text-stone-500">{t('greeting')}</p>
+              <p className="text-sm text-stone-600">{t('greeting')}</p>
               <h1 className="text-h1 tracking-tight text-foreground sm:text-3xl">
                 {t('welcome', { name: firstName })}
               </h1>
@@ -205,7 +227,7 @@ export function AccountDashboard() {
             </Link>
             <Link
               href="/notifications"
-              className="inline-flex items-center justify-center gap-2 rounded-md border border-stone-300 bg-white px-3 py-1.5 text-sm font-medium text-stone-900 transition hover:bg-stone-50"
+              className="inline-flex items-center justify-center gap-2 rounded-md border border-stone-300 bg-card px-3 py-1.5 text-sm font-medium text-stone-900 transition hover:bg-muted"
             >
               <Bell className="h-4 w-4" aria-hidden />
               {t('ctaNotifications')}
@@ -262,7 +284,7 @@ export function AccountDashboard() {
                 <p className="mt-1 text-sm text-stone-600">{t('reportsSubtitle')}</p>
               </div>
               <div
-                className="inline-flex rounded-md border border-stone-200 bg-white p-0.5"
+                className="inline-flex rounded-md border border-stone-200 bg-card p-0.5"
                 role="group"
                 aria-label={t('filterLabel')}
               >
@@ -280,8 +302,8 @@ export function AccountDashboard() {
                     className={cn(
                       'rounded px-2.5 py-1 text-xs font-medium transition',
                       filter === key
-                        ? 'bg-mosque-700 text-white'
-                        : 'text-stone-600 hover:bg-stone-50',
+                        ? 'bg-primary text-primary-foreground'
+                        : 'text-stone-600 hover:bg-muted',
                     )}
                     aria-pressed={filter === key}
                   >
@@ -316,7 +338,7 @@ export function AccountDashboard() {
                 }
               />
             ) : (
-              <ul className="mt-4 overflow-hidden rounded-xl border border-stone-200 bg-white">
+              <ul className="mt-4 overflow-hidden rounded-xl border border-stone-200 bg-card">
                 {visibleReports.map((report) => (
                   <li key={report.id}>
                     <ReportCard report={report} compact />
@@ -326,9 +348,32 @@ export function AccountDashboard() {
             )}
 
             {!reportsLoading && totalReports > reports.length ? (
-              <p className="mt-3 text-xs text-stone-500">
+              <p className="mt-3 text-xs text-stone-600">
                 {t('showingOf', { shown: reports.length, total: totalReports })}
               </p>
+            ) : null}
+
+            {!reportsLoading ? (
+              <div className="mt-6 flex flex-col items-start gap-4 rounded-xl border border-dashed border-mosque-300 bg-mosque-50 p-6 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex items-start gap-3">
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-mosque-100 text-mosque-800">
+                    <FilePlus2 className="h-5 w-5" aria-hidden />
+                  </span>
+                  <div>
+                    <p className="font-display text-base font-semibold tracking-tight text-foreground">
+                      {t('ctaCardTitle')}
+                    </p>
+                    <p className="mt-1 text-sm text-stone-600">{t('ctaCardBody')}</p>
+                  </div>
+                </div>
+                <Link
+                  href="/report"
+                  className="inline-flex shrink-0 items-center justify-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow-sm transition hover:bg-primary-hover"
+                >
+                  <FilePlus2 className="h-4 w-4" aria-hidden />
+                  {t('ctaCardCta')}
+                </Link>
+              </div>
             ) : null}
           </section>
 
@@ -336,7 +381,7 @@ export function AccountDashboard() {
           <aside className="space-y-6 lg:sticky lg:top-24">
             <section
               aria-labelledby="account-notif-heading"
-              className="rounded-xl border border-stone-200 bg-white p-5"
+              className="rounded-xl border border-stone-200 bg-card p-5"
             >
               <div className="flex items-center justify-between gap-2">
                 <h2
@@ -358,7 +403,7 @@ export function AccountDashboard() {
                   <Skeleton className="h-12 w-full" />
                 </div>
               ) : notifications.length === 0 ? (
-                <p className="mt-3 text-sm text-stone-500">{t('notifEmpty')}</p>
+                <p className="mt-3 text-sm text-stone-600">{t('notifEmpty')}</p>
               ) : (
                 <ul className="-mx-2 mt-3 divide-y divide-stone-100 overflow-hidden rounded-lg border border-stone-100">
                   {notifications.map((n) => (
@@ -378,7 +423,7 @@ export function AccountDashboard() {
             <section
               id="profile"
               aria-labelledby="account-profile-heading"
-              className="scroll-mt-24 rounded-xl border border-stone-200 bg-white p-5"
+              className="scroll-mt-24 rounded-xl border border-stone-200 bg-card p-5"
             >
               <h2
                 id="account-profile-heading"
@@ -386,41 +431,37 @@ export function AccountDashboard() {
               >
                 {t('profileHeading')}
               </h2>
-              <dl className="mt-4 space-y-3 text-sm">
-                <div>
-                  <dt className="text-stone-500">{t('profileName')}</dt>
-                  <dd className="font-medium text-stone-900">{user.name}</dd>
-                </div>
-                <div>
-                  <dt className="text-stone-500">{t('profileEmail')}</dt>
-                  <dd className="font-medium text-stone-900">{user.email}</dd>
-                </div>
-                <div>
-                  <dt className="text-stone-500">{t('profileRole')}</dt>
-                  <dd className="font-medium text-stone-900">{getRoleLabel(user.role, locale)}</dd>
-                </div>
-                <div>
-                  <dt className="text-stone-500">{t('profileSince')}</dt>
-                  <dd className="font-medium text-stone-900">
-                    {new Date(user.createdAt).toLocaleDateString(
-                      locale === 'en' ? 'en-GB' : 'sq-AL',
-                      { year: 'numeric', month: 'long', day: 'numeric' },
-                    )}
-                  </dd>
-                </div>
-              </dl>
+              <ProfileSettings
+                user={user}
+                roleLabel={getRoleLabel(user.role, locale)}
+                memberSince={new Date(user.createdAt).toLocaleDateString(
+                  locale === 'en' ? 'en-GB' : 'sq-AL',
+                  { year: 'numeric', month: 'long', day: 'numeric' },
+                )}
+              />
 
-              <Button
-                type="button"
-                variant="secondary"
-                size="sm"
-                className="mt-5"
-                onClick={() => void logout().then(() => router.push('/'))}
-              >
-                <LogOut className="h-4 w-4" aria-hidden />
-                {t('logout')}
-              </Button>
+              <div className="mt-5 flex flex-wrap gap-2">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => void logout().then(() => router.push('/'))}
+                >
+                  <LogOut className="h-4 w-4" aria-hidden />
+                  {t('logout')}
+                </Button>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  loading={loggingOutAll}
+                  onClick={() => void handleLogoutAll()}
+                >
+                  {t('logoutAllCta')}
+                </Button>
+              </div>
             </section>
+            <ChangePasswordForm user={user} />
             <TwoFactorSettings enabled={Boolean(user.totpEnabled)} />
           </aside>
         </div>
@@ -433,7 +474,7 @@ function QuickLink({ href, icon: Icon, label }: { href: string; icon: typeof Map
   return (
     <Link
       href={href}
-      className="inline-flex items-center gap-1.5 rounded-md border border-stone-200 bg-white px-3 py-1.5 text-xs font-medium text-stone-700 transition hover:border-mosque-300 hover:text-mosque-800"
+      className="inline-flex items-center gap-1.5 rounded-md border border-stone-200 bg-card px-3 py-1.5 text-xs font-medium text-stone-700 transition hover:border-mosque-300 hover:text-mosque-800"
     >
       <Icon className="h-3.5 w-3.5" aria-hidden />
       {label}

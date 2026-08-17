@@ -22,7 +22,7 @@ export async function HomeLiveIssues({ reports }: { reports: ReportDto[] }) {
   const locale = (await getLocale()) as AppLocale;
 
   return (
-    <Section className="bg-white">
+    <Section className="bg-card">
       <PageContainer>
         <Reveal>
           <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
@@ -57,7 +57,7 @@ export async function HomeLiveIssues({ reports }: { reports: ReportDto[] }) {
               <li key={report.id}>
                 <Link
                   href={`/reports/${report.id}`}
-                  className="group flex h-full flex-col overflow-hidden rounded-lg border border-stone-200 bg-stone-50/50 transition hover:border-mosque-300 hover:bg-white hover:shadow-sm"
+                  className="group flex h-full flex-col overflow-hidden rounded-lg border border-stone-200 bg-muted/50 transition hover:border-mosque-300 hover:bg-card hover:shadow-sm"
                 >
                   <div className="relative aspect-[16/10] overflow-hidden bg-stone-200">
                     {report.photoUrl ? (
@@ -68,7 +68,7 @@ export async function HomeLiveIssues({ reports }: { reports: ReportDto[] }) {
                         sizes="(max-width: 640px) 100vw, 33vw"
                       />
                     ) : (
-                      <div className="flex h-full items-center justify-center text-sm text-stone-500">
+                      <div className="flex h-full items-center justify-center text-sm text-stone-600">
                         {t('live.noPhoto')}
                       </div>
                     )}
@@ -77,20 +77,20 @@ export async function HomeLiveIssues({ reports }: { reports: ReportDto[] }) {
                     <div className="flex flex-wrap items-center gap-2">
                       <StatusBadge status={report.status} />
                       {report.categoryName ? (
-                        <span className="text-xs text-stone-500">{report.categoryName}</span>
+                        <span className="text-xs text-stone-600">{report.categoryName}</span>
                       ) : null}
                     </div>
                     <p className="text-sm font-medium leading-snug text-stone-900">
                       {excerpt(report.description)}
                     </p>
-                    <p className="mt-auto pt-2 text-xs text-stone-500">
+                    <p className="mt-auto pt-2 text-xs text-stone-600">
                       {report.address
                         ? report.address
                         : t('live.coords', {
                             lat: report.lat.toFixed(3),
                             lng: report.lng.toFixed(3),
                           })}
-                      <span className="mx-1.5 text-stone-300" aria-hidden>
+                      <span className="mx-1.5 text-stone-600" aria-hidden>
                         ·
                       </span>
                       {new Date(report.createdAt).toLocaleDateString(

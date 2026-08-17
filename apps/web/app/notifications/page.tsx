@@ -119,7 +119,7 @@ export default function NotificationsPage() {
         {items.length === 0 ? (
           <EmptyState className="mt-8" title={t('emptyTitle')} description={t('emptyBody')} />
         ) : (
-          <ul className="mt-6 divide-y divide-stone-100 overflow-hidden rounded-xl border border-stone-200 bg-white">
+          <ul className="mt-6 divide-y divide-stone-100 overflow-hidden rounded-xl border border-stone-200 bg-card">
             {items.map((n) => (
               <NotificationItem
                 key={n.id}

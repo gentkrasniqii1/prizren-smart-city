@@ -34,7 +34,7 @@ export async function HomeHowItWorks() {
             return (
               <Reveal key={step.title} as="li" delay={delay} className="relative">
                 <div className="flex items-center gap-3">
-                  <span className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-mosque-700 text-sm font-semibold text-white">
+                  <span className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-primary text-sm font-semibold text-primary-foreground">
                     {index + 1}
                   </span>
                   <Icon className="h-5 w-5 text-mosque-700" aria-hidden />

@@ -11,7 +11,7 @@ export function CategoryBarChart({
   emptyLabel?: string;
 }) {
   if (data.length === 0) {
-    return <p className="text-sm text-stone-500">{emptyLabel}</p>;
+    return <p className="text-sm text-stone-600">{emptyLabel}</p>;
   }
 
   return (

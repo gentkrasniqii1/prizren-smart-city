@@ -16,8 +16,10 @@ const STATUS_LABELS_SQ: Record<string, string> = {
   IN_REVIEW: 'Në shqyrtim',
   ASSIGNED: 'I caktuar',
   IN_PROGRESS: 'Në progres',
+  WAITING_FOR_INFORMATION: 'Në pritje të informacionit',
   RESOLVED: 'I zgjidhur',
   REJECTED: 'I refuzuar',
+  DUPLICATE: 'Kopje e një raporti ekzistues',
 };
 
 function statusLabel(status: string): string {
@@ -113,19 +115,75 @@ export class MailService {
 
   async sendReportStatusChangedEmail(
     to: string,
-    params: { oldStatus: string; newStatus: string; reportUrl: string },
+    params: { oldStatus: string; newStatus: string; reportUrl: string; note?: string },
   ): Promise<void> {
     const oldLabel = statusLabel(params.oldStatus);
     const newLabel = statusLabel(params.newStatus);
+    const noteBlock = params.note
+      ? `<p style="padding:12px 16px;background:#f5f0e8;border-radius:8px;color:#4a3f33"><strong>Shënim nga stafi:</strong> ${this.escapeHtml(params.note)}</p>`
+      : '';
+    const noteText = params.note ? `\n\nShënim nga stafi: ${params.note}` : '';
+    const cta = (label: string) =>
+      `<p><a href="${params.reportUrl}" style="display:inline-block;padding:12px 20px;background:#335f9b;color:#faf8f5;border-radius:8px;text-decoration:none;font-weight:600">${label}</a></p>`;
+
+    // Outcome transitions get a more meaningful, specific email than the generic
+    // "status changed" one — citizens care most about the moment their report gets
+    // picked up or resolved, so those deserve their own subject line and copy.
+    if (params.newStatus === 'RESOLVED') {
+      await this.send({
+        to,
+        subject: 'Raporti yt u zgjidh ✅ — Prizren Smart City',
+        text: `Lajm i mirë! Raporti yt u shënua si i zgjidhur.${noteText}\n\nShiko rezultatin këtu:\n${params.reportUrl}`,
+        html: this.layout(
+          'Raporti u zgjidh',
+          `<p>Lajm i mirë! Raporti yt u shënua si <strong>i zgjidhur</strong>.</p>
+           ${noteBlock}
+           ${cta('Shiko rezultatin')}`,
+        ),
+      });
+      return;
+    }
+
+    if (params.newStatus === 'ASSIGNED') {
+      await this.send({
+        to,
+        subject: 'Raporti yt u caktua te departamenti — Prizren Smart City',
+        text: `Raporti yt u kalua te departamenti përgjegjës dhe do të trajtohet.${noteText}\n\nShiko detajet këtu:\n${params.reportUrl}`,
+        html: this.layout(
+          'Raporti u caktua',
+          `<p>Raporti yt u kalua te departamenti përgjegjës dhe do të trajtohet së shpejti.</p>
+           ${noteBlock}
+           ${cta('Shiko raportin')}`,
+        ),
+      });
+      return;
+    }
+
+    if (params.newStatus === 'REJECTED') {
+      await this.send({
+        to,
+        subject: 'Përditësim për raportin tënd — Prizren Smart City',
+        text: `Raporti yt u shqyrtua dhe u refuzua.${noteText}\n\nShiko detajet këtu:\n${params.reportUrl}`,
+        html: this.layout(
+          'Raporti u refuzua',
+          `<p>Raporti yt u shqyrtua dhe u <strong>refuzua</strong>.</p>
+           ${noteBlock}
+           ${cta('Shiko raportin')}`,
+        ),
+      });
+      return;
+    }
+
     await this.send({
       to,
       subject: 'Statusi i raportit u ndryshua — Prizren Smart City',
-      text: `Statusi i raportit tënd ndryshoi: ${oldLabel} → ${newLabel}\n\nShiko detajet këtu:\n${params.reportUrl}`,
+      text: `Statusi i raportit tënd ndryshoi: ${oldLabel} → ${newLabel}${noteText}\n\nShiko detajet këtu:\n${params.reportUrl}`,
       html: this.layout(
         'Statusi u përditësua',
         `<p>Statusi i raportit tënd ndryshoi:</p>
          <p style="font-size:16px"><strong>${this.escapeHtml(oldLabel)}</strong> → <strong>${this.escapeHtml(newLabel)}</strong></p>
-         <p><a href="${params.reportUrl}" style="display:inline-block;padding:12px 20px;background:#335f9b;color:#faf8f5;border-radius:8px;text-decoration:none;font-weight:600">Shiko raportin</a></p>`,
+         ${noteBlock}
+         ${cta('Shiko raportin')}`,
       ),
     });
   }

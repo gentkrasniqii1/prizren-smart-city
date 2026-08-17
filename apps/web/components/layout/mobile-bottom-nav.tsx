@@ -97,7 +97,7 @@ export function MobileBottomNav() {
                 href={item.href}
                 className={cn(
                   'flex min-h-[3.25rem] w-full flex-col items-center justify-center gap-0.5 px-1 text-[10px] font-medium',
-                  active ? 'text-mosque-800' : 'text-stone-500',
+                  active ? 'text-mosque-800' : 'text-stone-600',
                 )}
                 aria-current={active ? 'page' : undefined}
               >

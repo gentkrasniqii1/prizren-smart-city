@@ -37,7 +37,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
               t.tone === 'error'
                 ? 'bg-red-800 text-white'
                 : t.tone === 'info'
-                  ? 'bg-mosque-800 text-white'
+                  ? 'bg-primary text-primary-foreground'
                   : 'bg-stone-900 text-stone-50'
             }`}
           >

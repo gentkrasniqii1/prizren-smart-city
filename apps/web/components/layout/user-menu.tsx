@@ -64,11 +64,11 @@ export function UserMenu() {
         <div
           id={menuId}
           role="menu"
-          className="absolute right-0 z-50 mt-2 w-56 overflow-hidden rounded-lg border border-stone-200 bg-white py-1 shadow-lift"
+          className="absolute right-0 z-50 mt-2 w-56 overflow-hidden rounded-lg border border-stone-200 bg-card py-1 shadow-lift"
         >
           <div className="border-b border-stone-100 px-3 py-2">
             <p className="truncate text-sm font-medium text-stone-900">{user.name}</p>
-            <p className="truncate text-xs text-stone-500">{user.email}</p>
+            <p className="truncate text-xs text-stone-600">{user.email}</p>
           </div>
           <Link
             href="/account"
@@ -93,7 +93,7 @@ export function UserMenu() {
           <button
             type="button"
             role="menuitem"
-            className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-red-800 hover:bg-red-50"
+            className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-red-800 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950/40"
             onClick={() => {
               setOpen(false);
               void logout();

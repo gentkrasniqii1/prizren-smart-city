@@ -7,6 +7,7 @@ import { useEffect, useState } from 'react';
 import { useLocale, useTranslations } from 'next-intl';
 import type { PaginatedReports, ReportDto, TransparencyStats } from '@prizren/shared-types';
 import { apiFetch } from '@/lib/api';
+import { usePolling } from '@/lib/use-polling';
 import { PageContainer } from '@/components/layout/page-container';
 import { EmptyState, ErrorBanner, Skeleton, StatCard } from '@/components/ui';
 import { getStatusLabel } from '@/lib/labels';
@@ -29,7 +30,7 @@ function DistributionList({
 }) {
   const max = Math.max(...items.map((i) => i.count), 1);
   if (items.length === 0) {
-    return <p className="mt-3 text-sm text-stone-500">{emptyLabel}</p>;
+    return <p className="mt-3 text-sm text-stone-600">{emptyLabel}</p>;
   }
   return (
     <ul className="mt-4 space-y-3">
@@ -60,9 +61,11 @@ export function TransparencyView() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
-  function load() {
+  function load(opts?: { background?: boolean }) {
     void (async () => {
-      setLoading(true);
+      // Background polling refreshes keep the current view intact instead of
+      // flashing the skeleton loader every cycle.
+      if (!opts?.background) setLoading(true);
       setError(null);
       try {
         const [data, reportsPage] = await Promise.all([
@@ -72,11 +75,13 @@ export function TransparencyView() {
         setStats(data);
         setMapReports(reportsPage.data);
       } catch {
-        setError(t('loadError'));
-        setStats(null);
-        setMapReports([]);
+        if (!opts?.background) {
+          setError(t('loadError'));
+          setStats(null);
+          setMapReports([]);
+        }
       } finally {
-        setLoading(false);
+        if (!opts?.background) setLoading(false);
       }
     })();
   }
@@ -85,6 +90,10 @@ export function TransparencyView() {
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps -- mount-only load
   }, []);
+
+  // New reports and status changes should show up here without a manual
+  // refresh — poll every 30s (paused while the tab is hidden).
+  usePolling(() => load({ background: true }), 30_000);
 
   const statusItems =
     stats?.byStatus.map((row) => ({
@@ -170,13 +179,13 @@ export function TransparencyView() {
             </section>
 
             <section className="mt-10 grid gap-6 md:grid-cols-2">
-              <div className="rounded-xl border border-stone-200 bg-white p-5">
+              <div className="rounded-xl border border-stone-200 bg-card p-5">
                 <h2 className="font-display text-lg tracking-tight text-stone-950">
                   {t('byStatus')}
                 </h2>
                 <DistributionList items={statusItems} emptyLabel={t('noData')} />
               </div>
-              <div className="rounded-xl border border-stone-200 bg-white p-5">
+              <div className="rounded-xl border border-stone-200 bg-card p-5">
                 <h2 className="font-display text-lg tracking-tight text-stone-950">
                   {t('byCategory')}
                 </h2>
@@ -213,13 +222,13 @@ export function TransparencyView() {
               </Link>
               <Link
                 href="/report"
-                className="inline-flex items-center justify-center rounded-md border border-stone-300 bg-white px-4 py-2.5 text-sm font-medium text-stone-900 hover:bg-stone-50"
+                className="inline-flex items-center justify-center rounded-md border border-stone-300 bg-card px-4 py-2.5 text-sm font-medium text-stone-900 hover:bg-muted"
               >
                 {t('ctaReport')}
               </Link>
             </div>
 
-            <p className="mt-6 text-xs text-stone-500">{t('privacyNote')}</p>
+            <p className="mt-6 text-xs text-stone-600">{t('privacyNote')}</p>
           </>
         ) : null}
       </PageContainer>

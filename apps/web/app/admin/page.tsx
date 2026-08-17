@@ -7,6 +7,8 @@ import { useRouter } from 'next/navigation';
 import { useLocale, useTranslations } from 'next-intl';
 import type {
   AnalyticsByCategoryItem,
+  AnalyticsByDepartmentItem,
+  AnalyticsOverTimeItem,
   AnalyticsSla,
   AnalyticsSummary,
   AssignReportRequest,
@@ -19,6 +21,7 @@ import type {
   UpdateReportStatusRequest,
 } from '@prizren/shared-types';
 import { ApiError, apiFetch } from '@/lib/api';
+import { usePolling } from '@/lib/use-polling';
 import { useAuth } from '@/components/auth-provider';
 import { Breadcrumbs } from '@/components/breadcrumbs';
 import { PageContainer } from '@/components/layout/page-container';
@@ -105,6 +108,8 @@ export default function AdminPage() {
   const [summary, setSummary] = useState<AnalyticsSummary | null>(null);
   const [sla, setSla] = useState<AnalyticsSla | null>(null);
   const [byCategory, setByCategory] = useState<AnalyticsByCategoryItem[]>([]);
+  const [byDepartment, setByDepartment] = useState<AnalyticsByDepartmentItem[]>([]);
+  const [overTime, setOverTime] = useState<AnalyticsOverTimeItem[]>([]);
   const [status, setStatus] = useState('');
   const [categoryId, setCategoryId] = useState('');
   const [departmentId, setDepartmentId] = useState('');
@@ -116,28 +121,6 @@ export default function AdminPage() {
   const [message, setMessage] = useState<string | null>(null);
 
   const canAssign = ASSIGN_ROLES.has(user?.role ?? '');
-
-  const overTimeData = useMemo(() => {
-    const counts = new Map<string, number>();
-    for (const r of reports) {
-      const day = r.createdAt.slice(0, 10);
-      counts.set(day, (counts.get(day) ?? 0) + 1);
-    }
-    return Array.from(counts.entries())
-      .sort(([a], [b]) => a.localeCompare(b))
-      .map(([date, count]) => ({ date, count }));
-  }, [reports]);
-
-  const byDepartmentData = useMemo(() => {
-    const counts = new Map<string, number>();
-    for (const r of reports) {
-      const name = r.departmentName?.trim() || t('noDepartment');
-      counts.set(name, (counts.get(name) ?? 0) + 1);
-    }
-    return Array.from(counts.entries())
-      .map(([department, count]) => ({ department, count }))
-      .sort((a, b) => b.count - a.count);
-  }, [reports, t]);
 
   const reportQuery = useMemo(() => {
     const params = new URLSearchParams();
@@ -159,40 +142,63 @@ export default function AdminPage() {
     return qs ? `?${qs}` : '';
   }, [departmentId, from, to]);
 
-  const loadDashboard = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const [list, sum, cats, slaRes] = await Promise.all([
-        apiFetch<PaginatedReports>(`/reports?${reportQuery}`, { auth: true }),
-        apiFetch<AnalyticsSummary>(`/analytics/summary${analyticsQuery}`, { auth: true }),
-        apiFetch<AnalyticsByCategoryItem[]>(`/analytics/by-category${analyticsQuery}`, {
-          auth: true,
-        }),
-        apiFetch<AnalyticsSla>(`/analytics/sla${analyticsQuery}`, { auth: true }),
-      ]);
-      setReports(list.data);
-      setMetaTotal(list.meta.total);
-      setSummary(sum);
-      setByCategory(cats);
-      setSla(slaRes);
-    } catch (err) {
-      setError(err instanceof ApiError ? err.message : t('loadError'));
-    } finally {
-      setLoading(false);
-    }
-  }, [reportQuery, analyticsQuery, t]);
+  const loadDashboard = useCallback(
+    async (opts?: { background?: boolean }) => {
+      // Background polling refreshes shouldn't flash the spinner over the
+      // table/filters the staff member is currently looking at.
+      if (!opts?.background) setLoading(true);
+      setError(null);
+      try {
+        const [list, sum, cats, depts, time, slaRes] = await Promise.all([
+          apiFetch<PaginatedReports>(`/reports?${reportQuery}`, { auth: true }),
+          apiFetch<AnalyticsSummary>(`/analytics/summary${analyticsQuery}`, { auth: true }),
+          apiFetch<AnalyticsByCategoryItem[]>(`/analytics/by-category${analyticsQuery}`, {
+            auth: true,
+          }),
+          apiFetch<AnalyticsByDepartmentItem[]>(`/analytics/by-department${analyticsQuery}`, {
+            auth: true,
+          }),
+          apiFetch<AnalyticsOverTimeItem[]>(`/analytics/over-time${analyticsQuery}`, {
+            auth: true,
+          }),
+          apiFetch<AnalyticsSla>(`/analytics/sla${analyticsQuery}`, { auth: true }),
+        ]);
+        setReports(list.data);
+        setMetaTotal(list.meta.total);
+        setSummary(sum);
+        setByCategory(cats);
+        setByDepartment(depts);
+        setOverTime(time);
+        setSla(slaRes);
+      } catch (err) {
+        if (!opts?.background) {
+          setError(err instanceof ApiError ? err.message : t('loadError'));
+        }
+      } finally {
+        if (!opts?.background) setLoading(false);
+      }
+    },
+    [reportQuery, analyticsQuery, t],
+  );
 
   async function refreshAnalytics() {
-    const [sum, cats, slaRes] = await Promise.all([
+    const [sum, cats, depts, time, slaRes] = await Promise.all([
       apiFetch<AnalyticsSummary>(`/analytics/summary${analyticsQuery}`, { auth: true }),
       apiFetch<AnalyticsByCategoryItem[]>(`/analytics/by-category${analyticsQuery}`, {
+        auth: true,
+      }),
+      apiFetch<AnalyticsByDepartmentItem[]>(`/analytics/by-department${analyticsQuery}`, {
+        auth: true,
+      }),
+      apiFetch<AnalyticsOverTimeItem[]>(`/analytics/over-time${analyticsQuery}`, {
         auth: true,
       }),
       apiFetch<AnalyticsSla>(`/analytics/sla${analyticsQuery}`, { auth: true }),
     ]);
     setSummary(sum);
     setByCategory(cats);
+    setByDepartment(depts);
+    setOverTime(time);
     setSla(slaRes);
   }
 
@@ -200,6 +206,17 @@ export default function AdminPage() {
     if (authLoading || !isStaff(user?.role)) return;
     void loadDashboard();
   }, [authLoading, user?.role, loadDashboard]);
+
+  // New reports and status changes should show up here without a manual
+  // refresh. Skip the tick while a row mutation is in-flight so a poll can't
+  // clobber the optimistic update the staff member is currently reviewing.
+  usePolling(
+    () => {
+      if (!rowBusy) void loadDashboard({ background: true });
+    },
+    25_000,
+    !authLoading && isStaff(user?.role),
+  );
 
   useEffect(() => {
     if (authLoading || !isStaff(user?.role)) return;
@@ -361,19 +378,19 @@ export default function AdminPage() {
             {t('chartHeading')}
           </h2>
           <div className="mt-3 grid gap-4 lg:grid-cols-2">
-            <div className="rounded-xl border border-stone-200 bg-white p-4">
+            <div className="rounded-xl border border-stone-200 bg-card p-4">
               <CategoryBarChart data={byCategory} emptyLabel={t('chartEmpty')} />
             </div>
-            <div className="rounded-xl border border-stone-200 bg-white p-4">
+            <div className="rounded-xl border border-stone-200 bg-card p-4">
               <h3 className="text-sm font-medium text-stone-700">{t('chartDepartment')}</h3>
               <div className="mt-2">
-                <DepartmentBarChart data={byDepartmentData} emptyLabel={t('chartEmpty')} />
+                <DepartmentBarChart data={byDepartment} emptyLabel={t('chartEmpty')} />
               </div>
             </div>
-            <div className="rounded-xl border border-stone-200 bg-white p-4 lg:col-span-2">
+            <div className="rounded-xl border border-stone-200 bg-card p-4 lg:col-span-2">
               <h3 className="text-sm font-medium text-stone-700">{t('chartOverTime')}</h3>
               <div className="mt-2">
-                <ReportsOverTimeChart data={overTimeData} emptyLabel={t('chartEmpty')} />
+                <ReportsOverTimeChart data={overTime} emptyLabel={t('chartEmpty')} />
               </div>
             </div>
           </div>
@@ -386,7 +403,7 @@ export default function AdminPage() {
           <p className="mt-1 text-sm text-stone-600">{t('heatmapHint')}</p>
           <div className="mt-3 h-72 overflow-hidden rounded-xl border border-stone-200 bg-stone-100">
             {reports.length === 0 ? (
-              <p className="flex h-full items-center justify-center text-sm text-stone-500">
+              <p className="flex h-full items-center justify-center text-sm text-stone-600">
                 {t('heatmapEmpty')}
               </p>
             ) : (
@@ -408,7 +425,7 @@ export default function AdminPage() {
             <p className="mt-1 text-sm text-stone-600">{t('tableSubtitle')}</p>
           </div>
 
-          <div className="flex flex-col gap-2 rounded-xl border border-stone-200 bg-white p-3 sm:flex-row sm:flex-wrap">
+          <div className="flex flex-col gap-2 rounded-xl border border-stone-200 bg-card p-3 sm:flex-row sm:flex-wrap">
             <div className="min-w-0 flex-1 sm:min-w-[9rem] sm:flex-none">
               <Label htmlFor="admin-status" className="sr-only">
                 {t('filterStatus')}
@@ -500,12 +517,12 @@ export default function AdminPage() {
             </p>
           ) : null}
           {loading ? <Spinner label={t('filtering')} /> : null}
-          <p className="text-xs text-stone-500">{t('tableCount', { total: metaTotal })}</p>
-          <p className="text-xs text-stone-500 md:hidden">{t('tableScrollHint')}</p>
+          <p className="text-xs text-stone-600">{t('tableCount', { total: metaTotal })}</p>
+          <p className="text-xs text-stone-600 md:hidden">{t('tableScrollHint')}</p>
 
-          <div className="-mx-4 overflow-x-auto border-y border-stone-200 bg-white sm:mx-0 sm:rounded-xl sm:border">
+          <div className="-mx-4 overflow-x-auto border-y border-stone-200 bg-card sm:mx-0 sm:rounded-xl sm:border">
             <table className="min-w-[720px] w-full text-left text-sm md:min-w-full">
-              <thead className="border-b border-stone-200 bg-stone-50 text-xs uppercase tracking-wide text-stone-500">
+              <thead className="border-b border-stone-200 bg-stone-50 text-xs uppercase tracking-wide text-stone-600">
                 <tr>
                   <th className="px-3 py-2.5 font-medium">{t('colId')}</th>
                   <th className="px-3 py-2.5 font-medium">{t('colCategory')}</th>
@@ -541,7 +558,7 @@ export default function AdminPage() {
                             onChange={(e) =>
                               void changeStatus(report, e.target.value as ReportStatus)
                             }
-                            className="max-w-[9.5rem] rounded border border-stone-300 bg-white px-1.5 py-1 text-xs"
+                            className="max-w-[9.5rem] rounded border border-stone-300 bg-card px-1.5 py-1 text-xs"
                             aria-label={t('colStatus')}
                           >
                             {STATUSES.map((s) => (
@@ -559,7 +576,7 @@ export default function AdminPage() {
                               onChange={(e) =>
                                 void assignReport(report, { departmentId: e.target.value })
                               }
-                              className="max-w-[11rem] rounded border border-stone-300 bg-white px-1.5 py-1 text-xs"
+                              className="max-w-[11rem] rounded border border-stone-300 bg-card px-1.5 py-1 text-xs"
                               aria-label={t('colDepartment')}
                             >
                               <option value="">{t('noDepartment')}</option>
@@ -581,7 +598,7 @@ export default function AdminPage() {
                               onChange={(e) =>
                                 void assignReport(report, { assignedStaffId: e.target.value })
                               }
-                              className="max-w-[11rem] rounded border border-stone-300 bg-white px-1.5 py-1 text-xs"
+                              className="max-w-[11rem] rounded border border-stone-300 bg-card px-1.5 py-1 text-xs"
                               aria-label={t('colStaff')}
                             >
                               <option value="">{t('noStaff')}</option>
@@ -600,7 +617,7 @@ export default function AdminPage() {
                             {slaLabel(bucket, locale)}
                           </span>
                           {report.dueAt ? (
-                            <div className="mt-1 text-[10px] text-stone-500">
+                            <div className="mt-1 text-[10px] text-stone-600">
                               {new Date(report.dueAt).toLocaleString(
                                 locale === 'en' ? 'en-GB' : 'sq-AL',
                               )}

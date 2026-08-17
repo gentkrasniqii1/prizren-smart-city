@@ -64,6 +64,10 @@ export const colors = {
     high: { bg: '#fed7aa', fg: '#7c2d12' },
     critical: { bg: '#fecaca', fg: '#7f1d1d' },
   },
+  /** Brand mark accent only (Monogram P signal lines + node) — fixed across themes. */
+  brand: {
+    gold: '#b8874f',
+  },
 } as const;
 
 export const radii = {

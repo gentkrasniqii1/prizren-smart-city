@@ -1,4 +1,9 @@
-import { ConflictException, ForbiddenException, UnauthorizedException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  ForbiddenException,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { Role } from '@prisma/client';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -49,6 +54,7 @@ describe('AuthService', () => {
       create: ReturnType<typeof vi.fn>;
       updateMany: ReturnType<typeof vi.fn>;
     };
+    $transaction: ReturnType<typeof vi.fn>;
   };
   let jwt: { signAsync: ReturnType<typeof vi.fn> };
   let mail: {
@@ -76,6 +82,7 @@ describe('AuthService', () => {
         create: vi.fn().mockResolvedValue({ id: 'at-1' }),
         updateMany: vi.fn(),
       },
+      $transaction: vi.fn((ops: Promise<unknown>[]) => Promise.all(ops)),
     };
     jwt = {
       signAsync: vi.fn().mockResolvedValue('access-token'),
@@ -241,6 +248,55 @@ describe('AuthService', () => {
     });
   });
 
+  describe('changePassword', () => {
+    it('changes the password and revokes existing sessions', async () => {
+      prisma.user.findUnique.mockResolvedValue(user);
+      prisma.user.update.mockResolvedValue(user);
+
+      const result = await service.changePassword('user-1', 'Password1!', 'NewPassw0rd!');
+
+      expect(result).toEqual({ ok: true });
+      expect(prisma.user.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: 'user-1' },
+          data: expect.objectContaining({ passwordHash: 'hashed-password' }),
+        }),
+      );
+      expect(prisma.refreshToken.updateMany).toHaveBeenCalledWith(
+        expect.objectContaining({ where: { userId: 'user-1', revokedAt: null } }),
+      );
+      expect(mail.sendPasswordChangedEmail).toHaveBeenCalledWith('citizen@test.local');
+    });
+
+    it('rejects when the current password is wrong', async () => {
+      prisma.user.findUnique.mockResolvedValue(user);
+      await expect(
+        service.changePassword('user-1', 'wrong-password', 'NewPassw0rd!'),
+      ).rejects.toBeInstanceOf(UnauthorizedException);
+    });
+
+    it('rejects a weak new password', async () => {
+      prisma.user.findUnique.mockResolvedValue(user);
+      await expect(service.changePassword('user-1', 'Password1!', 'weak')).rejects.toBeInstanceOf(
+        BadRequestException,
+      );
+    });
+
+    it('rejects when the new password matches the current one', async () => {
+      prisma.user.findUnique.mockResolvedValue(user);
+      await expect(
+        service.changePassword('user-1', 'Password1!', 'Password1!'),
+      ).rejects.toBeInstanceOf(BadRequestException);
+    });
+
+    it('rejects accounts without a password (OAuth-only)', async () => {
+      prisma.user.findUnique.mockResolvedValue({ ...user, passwordHash: null });
+      await expect(
+        service.changePassword('user-1', 'anything', 'NewPassw0rd!'),
+      ).rejects.toBeInstanceOf(BadRequestException);
+    });
+  });
+
   it('maps users to PublicUser via toPublicUser', () => {
     expect(service.toPublicUser(user as never)).toEqual({
       id: 'user-1',
@@ -252,7 +308,26 @@ describe('AuthService', () => {
       role: Role.CITIZEN,
       emailVerified: true,
       totpEnabled: false,
+      hasPassword: true,
+      googleLinked: false,
       createdAt: '2026-01-01T00:00:00.000Z',
+    });
+  });
+
+  it('reports googleLinked: true for a user with a linked Google account', () => {
+    expect(service.toPublicUser({ ...user, googleId: 'google-sub-1' } as never)).toMatchObject({
+      googleLinked: true,
+    });
+  });
+
+  describe('logoutAll', () => {
+    it('revokes every active refresh token for the user', async () => {
+      prisma.refreshToken.updateMany.mockResolvedValue({ count: 3 });
+      await service.logoutAll('user-1');
+      expect(prisma.refreshToken.updateMany).toHaveBeenCalledWith({
+        where: { userId: 'user-1', revokedAt: null },
+        data: { revokedAt: expect.any(Date) },
+      });
     });
   });
 });

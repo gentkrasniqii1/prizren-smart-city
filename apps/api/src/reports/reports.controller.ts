@@ -89,6 +89,12 @@ export class ReportsController {
     return this.reportsService.listMine(user, page ? Number(page) : 1, limit ? Number(limit) : 20);
   }
 
+  @Get('mine/stats')
+  @UseGuards(JwtAuthGuard)
+  myStats(@CurrentUser() user: AuthUser) {
+    return this.reportsService.myStats(user.id);
+  }
+
   @Get(':id')
   @UseGuards(OptionalJwtAuthGuard)
   findOne(@Param('id', ParseUUIDPipe) id: string, @CurrentUser() user: AuthUser | null) {

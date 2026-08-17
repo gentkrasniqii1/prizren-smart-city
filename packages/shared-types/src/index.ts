@@ -38,6 +38,10 @@ export interface PublicUser {
   role: Role;
   emailVerified: boolean;
   totpEnabled: boolean;
+  /** false for accounts created via Google/Apple/Facebook that never set a password. */
+  hasPassword: boolean;
+  /** true if a Google account is linked (via direct OAuth signup or auto-linking). */
+  googleLinked: boolean;
   createdAt: string;
 }
 
@@ -101,6 +105,17 @@ export interface ResetPasswordRequest {
 
 export interface VerifyEmailRequest {
   token: string;
+}
+
+export interface UpdateProfileRequest {
+  firstName: string;
+  lastName: string;
+  phone?: string;
+}
+
+export interface ChangePasswordRequest {
+  currentPassword: string;
+  newPassword: string;
 }
 
 export interface TwoFactorVerifyRequest {
@@ -207,6 +222,24 @@ export interface AnalyticsByCategoryItem {
 export interface AnalyticsByStatusItem {
   status: ReportStatus;
   count: number;
+}
+
+export interface AnalyticsByDepartmentItem {
+  departmentId: string | null;
+  department: string;
+  count: number;
+}
+
+export interface AnalyticsOverTimeItem {
+  date: string;
+  count: number;
+}
+
+export interface MyReportStats {
+  total: number;
+  open: number;
+  inProgress: number;
+  resolved: number;
 }
 
 export interface AssignReportRequest {

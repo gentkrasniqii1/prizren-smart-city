@@ -27,8 +27,8 @@ export function StepIndicator({
               <span
                 className={cn(
                   'inline-flex h-9 w-9 items-center justify-center rounded-full text-sm font-semibold transition duration-normal ease-product',
-                  done && 'bg-mosque-700 text-white',
-                  active && 'bg-mosque-700 text-white ring-4 ring-mosque-100',
+                  done && 'bg-primary text-primary-foreground',
+                  active && 'bg-primary text-primary-foreground ring-4 ring-mosque-100',
                   !done && !active && 'bg-stone-200 text-stone-600',
                 )}
                 aria-current={active ? 'step' : undefined}
@@ -62,9 +62,9 @@ export function StepIndicator({
                 <span
                   className={cn(
                     'inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm font-semibold transition duration-normal ease-product',
-                    done && 'bg-mosque-700 text-white',
-                    active && 'bg-mosque-700 text-white ring-4 ring-mosque-100',
-                    !done && !active && 'bg-stone-200 text-stone-600',
+                    done && 'bg-primary text-primary-foreground',
+                    active && 'bg-primary text-primary-foreground ring-4 ring-mosque-100',
+                    !done && !active && 'bg-stone-200 text-stone-800',
                   )}
                   aria-current={active ? 'step' : undefined}
                 >
@@ -73,7 +73,7 @@ export function StepIndicator({
                 <span
                   className={cn(
                     'text-sm font-medium',
-                    active || done ? 'text-stone-900' : 'text-stone-500',
+                    active || done ? 'text-stone-900' : 'text-stone-600',
                   )}
                 >
                   {step.label}

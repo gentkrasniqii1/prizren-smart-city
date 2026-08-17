@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { getTranslations } from 'next-intl/server';
-import { BrandWordmark } from '@/components/brand';
+import { Logo } from '@/components/brand/Logo';
 import { PageContainer } from '@/components/layout/page-container';
 
 export async function SiteFooter() {
@@ -21,7 +21,7 @@ export async function SiteFooter() {
       <PageContainer className="py-10 md:py-12">
         <div className="flex flex-col gap-8 md:flex-row md:items-start md:justify-between">
           <div className="max-w-sm">
-            <BrandWordmark />
+            <Logo variant="full" size={32} />
             <p className="mt-3 text-sm text-muted-foreground">{t('tagline')}</p>
           </div>
 

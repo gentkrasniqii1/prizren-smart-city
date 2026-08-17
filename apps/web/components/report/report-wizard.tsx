@@ -379,7 +379,7 @@ export function ReportWizard() {
 
                 <div className="rounded-lg border border-mosque-200 bg-mosque-50/70 p-4">
                   <div className="flex gap-3">
-                    <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-mosque-700 text-white">
+                    <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground">
                       <Bot className="h-4 w-4" aria-hidden />
                     </span>
                     <div>
@@ -463,7 +463,7 @@ export function ReportWizard() {
           </div>
 
           {formError ? (
-            <p className="mt-4 text-sm text-red-700" role="alert">
+            <p className="mt-4 text-sm text-red-700 dark:text-red-400" role="alert">
               {formError}
             </p>
           ) : null}

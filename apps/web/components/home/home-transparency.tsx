@@ -11,7 +11,7 @@ export async function HomeTransparency({ stats }: { stats: TransparencyStats | n
   const t = await getTranslations('Home');
 
   return (
-    <Section className="bg-mosque-950 text-stone-50">
+    <Section className="bg-overlay-surface text-overlay-foreground">
       <PageContainer>
         <Reveal>
           <div className="grid gap-10 lg:grid-cols-[1.1fr_0.9fr] lg:items-end">
@@ -26,13 +26,17 @@ export async function HomeTransparency({ stats }: { stats: TransparencyStats | n
                 <Button
                   size="lg"
                   variant="secondary"
-                  className="border-white/20 bg-white text-stone-900"
+                  className="border-white/20 bg-white text-chip-foreground"
                 >
                   {t('transparency.cta')}
                 </Button>
               </Link>
               <Link href="/reports">
-                <Button size="lg" variant="ghost" className="text-stone-50 hover:bg-white/10">
+                <Button
+                  size="lg"
+                  variant="ghost"
+                  className="text-overlay-foreground hover:bg-white/10"
+                >
                   {t('ctaBrowse')}
                 </Button>
               </Link>

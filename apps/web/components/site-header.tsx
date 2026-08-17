@@ -6,7 +6,7 @@ import { usePathname } from 'next/navigation';
 import { Menu, X } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useAuth } from '@/components/auth-provider';
-import { BrandWordmark } from '@/components/brand';
+import { Logo } from '@/components/brand/Logo';
 import { LanguageSwitcher } from '@/components/language-switcher';
 import { NotificationBell } from '@/components/layout/notification-bell';
 import { PageContainer } from '@/components/layout/page-container';
@@ -73,7 +73,7 @@ export function SiteHeader() {
     <header className="sticky top-0 z-40 border-b border-border/80 bg-background/90 backdrop-blur-md">
       <a
         href="#main-content"
-        className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded-md focus:bg-mosque-800 focus:px-3 focus:py-2 focus:text-sm focus:text-white"
+        className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded-md focus:bg-primary focus:px-3 focus:py-2 focus:text-sm focus:text-primary-foreground"
       >
         {t('skipToContent')}
       </a>
@@ -81,10 +81,10 @@ export function SiteHeader() {
       <PageContainer className="flex h-14 items-center justify-between gap-3 sm:h-16">
         <Link href="/" className="min-w-0 shrink" onClick={() => setOpen(false)}>
           <span className="md:hidden">
-            <BrandWordmark compact />
+            <Logo variant="full" size={32} compact />
           </span>
           <span className="hidden md:inline-flex">
-            <BrandWordmark />
+            <Logo variant="full" size={32} />
           </span>
         </Link>
 

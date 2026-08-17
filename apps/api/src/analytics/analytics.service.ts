@@ -2,7 +2,9 @@ import { Injectable } from '@nestjs/common';
 import { Prisma, ReportStatus } from '@prisma/client';
 import type {
   AnalyticsByCategoryItem,
+  AnalyticsByDepartmentItem,
   AnalyticsByStatusItem,
+  AnalyticsOverTimeItem,
   AnalyticsSla,
   AnalyticsSummary,
 } from '@prizren/shared-types';
@@ -63,6 +65,68 @@ export class AnalyticsService {
       categoryId: g.categoryId,
       category: g.categoryId ? (nameById.get(g.categoryId) ?? 'Unknown') : 'Uncategorized',
       count: g._count._all,
+    }));
+  }
+
+  async byDepartment(query: AnalyticsQueryDto): Promise<AnalyticsByDepartmentItem[]> {
+    const where = this.buildWhere(query);
+    const grouped = await this.prisma.report.groupBy({
+      by: ['departmentId'],
+      where,
+      _count: { _all: true },
+    });
+
+    const departmentIds = grouped
+      .map((g) => g.departmentId)
+      .filter((id): id is string => Boolean(id));
+    const departments = departmentIds.length
+      ? await this.prisma.department.findMany({
+          where: { id: { in: departmentIds } },
+          select: { id: true, name: true },
+        })
+      : [];
+    const nameById = new Map(departments.map((d) => [d.id, d.name]));
+
+    return grouped
+      .map((g) => ({
+        departmentId: g.departmentId,
+        department: g.departmentId ? (nameById.get(g.departmentId) ?? 'Unknown') : 'Unassigned',
+        count: g._count._all,
+      }))
+      .sort((a, b) => b.count - a.count);
+  }
+
+  async overTime(query: AnalyticsQueryDto): Promise<AnalyticsOverTimeItem[]> {
+    const conditions: Prisma.Sql[] = [];
+    if (query.departmentId) {
+      conditions.push(Prisma.sql`"departmentId" = ${query.departmentId}`);
+    }
+    if (query.from) {
+      conditions.push(Prisma.sql`"createdAt" >= ${new Date(query.from)}`);
+    }
+    if (query.to) {
+      conditions.push(Prisma.sql`"createdAt" <= ${new Date(query.to)}`);
+    }
+    // With no explicit range, default to the last 30 days so the trend line
+    // stays readable instead of one bar per day since the platform launched.
+    if (!query.from && !query.to) {
+      conditions.push(Prisma.sql`"createdAt" >= NOW() - INTERVAL '30 days'`);
+    }
+    const whereClause = conditions.length
+      ? Prisma.sql`WHERE ${Prisma.join(conditions, ' AND ')}`
+      : Prisma.empty;
+
+    const rows = await this.prisma.$queryRaw<{ day: Date; count: bigint }[]>(Prisma.sql`
+      SELECT date_trunc('day', "createdAt") AS day, COUNT(*)::bigint AS count
+      FROM "Report"
+      ${whereClause}
+      GROUP BY day
+      ORDER BY day ASC
+    `);
+
+    return rows.map((r) => ({
+      date: r.day.toISOString().slice(0, 10),
+      count: Number(r.count),
     }));
   }
 

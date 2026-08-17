@@ -16,7 +16,7 @@ export default async function NotFound() {
           className="object-cover"
           sizes="28rem"
         />
-        <div className="absolute inset-0 bg-stone-950/35" />
+        <div className="absolute inset-0 bg-overlay-surface/35" />
       </div>
       <p className="text-sm font-semibold uppercase tracking-[0.2em] text-mosque-700">404</p>
       <h1 className="mt-2 font-display text-3xl font-semibold text-stone-950">{t('title')}</h1>
