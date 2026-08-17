@@ -38,7 +38,15 @@ export function ThemeToggle({ className }: { className?: string }) {
   }
 
   return (
-    <DropdownMenu>
+    // `modal={false}`: the default modal mode makes Radix add
+    // `data-scroll-locked` to <body>, which forces `overflow: hidden` on it.
+    // That turns <body> into a second scroll/clipping container in the same
+    // chain as our sticky <header>, so while this menu is open the header's
+    // sticky offset gets computed against <body>'s (unscrolled) box instead
+    // of the real scrolled viewport — it snaps to its unstuck flow position
+    // and disappears off-screen for as long as the menu stays open. A tiny
+    // theme picker doesn't need modal scroll-locking, so we opt out of it.
+    <DropdownMenu modal={false}>
       <DropdownMenuTrigger asChild>
         <Button
           type="button"
