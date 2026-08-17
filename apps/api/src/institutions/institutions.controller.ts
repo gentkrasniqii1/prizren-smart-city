@@ -19,6 +19,8 @@ export class InstitutionsController {
       type: row.type,
       contact: row.contact,
       active: row.active,
+      integrationType: row.integrationType,
+      integrationStatus: row.integrationStatus,
     }));
   }
 }

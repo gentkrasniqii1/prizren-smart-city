@@ -124,6 +124,10 @@ export interface TwoFactorVerifyRequest {
   trustDevice?: boolean;
 }
 
+export type IntegrationType = 'EMAIL' | 'REST_API' | 'WEBHOOK' | 'SFTP' | 'MANUAL' | 'MOCK';
+
+export type IntegrationStatus = 'NOT_CONFIGURED' | 'MOCK' | 'TEST' | 'ACTIVE' | 'DISABLED';
+
 export interface InstitutionDto {
   id: string;
   name: string;
@@ -131,6 +135,10 @@ export interface InstitutionDto {
   type: string;
   contact: string | null;
   active: boolean;
+  /** How incidents are exchanged with this organization — MANUAL until an adapter is configured. */
+  integrationType: IntegrationType;
+  /** Integration lifecycle — NOT_CONFIGURED until Phase 7/8 wiring. */
+  integrationStatus: IntegrationStatus;
 }
 
 export interface DepartmentDto {
@@ -144,9 +152,14 @@ export interface DepartmentDto {
 
 export interface ReportDto {
   id: string;
+  /** Human-readable incident code, e.g. "PRZ-2026-000184". */
+  publicId: string;
   userId?: string;
   categoryId: string | null;
+  subcategory: string | null;
   departmentId: string | null;
+  /** Responsible external organization, distinct from the internal department. */
+  institutionId: string | null;
   description: string;
   status: ReportStatus;
   priority: Priority | null;
@@ -160,12 +173,14 @@ export interface ReportDto {
   /** true when confidence < 0.6; null when no AI result */
   aiNeedsReview?: boolean | null;
   duplicateOfId: string | null;
+  isDuplicate: boolean;
   assignedStaffId: string | null;
   dueAt: string | null;
   createdAt: string;
   updatedAt: string;
   categoryName?: string | null;
   departmentName?: string | null;
+  institutionName?: string | null;
   voteCount?: number;
   /** Present when authenticated viewer context is available */
   votedByMe?: boolean;

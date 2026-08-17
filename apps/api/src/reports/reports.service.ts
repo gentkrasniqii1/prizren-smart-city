@@ -34,6 +34,7 @@ import { UpdateAiClassificationDto } from './dto/update-ai-classification.dto';
 import { AssignReportDto } from './dto/assign-report.dto';
 import { UpdateReportStatusDto } from './dto/update-report-status.dto';
 import { computeDueAt } from './sla';
+import { nextReportPublicId } from './public-id';
 import { REPORT_STATUS_CHANGED_EVENT, StatusChangedEvent } from '../events/status-changed.event';
 import { assertValidImageUpload } from '../uploads/image-validation';
 import { RoutingService } from '../routing/routing.service';
@@ -48,9 +49,18 @@ const OPEN_STATUSES: ReportStatus[] = [
   ReportStatus.WAITING_FOR_INFORMATION,
 ];
 
+/** Shared `include` shape so every Report query returns display names consistently. */
+const REPORT_INCLUDE = {
+  category: { select: { name: true } },
+  department: { select: { name: true } },
+  institution: { select: { name: true } },
+  _count: { select: { votes: true } },
+} satisfies Prisma.ReportInclude;
+
 type ReportWithRelations = Report & {
   category?: { name: string } | null;
   department?: { name: string } | null;
+  institution?: { name: string } | null;
   _count?: { votes: number };
 };
 
@@ -82,24 +92,25 @@ export class ReportsService {
 
     const routed = await this.routing.routeByCategory(fields.categoryId);
 
-    const report = await this.prisma.report.create({
-      data: {
-        userId: user.id,
-        description: fields.description,
-        lat: fields.lat,
-        lng: fields.lng,
-        address: fields.address,
-        categoryId: fields.categoryId,
-        departmentId: routed?.departmentId,
-        priority: routed?.defaultPriority ?? null,
-        photoUrl,
-        status: ReportStatus.PENDING,
-      },
-      include: {
-        category: { select: { name: true } },
-        department: { select: { name: true } },
-        _count: { select: { votes: true } },
-      },
+    const report = await this.prisma.$transaction(async (tx) => {
+      const publicId = await nextReportPublicId(tx);
+      return tx.report.create({
+        data: {
+          publicId,
+          userId: user.id,
+          description: fields.description,
+          lat: fields.lat,
+          lng: fields.lng,
+          address: fields.address,
+          categoryId: fields.categoryId,
+          departmentId: routed?.departmentId,
+          institutionId: routed?.institutionId ?? undefined,
+          priority: routed?.defaultPriority ?? null,
+          photoUrl,
+          status: ReportStatus.PENDING,
+        },
+        include: REPORT_INCLUDE,
+      });
     });
 
     await this.syncReportLocation(report.id, fields.lat, fields.lng);
@@ -139,9 +150,12 @@ export class ReportsService {
 
     type NearbyRow = {
       id: string;
+      publicId: string;
       userId: string;
       categoryId: string | null;
+      subcategory: string | null;
       departmentId: string | null;
+      institutionId: string | null;
       description: string;
       status: ReportStatus;
       priority: Report['priority'];
@@ -153,21 +167,29 @@ export class ReportsService {
       aiClassification: Prisma.JsonValue | null;
       aiConfidence: number | null;
       duplicateOfId: string | null;
+      isDuplicate: boolean;
       assignedStaffId: string | null;
+      source: string;
+      anonymous: boolean;
+      language: string;
       dueAt: Date | null;
       createdAt: Date;
       updatedAt: Date;
       categoryName: string | null;
       departmentName: string | null;
+      institutionName: string | null;
       voteCount: number;
     };
 
     const rows = await this.prisma.$queryRaw<NearbyRow[]>`
       SELECT
         r.id,
+        r."publicId",
         r."userId",
         r."categoryId",
+        r."subcategory",
         r."departmentId",
+        r."institutionId",
         r.description,
         r.status,
         r.priority,
@@ -179,16 +201,22 @@ export class ReportsService {
         r."aiClassification",
         r."aiConfidence",
         r."duplicateOfId",
+        r."isDuplicate",
         r."assignedStaffId",
+        r.source,
+        r.anonymous,
+        r.language,
         r."dueAt",
         r."createdAt",
         r."updatedAt",
         c.name AS "categoryName",
         d.name AS "departmentName",
+        i.name AS "institutionName",
         COALESCE(v.cnt, 0)::int AS "voteCount"
       FROM "Report" r
       LEFT JOIN "Category" c ON c.id = r."categoryId"
       LEFT JOIN "Department" d ON d.id = r."departmentId"
+      LEFT JOIN "Institution" i ON i.id = r."institutionId"
       LEFT JOIN (
         SELECT "reportId", COUNT(*)::int AS cnt
         FROM "Vote"
@@ -213,6 +241,7 @@ export class ReportsService {
           ...row,
           category: row.categoryName ? { name: row.categoryName } : null,
           department: row.departmentName ? { name: row.departmentName } : null,
+          institution: row.institutionName ? { name: row.institutionName } : null,
           _count: { votes: row.voteCount },
         },
         { includeUserId: this.canSeeUserId(viewer, row.userId) },
@@ -237,11 +266,7 @@ export class ReportsService {
       this.prisma.report.count({ where }),
       this.prisma.report.findMany({
         where,
-        include: {
-          category: { select: { name: true } },
-          department: { select: { name: true } },
-          _count: { select: { votes: true } },
-        },
+        include: REPORT_INCLUDE,
         orderBy: { createdAt: 'desc' },
         skip: (page - 1) * limit,
         take: limit,
@@ -264,11 +289,7 @@ export class ReportsService {
   async findOne(id: string, viewer: AuthUser | null): Promise<ReportDto> {
     const report = await this.prisma.report.findUnique({
       where: { id },
-      include: {
-        category: { select: { name: true } },
-        department: { select: { name: true } },
-        _count: { select: { votes: true } },
-      },
+      include: REPORT_INCLUDE,
     });
     if (!report) {
       throw new NotFoundException('Report not found');
@@ -296,11 +317,7 @@ export class ReportsService {
       this.prisma.report.count({ where }),
       this.prisma.report.findMany({
         where,
-        include: {
-          category: { select: { name: true } },
-          department: { select: { name: true } },
-          _count: { select: { votes: true } },
-        },
+        include: REPORT_INCLUDE,
         orderBy: { createdAt: 'desc' },
         skip: (page - 1) * limit,
         take: limit,
@@ -369,11 +386,7 @@ export class ReportsService {
           status: dto.status,
           ...(nextDueAt ? { dueAt: nextDueAt } : {}),
         },
-        include: {
-          category: { select: { name: true } },
-          department: { select: { name: true } },
-          _count: { select: { votes: true } },
-        },
+        include: REPORT_INCLUDE,
       });
 
       await tx.statusHistory.create({
@@ -466,11 +479,7 @@ export class ReportsService {
           status: nextStatus,
           dueAt,
         },
-        include: {
-          category: { select: { name: true } },
-          department: { select: { name: true } },
-          _count: { select: { votes: true } },
-        },
+        include: REPORT_INCLUDE,
       });
 
       if (nextStatus !== existing.status) {
@@ -538,11 +547,7 @@ export class ReportsService {
       const report = await tx.report.update({
         where: { id },
         data: { photoAfterUrl },
-        include: {
-          category: { select: { name: true } },
-          department: { select: { name: true } },
-          _count: { select: { votes: true } },
-        },
+        include: REPORT_INCLUDE,
       });
 
       await tx.auditLog.create({
@@ -698,17 +703,14 @@ export class ReportsService {
           aiConfidence: classification.confidence,
           categoryId: mapped.categoryId ?? existing.categoryId,
           departmentId: mapped.departmentId ?? existing.departmentId,
+          institutionId: mapped.institutionId ?? existing.institutionId,
           priority: mapped.priority ?? existing.priority,
           status:
             existing.status === ReportStatus.PENDING || existing.status === ReportStatus.IN_REVIEW
               ? ReportStatus.IN_REVIEW
               : existing.status,
         },
-        include: {
-          category: { select: { name: true } },
-          department: { select: { name: true } },
-          _count: { select: { votes: true } },
-        },
+        include: REPORT_INCLUDE,
       });
 
       await tx.auditLog.create({
@@ -763,12 +765,8 @@ export class ReportsService {
       }
       return this.prisma.report.update({
         where: { id: reportId },
-        data: { duplicateOfId },
-        include: {
-          category: { select: { name: true } },
-          department: { select: { name: true } },
-          _count: { select: { votes: true } },
-        },
+        data: { duplicateOfId, isDuplicate: true },
+        include: REPORT_INCLUDE,
       });
     }
 
@@ -781,12 +779,9 @@ export class ReportsService {
         aiConfidence: classification.confidence,
         status: needsReview ? ReportStatus.IN_REVIEW : ReportStatus.PENDING,
         duplicateOfId: duplicateOfId ?? undefined,
+        isDuplicate: duplicateOfId ? true : undefined,
       },
-      include: {
-        category: { select: { name: true } },
-        department: { select: { name: true } },
-        _count: { select: { votes: true } },
-      },
+      include: REPORT_INCLUDE,
     });
   }
 
@@ -837,15 +832,18 @@ export class ReportsService {
   private async resolveCategoryAndPriority(classification: AIClassification): Promise<{
     categoryId?: string;
     departmentId?: string;
+    institutionId?: string | null;
     priority: Priority;
   }> {
     const categoryName = AI_CATEGORY_TO_DB_NAME[classification.category];
     const category = await this.prisma.category.findFirst({
       where: { name: categoryName },
+      include: { department: { select: { institutionId: true } } },
     });
     return {
       categoryId: category?.id,
       departmentId: category?.departmentId,
+      institutionId: category?.department.institutionId ?? null,
       priority: AI_SEVERITY_TO_PRIORITY[classification.severity] as Priority,
     };
   }
@@ -888,8 +886,11 @@ export class ReportsService {
   ): ReportDto {
     const dto: ReportDto = {
       id: report.id,
+      publicId: report.publicId,
       categoryId: report.categoryId,
+      subcategory: report.subcategory,
       departmentId: report.departmentId,
+      institutionId: report.institutionId,
       description: report.description,
       status: report.status,
       priority: report.priority,
@@ -907,12 +908,14 @@ export class ReportsService {
             ? false
             : null,
       duplicateOfId: report.duplicateOfId,
+      isDuplicate: report.isDuplicate,
       assignedStaffId: report.assignedStaffId,
       dueAt: report.dueAt?.toISOString() ?? null,
       createdAt: report.createdAt.toISOString(),
       updatedAt: report.updatedAt.toISOString(),
       categoryName: report.category?.name ?? null,
       departmentName: report.department?.name ?? null,
+      institutionName: report.institution?.name ?? null,
       voteCount: report._count?.votes ?? 0,
     };
 
