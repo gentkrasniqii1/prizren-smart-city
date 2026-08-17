@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { BrandWordmark } from '@/components/brand';
+import { Logo } from '@/components/brand/Logo';
 import { PageContainer } from '@/components/layout/page-container';
 
 export function LegalDocument({
@@ -17,7 +17,7 @@ export function LegalDocument({
     <main className="py-10 md:py-14">
       <PageContainer width="default">
         <div className="mx-auto max-w-3xl">
-          <BrandWordmark />
+          <Logo variant="full" size={32} />
           <h1 className="mt-8 text-h1 tracking-tight text-foreground">{title}</h1>
           <p className="mt-2 text-sm text-muted-foreground">{updated}</p>
           <p className="mt-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-100">
