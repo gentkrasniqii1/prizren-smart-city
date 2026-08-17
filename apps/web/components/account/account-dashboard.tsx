@@ -15,6 +15,7 @@ import type {
 import { ApiError, apiFetch } from '@/lib/api';
 import { usePolling } from '@/lib/use-polling';
 import { useAuth } from '@/components/auth-provider';
+import { useToast } from '@/components/toast-provider';
 import { PageContainer } from '@/components/layout/page-container';
 import { ReportCard } from '@/components/reports/report-card';
 import { NotificationItem } from '@/components/notifications/notification-item';
@@ -46,6 +47,8 @@ export function AccountDashboard() {
   const locale = useLocale() as AppLocale;
   const router = useRouter();
   const { user, loading: authLoading, logout } = useAuth();
+  const toast = useToast();
+  const [loggingOutAll, setLoggingOutAll] = useState(false);
 
   const [reports, setReports] = useState<ReportDto[]>([]);
   const [totalReports, setTotalReports] = useState(0);
@@ -158,6 +161,23 @@ export function AccountDashboard() {
     if (filter === 'resolved') return reports.filter((r) => r.status === 'RESOLVED');
     return reports;
   }, [reports, filter]);
+
+  async function handleLogoutAll() {
+    if (typeof window !== 'undefined' && !window.confirm(t('logoutAllConfirm'))) return;
+    setLoggingOutAll(true);
+    try {
+      // Revokes every refresh token for this user server-side (including this
+      // session's) — the local logout() call below just clears client state to match.
+      await apiFetch('/auth/logout-all', { method: 'POST', auth: true });
+      toast.push(t('logoutAllSuccess'), 'success');
+    } catch (err) {
+      toast.push(err instanceof ApiError ? err.message : t('logoutAllFailed'), 'error');
+    } finally {
+      setLoggingOutAll(false);
+    }
+    await logout();
+    router.push('/login');
+  }
 
   if (authLoading || !user) {
     return (
@@ -332,6 +352,29 @@ export function AccountDashboard() {
                 {t('showingOf', { shown: reports.length, total: totalReports })}
               </p>
             ) : null}
+
+            {!reportsLoading ? (
+              <div className="mt-6 flex flex-col items-start gap-4 rounded-xl border border-dashed border-mosque-300 bg-mosque-50 p-6 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex items-start gap-3">
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-mosque-100 text-mosque-800">
+                    <FilePlus2 className="h-5 w-5" aria-hidden />
+                  </span>
+                  <div>
+                    <p className="font-display text-base font-semibold tracking-tight text-foreground">
+                      {t('ctaCardTitle')}
+                    </p>
+                    <p className="mt-1 text-sm text-stone-600">{t('ctaCardBody')}</p>
+                  </div>
+                </div>
+                <Link
+                  href="/report"
+                  className="inline-flex shrink-0 items-center justify-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow-sm transition hover:bg-primary-hover"
+                >
+                  <FilePlus2 className="h-4 w-4" aria-hidden />
+                  {t('ctaCardCta')}
+                </Link>
+              </div>
+            ) : null}
           </section>
 
           {/* Sidebar: notifications + profile */}
@@ -397,16 +440,26 @@ export function AccountDashboard() {
                 )}
               />
 
-              <Button
-                type="button"
-                variant="secondary"
-                size="sm"
-                className="mt-5"
-                onClick={() => void logout().then(() => router.push('/'))}
-              >
-                <LogOut className="h-4 w-4" aria-hidden />
-                {t('logout')}
-              </Button>
+              <div className="mt-5 flex flex-wrap gap-2">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => void logout().then(() => router.push('/'))}
+                >
+                  <LogOut className="h-4 w-4" aria-hidden />
+                  {t('logout')}
+                </Button>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  loading={loggingOutAll}
+                  onClick={() => void handleLogoutAll()}
+                >
+                  {t('logoutAllCta')}
+                </Button>
+              </div>
             </section>
             <ChangePasswordForm user={user} />
             <TwoFactorSettings enabled={Boolean(user.totpEnabled)} />

@@ -235,6 +235,15 @@ export class AuthController {
     return { ok: true };
   }
 
+  @Post('logout-all')
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(JwtAuthGuard)
+  async logoutAll(@CurrentUser() user: AuthUser, @Res({ passthrough: true }) res: Response) {
+    await this.authService.logoutAll(user.id);
+    this.clearRefreshCookie(res);
+    return { ok: true };
+  }
+
   private startOauth(res: Response, provider: OAuthProvider) {
     this.oauth.assertEnabled(provider);
     const { state, nonce } = this.oauth.buildState(provider);

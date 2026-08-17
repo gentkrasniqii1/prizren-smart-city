@@ -439,6 +439,14 @@ export class AuthService {
     });
   }
 
+  /** Revokes every active refresh token for the user — used by "log out of all devices". */
+  async logoutAll(userId: string): Promise<void> {
+    await this.prisma.refreshToken.updateMany({
+      where: { userId, revokedAt: null },
+      data: { revokedAt: new Date() },
+    });
+  }
+
   toPublicUser(user: User): PublicUser {
     return {
       id: user.id,
@@ -451,6 +459,7 @@ export class AuthService {
       emailVerified: user.emailVerified,
       totpEnabled: user.totpEnabled,
       hasPassword: Boolean(user.passwordHash),
+      googleLinked: Boolean(user.googleId),
       createdAt: user.createdAt.toISOString(),
     };
   }

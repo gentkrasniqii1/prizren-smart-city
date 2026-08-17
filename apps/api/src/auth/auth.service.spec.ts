@@ -309,7 +309,25 @@ describe('AuthService', () => {
       emailVerified: true,
       totpEnabled: false,
       hasPassword: true,
+      googleLinked: false,
       createdAt: '2026-01-01T00:00:00.000Z',
+    });
+  });
+
+  it('reports googleLinked: true for a user with a linked Google account', () => {
+    expect(service.toPublicUser({ ...user, googleId: 'google-sub-1' } as never)).toMatchObject({
+      googleLinked: true,
+    });
+  });
+
+  describe('logoutAll', () => {
+    it('revokes every active refresh token for the user', async () => {
+      prisma.refreshToken.updateMany.mockResolvedValue({ count: 3 });
+      await service.logoutAll('user-1');
+      expect(prisma.refreshToken.updateMany).toHaveBeenCalledWith({
+        where: { userId: 'user-1', revokedAt: null },
+        data: { revokedAt: expect.any(Date) },
+      });
     });
   });
 });

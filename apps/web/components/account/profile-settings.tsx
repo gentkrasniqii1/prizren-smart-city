@@ -8,7 +8,7 @@ import { useAuth } from '@/components/auth-provider';
 import { useToast } from '@/components/toast-provider';
 import { Button } from '@/components/ui/button';
 import { Input, Label } from '@/components/ui/field';
-import { FieldError } from '@/components/ui';
+import { Badge, FieldError } from '@/components/ui';
 
 type FieldErrors = {
   firstName?: string;
@@ -36,6 +36,7 @@ export function ProfileSettings({
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [formError, setFormError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [verifying, setVerifying] = useState(false);
 
   function startEdit() {
     setFirstName(user.firstName ?? '');
@@ -85,6 +86,23 @@ export function ProfileSettings({
       setFormError(err instanceof ApiError ? err.message : t('profileUpdateFailed'));
     } finally {
       setSubmitting(false);
+    }
+  }
+
+  async function sendVerification() {
+    setVerifying(true);
+    try {
+      // Public endpoint (rate-limited server-side) — same one used on the
+      // "resend verification" screen, reused here so users don't need to log out.
+      await apiFetch('/auth/resend-verification', {
+        method: 'POST',
+        body: { email: user.email },
+      });
+      toast.push(t('verifyEmailSent'), 'success');
+    } catch (err) {
+      toast.push(err instanceof ApiError ? err.message : t('verifyEmailFailed'), 'error');
+    } finally {
+      setVerifying(false);
     }
   }
 
@@ -180,6 +198,26 @@ export function ProfileSettings({
           <dd className="font-medium text-stone-900">{memberSince}</dd>
         </div>
       </dl>
+
+      <div className="mt-4 flex flex-wrap items-center gap-2">
+        {user.emailVerified ? (
+          <Badge tone="success">{t('emailVerifiedBadge')}</Badge>
+        ) : (
+          <>
+            <Badge tone="warning">{t('emailUnverifiedBadge')}</Badge>
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              loading={verifying}
+              onClick={() => void sendVerification()}
+            >
+              {t('verifyEmailCta')}
+            </Button>
+          </>
+        )}
+        {user.googleLinked ? <Badge tone="info">{t('googleLinkedBadge')}</Badge> : null}
+      </div>
 
       <Button type="button" variant="secondary" size="sm" className="mt-4" onClick={startEdit}>
         {t('profileEditCta')}
