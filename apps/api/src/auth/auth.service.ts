@@ -24,6 +24,7 @@ import {
   sha256Hex,
 } from './crypto';
 import type { OAuthProfile, OAuthProvider } from './oauth.service';
+import { AuditService } from '../audit/audit.service';
 
 const BCRYPT_ROUNDS = 12;
 const MAX_FAILED_LOGINS = 10;
@@ -31,6 +32,13 @@ const LOCK_MINUTES = 15;
 const VERIFY_HOURS = 24;
 const RESET_HOURS = 1;
 const TWO_FACTOR_MINUTES = 10;
+/** Precomputed bcrypt hash used to keep unknown-user login timing close to a real compare. */
+const DUMMY_PASSWORD_HASH = '$2b$12$2ob0Xf6XiYZ7X5Ft3MtIs.LRNF8mjSSVBX2Eq4.8RoGiVnpo9sGRe';
+
+export type LoginContext = {
+  ip?: string | null;
+  userAgent?: string | null;
+};
 
 const STAFF_ROLES: Role[] = [Role.DEPARTMENT_STAFF, Role.DEPARTMENT_ADMIN, Role.SUPER_ADMIN];
 
@@ -43,6 +51,7 @@ export class AuthService {
     private readonly jwt: JwtService,
     private readonly config: ConfigService,
     private readonly mail: MailService,
+    private readonly audit: AuditService,
   ) {}
 
   async register(dto: RegisterDto): Promise<RegisterResponse> {
@@ -89,6 +98,8 @@ export class AuthService {
 
   async login(
     dto: LoginDto,
+    trustedDeviceRaw?: string,
+    ctx: LoginContext = {},
   ): Promise<
     | { kind: 'auth'; auth: AuthResponse; refreshToken: string; refreshDays: number }
     | { kind: '2fa'; challengeToken: string }
@@ -107,7 +118,7 @@ export class AuthService {
 
     const valid = await bcrypt.compare(dto.password, user.passwordHash);
     if (!valid) {
-      await this.recordFailedLogin(user.id, user.failedLoginCount);
+      await this.recordFailedLogin(user, ctx);
       throw new UnauthorizedException('Invalid email or password');
     }
 
@@ -120,7 +131,7 @@ export class AuthService {
       data: { failedLoginCount: 0, lockedUntil: null },
     });
 
-    if (user.totpEnabled) {
+    if (user.totpEnabled && !(await this.isTrustedDevice(user.id, trustedDeviceRaw))) {
       const challengeToken = await this.createAuthToken(user.id, AuthTokenType.TWO_FACTOR, {
         minutes: TWO_FACTOR_MINUTES,
       });
@@ -135,13 +146,21 @@ export class AuthService {
       ? this.config.rememberMeExpiresDays
       : this.config.refreshExpiresDays;
     const issued = await this.issueAuth(user, refreshDays);
+    await this.recordSuccessfulLogin(user, ctx);
     return { kind: 'auth', ...issued, refreshDays };
   }
 
   async verifyTwoFactorLogin(
     challengeToken: string,
     code: string,
-  ): Promise<{ auth: AuthResponse; refreshToken: string; refreshDays: number }> {
+    trustDevice = false,
+    ctx: LoginContext = {},
+  ): Promise<{
+    auth: AuthResponse;
+    refreshToken: string;
+    refreshDays: number;
+    trustedDeviceToken?: string;
+  }> {
     const user = await this.consumeAuthToken(challengeToken, AuthTokenType.TWO_FACTOR);
     if (!user.totpEnabled || !user.totpSecretEnc) {
       throw new UnauthorizedException('Two-factor authentication is not enabled');
@@ -153,10 +172,15 @@ export class AuthService {
     }
     const refreshDays = this.config.refreshExpiresDays;
     const issued = await this.issueAuth(user, refreshDays);
-    return { ...issued, refreshDays };
+    const trustedDeviceToken = trustDevice ? await this.createTrustedDevice(user.id) : undefined;
+    await this.recordSuccessfulLogin(user, ctx);
+    return { ...issued, refreshDays, trustedDeviceToken };
   }
 
-  async loginWithOAuth(profile: OAuthProfile): Promise<{
+  async loginWithOAuth(
+    profile: OAuthProfile,
+    ctx: LoginContext = {},
+  ): Promise<{
     auth: AuthResponse;
     refreshToken: string;
     refreshDays: number;
@@ -226,6 +250,7 @@ export class AuthService {
 
     const refreshDays = this.config.refreshExpiresDays;
     const issued = await this.issueAuth(user, refreshDays);
+    await this.recordSuccessfulLogin(user, ctx);
     return { ...issued, refreshDays, linkedAccount };
   }
 
@@ -288,6 +313,7 @@ export class AuthService {
         where: { userId: user.id, revokedAt: null },
         data: { revokedAt: new Date() },
       }),
+      this.prisma.trustedDevice.deleteMany({ where: { userId: user.id } }),
     ]);
     await this.notifyPasswordChanged(user.email);
     return { ok: true };
@@ -330,6 +356,7 @@ export class AuthService {
         where: { userId: user.id, revokedAt: null },
         data: { revokedAt: new Date() },
       }),
+      this.prisma.trustedDevice.deleteMany({ where: { userId: user.id } }),
     ]);
     await this.notifyPasswordChanged(user.email);
     return { ok: true };
@@ -379,10 +406,13 @@ export class AuthService {
     if (!result.valid) {
       throw new UnauthorizedException('Invalid verification code');
     }
-    await this.prisma.user.update({
-      where: { id: userId },
-      data: { totpEnabled: false, totpSecretEnc: null },
-    });
+    await this.prisma.$transaction([
+      this.prisma.user.update({
+        where: { id: userId },
+        data: { totpEnabled: false, totpSecretEnc: null },
+      }),
+      this.prisma.trustedDevice.deleteMany({ where: { userId } }),
+    ]);
     return { ok: true };
   }
 
@@ -439,12 +469,15 @@ export class AuthService {
     });
   }
 
-  /** Revokes every active refresh token for the user — used by "log out of all devices". */
+  /** Revokes every active refresh token and trusted-device grant for the user. */
   async logoutAll(userId: string): Promise<void> {
-    await this.prisma.refreshToken.updateMany({
-      where: { userId, revokedAt: null },
-      data: { revokedAt: new Date() },
-    });
+    await this.prisma.$transaction([
+      this.prisma.refreshToken.updateMany({
+        where: { userId, revokedAt: null },
+        data: { revokedAt: new Date() },
+      }),
+      this.prisma.trustedDevice.deleteMany({ where: { userId } }),
+    ]);
   }
 
   toPublicUser(user: User): PublicUser {
@@ -505,6 +538,33 @@ export class AuthService {
     return raw;
   }
 
+  /** Creates a "trust this device" token (raw value returned once, only its hash is stored). */
+  private async createTrustedDevice(userId: string): Promise<string> {
+    const raw = randomToken(32);
+    const expiresAt = new Date();
+    expiresAt.setDate(expiresAt.getDate() + this.config.trustedDeviceDays);
+    await this.prisma.trustedDevice.create({
+      data: { userId, tokenHash: sha256Hex(raw), expiresAt },
+    });
+    return raw;
+  }
+
+  /** Lets a recognized device skip the TOTP challenge until the trust expires. */
+  private async isTrustedDevice(userId: string, rawToken: string | undefined): Promise<boolean> {
+    if (!rawToken) return false;
+    const stored = await this.prisma.trustedDevice.findUnique({
+      where: { tokenHash: sha256Hex(rawToken) },
+    });
+    if (!stored || stored.userId !== userId || stored.expiresAt.getTime() <= Date.now()) {
+      return false;
+    }
+    await this.prisma.trustedDevice.update({
+      where: { id: stored.id },
+      data: { lastUsedAt: new Date() },
+    });
+    return true;
+  }
+
   private async consumeAuthToken(rawToken: string, type: AuthTokenType): Promise<User> {
     if (!rawToken) {
       throw new UnauthorizedException('Invalid or expired token');
@@ -528,18 +588,58 @@ export class AuthService {
     return stored.user;
   }
 
-  private async recordFailedLogin(userId: string, current: number): Promise<void> {
-    const next = current + 1;
-    const lockedUntil =
+  private async recordFailedLogin(user: User, ctx: LoginContext): Promise<void> {
+    const next = user.failedLoginCount + 1;
+    const locked =
       next >= MAX_FAILED_LOGINS ? new Date(Date.now() + LOCK_MINUTES * 60 * 1000) : null;
     await this.prisma.user.update({
-      where: { id: userId },
-      data: { failedLoginCount: next, lockedUntil },
+      where: { id: user.id },
+      data: { failedLoginCount: next, lockedUntil: locked },
     });
+    await this.audit.log({
+      userId: user.id,
+      actorType: 'USER',
+      action: locked ? 'LOGIN_LOCKED' : 'LOGIN_FAILED',
+      entityType: 'User',
+      entityId: user.id,
+      ipAddress: ctx.ip,
+      userAgent: ctx.userAgent,
+      metadata: { failedLoginCount: next },
+    });
+    if (locked) {
+      await this.safeSendMail('account-locked', () => this.mail.sendAccountLockedEmail(user.email));
+    }
+  }
+
+  private async recordSuccessfulLogin(user: User, ctx: LoginContext): Promise<void> {
+    const previousIp = user.lastLoginIp;
+    const ip = ctx.ip ?? null;
+    await this.prisma.user.update({
+      where: { id: user.id },
+      data: { lastLoginAt: new Date(), lastLoginIp: ip },
+    });
+    await this.audit.log({
+      userId: user.id,
+      actorType: 'USER',
+      action: 'LOGIN_SUCCESS',
+      entityType: 'User',
+      entityId: user.id,
+      ipAddress: ip,
+      userAgent: ctx.userAgent,
+      metadata: previousIp ? { previousIp } : undefined,
+    });
+    if (previousIp && ip && previousIp !== ip) {
+      await this.safeSendMail('suspicious-login', () =>
+        this.mail.sendSuspiciousLoginEmail(user.email, {
+          ip,
+          userAgent: ctx.userAgent ?? null,
+        }),
+      );
+    }
   }
 
   private async dummyCompare(): Promise<void> {
-    await new Promise((resolve) => setTimeout(resolve, 40));
+    await bcrypt.compare('not-a-real-password', DUMMY_PASSWORD_HASH);
   }
 
   // The underlying DB write (password change, token issuance, etc.) was already
@@ -581,7 +681,7 @@ export class AuthService {
       },
       {
         secret: this.config.jwtAccessSecret,
-        expiresIn: 60 * 15,
+        expiresIn: this.config.jwtAccessExpiresIn as `${number}${'s' | 'm' | 'h' | 'd'}`,
       },
     );
   }

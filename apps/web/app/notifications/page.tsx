@@ -4,19 +4,25 @@ import Link from 'next/link';
 import { useCallback, useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import type { NotificationDto, PaginatedNotifications } from '@prizren/shared-types';
-import { ApiError, apiFetch } from '@/lib/api';
+import { apiFetch } from '@/lib/api';
 import { useAuth } from '@/components/auth-provider';
 import { PageContainer } from '@/components/layout/page-container';
 import { NotificationItem } from '@/components/notifications/notification-item';
-import { Button, EmptyState, ErrorBanner, Spinner } from '@/components/ui';
+import { Button, EmptyState, ErrorBanner } from '@/components/ui';
+import { NotificationsPageSkeleton, NotificationListSkeleton } from '@/components/ui/skeletons';
+import { useToast } from '@/components/toast-provider';
+import { useErrorMessage } from '@/lib/use-error-message';
 
 export default function NotificationsPage() {
   const t = useTranslations('Notifications');
   const { user, loading } = useAuth();
+  const toast = useToast();
+  const errorMessage = useErrorMessage();
   const [items, setItems] = useState<NotificationDto[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [listLoading, setListLoading] = useState(true);
 
   const load = useCallback(async () => {
     const res = await apiFetch<PaginatedNotifications>('/notifications?limit=50', {
@@ -27,12 +33,19 @@ export default function NotificationsPage() {
   }, []);
 
   useEffect(() => {
-    if (loading || !user) return;
+    if (loading) return;
+    if (!user) {
+      setListLoading(false);
+      return;
+    }
     void (async () => {
+      setListLoading(true);
       try {
         await load();
       } catch (err) {
-        setError(err instanceof ApiError ? err.message : t('loadError'));
+        setError(errorMessage(err, t('loadError')));
+      } finally {
+        setListLoading(false);
       }
     })();
   }, [loading, user, load, t]);
@@ -43,7 +56,7 @@ export default function NotificationsPage() {
       await apiFetch(`/notifications/${id}/read`, { method: 'PATCH', auth: true });
       await load();
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : t('actionFailed'));
+      toast.push(errorMessage(err, t('actionFailed')), 'error');
     } finally {
       setBusy(false);
     }
@@ -55,23 +68,20 @@ export default function NotificationsPage() {
       await apiFetch('/notifications/read-all', { method: 'POST', auth: true });
       await load();
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : t('actionFailed'));
+      toast.push(errorMessage(err, t('actionFailed')), 'error');
     } finally {
       setBusy(false);
     }
   }
 
-  if (loading) {
-    return (
-      <main className="py-16">
-        <PageContainer width="narrow">
-          <Spinner label={t('loading')} />
-        </PageContainer>
-      </main>
-    );
-  }
-
-  if (!user) {
+  if (loading || !user) {
+    if (loading) {
+      return (
+        <main>
+          <NotificationsPageSkeleton label={t('loading')} />
+        </main>
+      );
+    }
     return (
       <main className="py-16">
         <PageContainer width="narrow">
@@ -102,6 +112,7 @@ export default function NotificationsPage() {
             type="button"
             variant="secondary"
             size="sm"
+            status={busy ? 'loading' : 'idle'}
             disabled={busy || unreadCount === 0}
             onClick={() => void markAll()}
             className="w-full sm:w-auto"
@@ -116,7 +127,11 @@ export default function NotificationsPage() {
           </div>
         ) : null}
 
-        {items.length === 0 ? (
+        {listLoading ? (
+          <div className="mt-6">
+            <NotificationListSkeleton count={6} />
+          </div>
+        ) : items.length === 0 ? (
           <EmptyState className="mt-8" title={t('emptyTitle')} description={t('emptyBody')} />
         ) : (
           <ul className="mt-6 divide-y divide-stone-100 overflow-hidden rounded-xl border border-stone-200 bg-card">

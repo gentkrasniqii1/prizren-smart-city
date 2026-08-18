@@ -4,11 +4,18 @@ import { PrismaService } from '../prisma/prisma.service';
 
 export type AuditWriteInput = {
   userId: string;
+  /** Who/what performed the action — defaults to "USER" for existing call sites. */
+  actorType?: string;
   action: string;
   entityType: string;
   entityId: string;
+  /** State before the change, for diffable audit entries (e.g. status transitions). */
+  oldValue?: Prisma.InputJsonValue;
+  /** State after the change. */
+  newValue?: Prisma.InputJsonValue;
   metadata?: Prisma.InputJsonValue;
   ipAddress?: string | null;
+  userAgent?: string | null;
 };
 
 @Injectable()
@@ -20,11 +27,15 @@ export class AuditService {
     return client.auditLog.create({
       data: {
         userId: input.userId,
+        actorType: input.actorType ?? undefined,
         action: input.action,
         entityType: input.entityType,
         entityId: input.entityId,
+        oldValue: input.oldValue ?? undefined,
+        newValue: input.newValue ?? undefined,
         metadata: input.metadata ?? undefined,
         ipAddress: input.ipAddress ?? undefined,
+        userAgent: input.userAgent ?? undefined,
       },
     });
   }
@@ -61,14 +72,18 @@ export class AuditService {
       data: rows.map((row) => ({
         id: row.id,
         userId: row.userId,
+        actorType: row.actorType,
         userEmail: row.user.email,
         userName: row.user.name,
         userRole: row.user.role,
         action: row.action,
         entityType: row.entityType,
         entityId: row.entityId,
+        oldValue: row.oldValue,
+        newValue: row.newValue,
         metadata: row.metadata,
         ipAddress: row.ipAddress,
+        userAgent: row.userAgent,
         createdAt: row.createdAt.toISOString(),
       })),
       meta: {

@@ -22,7 +22,7 @@ export async function HomeHero() {
         aria-hidden
       />
       <PageContainer className="relative flex min-h-[min(92svh,52rem)] flex-col justify-end pb-20 pt-28 sm:justify-center sm:pb-24">
-        <p className="motion-fade-up text-xs font-semibold uppercase tracking-[0.22em] text-river-200 sm:text-sm">
+        <p className="motion-fade-up text-xs font-semibold uppercase tracking-[0.22em] text-gilt sm:text-sm">
           {t('eyebrow')}
         </p>
         <h1 className="motion-fade-up motion-delay-1 mt-4 max-w-3xl font-display text-4xl font-semibold tracking-tight text-overlay-foreground sm:text-5xl md:text-6xl">

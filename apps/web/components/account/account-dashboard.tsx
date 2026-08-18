@@ -12,7 +12,7 @@ import type {
   PaginatedReports,
   ReportDto,
 } from '@prizren/shared-types';
-import { ApiError, apiFetch } from '@/lib/api';
+import { apiFetch } from '@/lib/api';
 import { usePolling } from '@/lib/use-polling';
 import { useAuth } from '@/components/auth-provider';
 import { useToast } from '@/components/toast-provider';
@@ -20,7 +20,15 @@ import { PageContainer } from '@/components/layout/page-container';
 import { ReportCard } from '@/components/reports/report-card';
 import { NotificationItem } from '@/components/notifications/notification-item';
 import { UserAvatar } from '@/components/user-avatar';
-import { Button, EmptyState, ErrorBanner, Skeleton, Spinner, StatCard } from '@/components/ui';
+import { Button, EmptyState, ErrorBanner, StatCard } from '@/components/ui';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { useErrorMessage } from '@/lib/use-error-message';
+import {
+  AccountPageSkeleton,
+  MetricGridSkeleton,
+  NotificationItemSkeleton,
+  ReportCardListSkeleton,
+} from '@/components/ui/skeletons';
 import { getRoleLabel } from '@/lib/labels';
 import { cn } from '@/lib/utils';
 import { TwoFactorSettings } from '@/components/account/two-factor-settings';
@@ -48,7 +56,9 @@ export function AccountDashboard() {
   const router = useRouter();
   const { user, loading: authLoading, logout } = useAuth();
   const toast = useToast();
+  const errorMessage = useErrorMessage();
   const [loggingOutAll, setLoggingOutAll] = useState(false);
+  const [logoutAllOpen, setLogoutAllOpen] = useState(false);
 
   const [reports, setReports] = useState<ReportDto[]>([]);
   const [totalReports, setTotalReports] = useState(0);
@@ -89,7 +99,7 @@ export function AccountDashboard() {
         setStats(statsRes);
       } catch (err) {
         if (!cancelled) {
-          setReportsError(err instanceof ApiError ? err.message : t('reportsLoadError'));
+          setReportsError(errorMessage(err, t('reportsLoadError')));
         }
       } finally {
         if (!cancelled) setReportsLoading(false);
@@ -163,36 +173,24 @@ export function AccountDashboard() {
   }, [reports, filter]);
 
   async function handleLogoutAll() {
-    if (typeof window !== 'undefined' && !window.confirm(t('logoutAllConfirm'))) return;
     setLoggingOutAll(true);
     try {
-      // Revokes every refresh token for this user server-side (including this
-      // session's) — the local logout() call below just clears client state to match.
       await apiFetch('/auth/logout-all', { method: 'POST', auth: true });
       toast.push(t('logoutAllSuccess'), 'success');
     } catch (err) {
-      toast.push(err instanceof ApiError ? err.message : t('logoutAllFailed'), 'error');
-    } finally {
+      toast.push(errorMessage(err, t('logoutAllFailed')), 'error');
       setLoggingOutAll(false);
+      return;
     }
+    setLogoutAllOpen(false);
     await logout();
     router.push('/login');
   }
 
   if (authLoading || !user) {
     return (
-      <main className="py-16">
-        <PageContainer width="default">
-          <h1 className="sr-only">{t('title')}</h1>
-          <Spinner label={t('loading')} />
-          <div className="mt-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            <Skeleton className="h-24" />
-            <Skeleton className="h-24" />
-            <Skeleton className="h-24" />
-            <Skeleton className="h-24" />
-          </div>
-          <Skeleton className="mt-8 h-48 w-full" />
-        </PageContainer>
+      <main>
+        <AccountPageSkeleton label={t('loading')} />
       </main>
     );
   }
@@ -250,24 +248,24 @@ export function AccountDashboard() {
           <h2 id="account-stats-heading" className="sr-only">
             {t('statsHeading')}
           </h2>
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            <StatCard
-              label={t('statTotal')}
-              value={reportsLoading ? '—' : totalReports}
-              hint={
-                totalReports > reports.length
-                  ? t('statSampleHint', { shown: reports.length })
-                  : undefined
-              }
-            />
-            <StatCard
-              label={t('statOpen')}
-              value={reportsLoading ? '—' : stats.open}
-              hint={t('statOpenHint')}
-            />
-            <StatCard label={t('statInProgress')} value={reportsLoading ? '—' : stats.inProgress} />
-            <StatCard label={t('statResolved')} value={reportsLoading ? '—' : stats.resolved} />
-          </div>
+          {reportsLoading ? (
+            <MetricGridSkeleton count={4} />
+          ) : (
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+              <StatCard
+                label={t('statTotal')}
+                value={totalReports}
+                hint={
+                  totalReports > reports.length
+                    ? t('statSampleHint', { shown: reports.length })
+                    : undefined
+                }
+              />
+              <StatCard label={t('statOpen')} value={stats.open} hint={t('statOpenHint')} />
+              <StatCard label={t('statInProgress')} value={stats.inProgress} />
+              <StatCard label={t('statResolved')} value={stats.resolved} />
+            </div>
+          )}
         </section>
 
         <div className="mt-10 grid gap-10 lg:grid-cols-[minmax(0,1.4fr)_minmax(260px,0.75fr)] lg:items-start">
@@ -316,10 +314,8 @@ export function AccountDashboard() {
             {reportsError ? <ErrorBanner className="mt-4" message={reportsError} /> : null}
 
             {reportsLoading ? (
-              <div className="mt-4 space-y-2">
-                <Skeleton className="h-20 w-full" />
-                <Skeleton className="h-20 w-full" />
-                <Skeleton className="h-20 w-full" />
+              <div className="mt-4 overflow-hidden rounded-xl border border-stone-200 bg-card">
+                <ReportCardListSkeleton count={4} compact />
               </div>
             ) : visibleReports.length === 0 ? (
               <EmptyState
@@ -398,9 +394,10 @@ export function AccountDashboard() {
               </div>
 
               {notifLoading ? (
-                <div className="mt-3 space-y-2">
-                  <Skeleton className="h-12 w-full" />
-                  <Skeleton className="h-12 w-full" />
+                <div className="mt-3">
+                  <NotificationItemSkeleton compact />
+                  <NotificationItemSkeleton compact />
+                  <NotificationItemSkeleton compact />
                 </div>
               ) : notifications.length === 0 ? (
                 <p className="mt-3 text-sm text-stone-600">{t('notifEmpty')}</p>
@@ -454,8 +451,7 @@ export function AccountDashboard() {
                   type="button"
                   variant="secondary"
                   size="sm"
-                  loading={loggingOutAll}
-                  onClick={() => void handleLogoutAll()}
+                  onClick={() => setLogoutAllOpen(true)}
                 >
                   {t('logoutAllCta')}
                 </Button>
@@ -466,6 +462,16 @@ export function AccountDashboard() {
           </aside>
         </div>
       </PageContainer>
+      <ConfirmDialog
+        open={logoutAllOpen}
+        onOpenChange={setLogoutAllOpen}
+        title={t('logoutAllConfirmTitle')}
+        description={t('logoutAllConfirm')}
+        confirmLabel={t('logoutAllCta')}
+        tone="destructive"
+        loading={loggingOutAll}
+        onConfirm={() => void handleLogoutAll()}
+      />
     </main>
   );
 }

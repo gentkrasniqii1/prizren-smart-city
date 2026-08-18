@@ -214,7 +214,7 @@ export function ReportFilters({
                 size="sm"
                 className="w-full shrink-0 sm:w-auto"
                 onClick={onNearby}
-                disabled={nearbyBusy}
+                loading={nearbyBusy}
               >
                 {nearbyBusy ? t('searching') : t('nearMe')}
               </Button>

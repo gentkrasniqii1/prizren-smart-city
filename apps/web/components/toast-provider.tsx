@@ -1,56 +1,25 @@
 'use client';
 
-import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from 'react';
+import type { ReactNode } from 'react';
+import { toast } from 'sonner';
 
-type ToastItem = { id: number; message: string; tone: 'success' | 'error' | 'info' };
+type ToastTone = 'success' | 'error' | 'info';
 
 type ToastContextValue = {
-  push: (message: string, tone?: ToastItem['tone']) => void;
+  push: (message: string, tone?: ToastTone) => void;
 };
 
-const ToastContext = createContext<ToastContextValue | null>(null);
-
+/** Back-compat helper over Sonner so the app has a single toast surface. */
 export function ToastProvider({ children }: { children: ReactNode }) {
-  const [items, setItems] = useState<ToastItem[]>([]);
-
-  const push = useCallback((message: string, tone: ToastItem['tone'] = 'success') => {
-    const id = Date.now() + Math.floor(Math.random() * 1000);
-    setItems((prev) => [...prev, { id, message, tone }]);
-    window.setTimeout(() => {
-      setItems((prev) => prev.filter((t) => t.id !== id));
-    }, 4200);
-  }, []);
-
-  const value = useMemo(() => ({ push }), [push]);
-
-  return (
-    <ToastContext.Provider value={value}>
-      {children}
-      <div
-        className="pointer-events-none fixed bottom-[calc(4.5rem+env(safe-area-inset-bottom))] right-4 z-[60] flex w-[min(100%-2rem,22rem)] flex-col gap-2 md:bottom-4"
-        aria-live="polite"
-      >
-        {items.map((t) => (
-          <div
-            key={t.id}
-            className={`motion-slide-up pointer-events-auto rounded-lg px-4 py-3 text-sm shadow-lift ${
-              t.tone === 'error'
-                ? 'bg-red-800 text-white'
-                : t.tone === 'info'
-                  ? 'bg-primary text-primary-foreground'
-                  : 'bg-stone-900 text-stone-50'
-            }`}
-          >
-            {t.message}
-          </div>
-        ))}
-      </div>
-    </ToastContext.Provider>
-  );
+  return children;
 }
 
-export function useToast() {
-  const ctx = useContext(ToastContext);
-  if (!ctx) throw new Error('useToast must be used within ToastProvider');
-  return ctx;
+export function useToast(): ToastContextValue {
+  return {
+    push(message: string, tone: ToastTone = 'success') {
+      if (tone === 'error') toast.error(message);
+      else if (tone === 'info') toast.message(message);
+      else toast.success(message);
+    },
+  };
 }

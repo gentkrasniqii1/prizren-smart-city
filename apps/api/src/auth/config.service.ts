@@ -136,4 +136,12 @@ export class ConfigService {
   get oauthStateCookieName(): string {
     return 'oauth_state';
   }
+
+  get trustedDeviceCookieName(): string {
+    return process.env.TRUSTED_DEVICE_COOKIE_NAME ?? 'trusted_device';
+  }
+
+  get trustedDeviceDays(): number {
+    return Number(process.env.TRUSTED_DEVICE_DAYS ?? 30);
+  }
 }

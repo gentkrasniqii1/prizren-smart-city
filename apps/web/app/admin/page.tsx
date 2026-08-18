@@ -20,23 +20,31 @@ import type {
   ReportStatus,
   UpdateReportStatusRequest,
 } from '@prizren/shared-types';
-import { ApiError, apiFetch } from '@/lib/api';
+import { apiFetch } from '@/lib/api';
 import { usePolling } from '@/lib/use-polling';
 import { useAuth } from '@/components/auth-provider';
+import { useToast } from '@/components/toast-provider';
 import { Breadcrumbs } from '@/components/breadcrumbs';
 import { PageContainer } from '@/components/layout/page-container';
-import { Button, EmptyState, ErrorBanner, Skeleton, Spinner, StatCard } from '@/components/ui';
+import { Button, EmptyState, ErrorBanner, StatCard } from '@/components/ui';
+import {
+  ChartSkeleton,
+  DashboardSkeleton,
+  MapSkeleton,
+  TableRowSkeleton,
+} from '@/components/ui/skeletons';
 import { Input, Label, Select } from '@/components/ui/field';
 import { getStatusLabel } from '@/lib/labels';
 import { slaBucket, slaClass, slaLabel } from '@/lib/sla';
+import { useErrorMessage } from '@/lib/use-error-message';
 import type { AppLocale } from '@/i18n/request';
 
 const CategoryBarChart = dynamic(
   () => import('@/components/category-bar-chart').then((m) => m.CategoryBarChart),
   {
     ssr: false,
-    loading: function ChartSkeleton() {
-      return <Skeleton className="h-64 w-full" />;
+    loading: function CategoryChartFallback() {
+      return <ChartSkeleton />;
     },
   },
 );
@@ -45,8 +53,8 @@ const ReportsOverTimeChart = dynamic(
   () => import('@/components/admin/reports-over-time-chart').then((m) => m.ReportsOverTimeChart),
   {
     ssr: false,
-    loading: function ChartSkeleton() {
-      return <Skeleton className="h-64 w-full" />;
+    loading: function OverTimeChartFallback() {
+      return <ChartSkeleton />;
     },
   },
 );
@@ -55,16 +63,16 @@ const DepartmentBarChart = dynamic(
   () => import('@/components/admin/department-bar-chart').then((m) => m.DepartmentBarChart),
   {
     ssr: false,
-    loading: function ChartSkeleton() {
-      return <Skeleton className="h-64 w-full" />;
+    loading: function DepartmentChartFallback() {
+      return <ChartSkeleton />;
     },
   },
 );
 
 const ReportsMap = dynamic(() => import('@/components/reports-map').then((m) => m.ReportsMap), {
   ssr: false,
-  loading: function MapSkeleton() {
-    return <Skeleton className="h-72 w-full" />;
+  loading: function AdminMapFallback() {
+    return <MapSkeleton className="h-72 w-full" />;
   },
 });
 
@@ -100,6 +108,8 @@ export default function AdminPage() {
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
   const locale = useLocale() as AppLocale;
+  const toast = useToast();
+  const errorMessage = useErrorMessage();
   const [reports, setReports] = useState<ReportDto[]>([]);
   const [metaTotal, setMetaTotal] = useState(0);
   const [categories, setCategories] = useState<CategoryDto[]>([]);
@@ -115,10 +125,9 @@ export default function AdminPage() {
   const [departmentId, setDepartmentId] = useState('');
   const [from, setFrom] = useState('');
   const [to, setTo] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [rowBusy, setRowBusy] = useState<string | null>(null);
-  const [message, setMessage] = useState<string | null>(null);
 
   const canAssign = ASSIGN_ROLES.has(user?.role ?? '');
 
@@ -172,7 +181,7 @@ export default function AdminPage() {
         setSla(slaRes);
       } catch (err) {
         if (!opts?.background) {
-          setError(err instanceof ApiError ? err.message : t('loadError'));
+          setError(errorMessage(err, t('loadError')));
         }
       } finally {
         if (!opts?.background) setLoading(false);
@@ -241,7 +250,6 @@ export default function AdminPage() {
   async function changeStatus(report: ReportDto, next: ReportStatus) {
     if (next === report.status) return;
     setRowBusy(report.id);
-    setMessage(null);
     try {
       const body: UpdateReportStatusRequest = { status: next };
       const updated = await apiFetch<ReportDto>(`/reports/${report.id}/status`, {
@@ -250,15 +258,16 @@ export default function AdminPage() {
         body,
       });
       setReports((prev) => prev.map((r) => (r.id === updated.id ? updated : r)));
-      setMessage(
+      toast.push(
         t('statusChanged', {
           id: updated.id.slice(0, 8),
           status: getStatusLabel(updated.status, locale),
         }),
+        'success',
       );
       await refreshAnalytics();
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : t('statusFailed'));
+      toast.push(errorMessage(err, t('statusFailed')), 'error');
     } finally {
       setRowBusy(null);
     }
@@ -269,7 +278,6 @@ export default function AdminPage() {
     patch: { departmentId?: string; assignedStaffId?: string },
   ) {
     setRowBusy(report.id);
-    setMessage(null);
     try {
       const body: AssignReportRequest = {};
       if (patch.departmentId !== undefined) {
@@ -284,17 +292,18 @@ export default function AdminPage() {
         body,
       });
       setReports((prev) => prev.map((r) => (r.id === updated.id ? updated : r)));
-      setMessage(
+      toast.push(
         updated.dueAt
           ? t('assignSavedDue', {
               id: updated.id.slice(0, 8),
               due: new Date(updated.dueAt).toLocaleString(locale === 'en' ? 'en-GB' : 'sq-AL'),
             })
           : t('assignSaved', { id: updated.id.slice(0, 8) }),
+        'success',
       );
       await refreshAnalytics();
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : t('assignFailed'));
+      toast.push(errorMessage(err, t('assignFailed')), 'error');
     } finally {
       setRowBusy(null);
     }
@@ -302,16 +311,8 @@ export default function AdminPage() {
 
   if (authLoading) {
     return (
-      <main className="py-16">
-        <PageContainer width="wide">
-          <Spinner label={t('loading')} />
-          <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            <Skeleton className="h-20" />
-            <Skeleton className="h-20" />
-            <Skeleton className="h-20" />
-            <Skeleton className="h-20" />
-          </div>
-        </PageContainer>
+      <main>
+        <DashboardSkeleton label={t('loading')} />
       </main>
     );
   }
@@ -330,6 +331,14 @@ export default function AdminPage() {
     );
   }
 
+  if (loading && !summary) {
+    return (
+      <main>
+        <DashboardSkeleton label={t('loading')} />
+      </main>
+    );
+  }
+
   return (
     <main className="pb-bottom-nav pt-6 sm:pt-8">
       <PageContainer width="wide">
@@ -342,7 +351,13 @@ export default function AdminPage() {
             </h1>
             <p className="mt-1 text-sm text-stone-600">{t('subtitle')}</p>
           </div>
-          <Button type="button" variant="secondary" size="sm" onClick={() => void loadDashboard()}>
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            loading={loading}
+            onClick={() => void loadDashboard()}
+          >
             {t('refresh')}
           </Button>
         </div>
@@ -402,7 +417,9 @@ export default function AdminPage() {
           </h2>
           <p className="mt-1 text-sm text-stone-600">{t('heatmapHint')}</p>
           <div className="mt-3 h-72 overflow-hidden rounded-xl border border-stone-200 bg-stone-100">
-            {reports.length === 0 ? (
+            {loading && reports.length === 0 ? (
+              <MapSkeleton className="h-full" />
+            ) : reports.length === 0 ? (
               <p className="flex h-full items-center justify-center text-sm text-stone-600">
                 {t('heatmapEmpty')}
               </p>
@@ -511,12 +528,6 @@ export default function AdminPage() {
           </div>
 
           {error ? <ErrorBanner message={error} onRetry={() => void loadDashboard()} /> : null}
-          {message ? (
-            <p className="text-sm text-river-900" role="status">
-              {message}
-            </p>
-          ) : null}
-          {loading ? <Spinner label={t('filtering')} /> : null}
           <p className="text-xs text-stone-600">{t('tableCount', { total: metaTotal })}</p>
           <p className="text-xs text-stone-600 md:hidden">{t('tableScrollHint')}</p>
 
@@ -535,7 +546,11 @@ export default function AdminPage() {
                 </tr>
               </thead>
               <tbody>
-                {!loading && reports.length === 0 ? (
+                {loading && reports.length === 0 ? (
+                  Array.from({ length: 6 }, (_, i) => (
+                    <TableRowSkeleton key={i} cols={canAssign ? 8 : 7} />
+                  ))
+                ) : !loading && reports.length === 0 ? (
                   <tr>
                     <td colSpan={canAssign ? 8 : 7} className="px-3 py-6">
                       <EmptyState title={t('emptyTitle')} description={t('emptyBody')} />

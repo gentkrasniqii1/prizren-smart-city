@@ -77,9 +77,10 @@ export default async function RootLayout({
     <html lang={locale} suppressHydrationWarning>
       <body
         className={`${display.variable} ${sans.variable} min-h-screen bg-background font-sans text-foreground antialiased`}
+        suppressHydrationWarning
       >
         <ThemeProvider>
-          <NextIntlClientProvider messages={messages}>
+          <NextIntlClientProvider locale={locale} messages={messages}>
             <AuthProvider>
               <ToastProvider>
                 <SentryInit />

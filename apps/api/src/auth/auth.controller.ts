@@ -27,6 +27,9 @@ import { TotpCodeDto } from './dto/totp-code.dto';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { CurrentUser, AuthUser } from './decorators/current-user.decorator';
 import { rejectIfHoneypotFilled } from '../common/honeypot';
+import { getClientIp } from '../common/client-ip';
+import { CsrfOriginGuard } from './guards/csrf-origin.guard';
+import { timingSafeEqualString } from './crypto';
 
 @Controller('auth')
 export class AuthController {
@@ -51,9 +54,18 @@ export class AuthController {
   @Post('login')
   @HttpCode(HttpStatus.OK)
   @Throttle({ default: { limit: 5, ttl: 60_000 } })
-  async login(@Body() dto: LoginDto, @Res({ passthrough: true }) res: Response) {
+  async login(
+    @Body() dto: LoginDto,
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+  ) {
     rejectIfHoneypotFilled(dto.website);
-    const result = await this.authService.login(dto);
+    const trustedDeviceRaw = req.cookies?.[this.config.trustedDeviceCookieName] as
+      string | undefined;
+    const result = await this.authService.login(dto, trustedDeviceRaw, {
+      ip: getClientIp(req),
+      userAgent: req.headers['user-agent'] ?? null,
+    });
     if (result.kind === '2fa') {
       return { requiresTwoFactor: true, challengeToken: result.challengeToken };
     }
@@ -65,9 +77,24 @@ export class AuthController {
   @Post('2fa/verify')
   @HttpCode(HttpStatus.OK)
   @Throttle({ default: { limit: 10, ttl: 60_000 } })
-  async verifyTwoFactor(@Body() dto: TwoFactorLoginDto, @Res({ passthrough: true }) res: Response) {
-    const result = await this.authService.verifyTwoFactorLogin(dto.challengeToken, dto.code);
+  async verifyTwoFactor(
+    @Body() dto: TwoFactorLoginDto,
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const result = await this.authService.verifyTwoFactorLogin(
+      dto.challengeToken,
+      dto.code,
+      dto.trustDevice,
+      {
+        ip: getClientIp(req),
+        userAgent: req.headers['user-agent'] ?? null,
+      },
+    );
     this.setRefreshCookie(res, result.refreshToken, result.refreshDays);
+    if (result.trustedDeviceToken) {
+      this.setTrustedDeviceCookie(res, result.trustedDeviceToken);
+    }
     return result.auth;
   }
 
@@ -87,8 +114,16 @@ export class AuthController {
   @Post('2fa/disable')
   @HttpCode(HttpStatus.OK)
   @UseGuards(JwtAuthGuard)
-  disableTotp(@CurrentUser() user: AuthUser, @Body() dto: TotpCodeDto) {
-    return this.authService.disableTotp(user.id, dto.code);
+  async disableTotp(
+    @CurrentUser() user: AuthUser,
+    @Body() dto: TotpCodeDto,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const result = await this.authService.disableTotp(user.id, dto.code);
+    // Trust no longer means anything once 2FA is off — the same cookie could
+    // otherwise be replayed to skip 2FA if it's re-enabled later.
+    this.clearTrustedDeviceCookie(res);
+    return result;
   }
 
   @Post('forgot-password')
@@ -123,6 +158,7 @@ export class AuthController {
     // All refresh tokens were just revoked server-side — drop the cookie too so the
     // browser doesn't keep trying (now-invalid) silent refreshes with it.
     this.clearRefreshCookie(res);
+    this.clearTrustedDeviceCookie(res);
     return result;
   }
 
@@ -216,6 +252,8 @@ export class AuthController {
 
   @Post('refresh')
   @HttpCode(HttpStatus.OK)
+  @UseGuards(CsrfOriginGuard)
+  @Throttle({ default: { limit: 30, ttl: 60_000 } })
   async refresh(@Req() req: Request, @Res({ passthrough: true }) res: Response) {
     const raw = req.cookies?.[this.config.refreshCookieName] as string | undefined;
     const { accessToken, refreshToken, refreshDays, persistent } =
@@ -227,7 +265,7 @@ export class AuthController {
 
   @Post('logout')
   @HttpCode(HttpStatus.OK)
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, CsrfOriginGuard)
   async logout(@Req() req: Request, @Res({ passthrough: true }) res: Response) {
     const raw = req.cookies?.[this.config.refreshCookieName] as string | undefined;
     await this.authService.logout(raw);
@@ -237,10 +275,11 @@ export class AuthController {
 
   @Post('logout-all')
   @HttpCode(HttpStatus.OK)
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, CsrfOriginGuard)
   async logoutAll(@CurrentUser() user: AuthUser, @Res({ passthrough: true }) res: Response) {
     await this.authService.logoutAll(user.id);
     this.clearRefreshCookie(res);
+    this.clearTrustedDeviceCookie(res);
     return { ok: true };
   }
 
@@ -263,7 +302,7 @@ export class AuthController {
     }
     const cookieState = req.cookies?.[this.config.oauthStateCookieName] as string | undefined;
     res.clearCookie(this.config.oauthStateCookieName, { path: '/' });
-    if (!payload.state || !cookieState || payload.state !== cookieState) {
+    if (!payload.state || !cookieState || !timingSafeEqualString(payload.state, cookieState)) {
       return res.redirect(`${loginUrl}?oauth_error=state`);
     }
     const parsed = this.oauth.parseState(payload.state);
@@ -277,12 +316,15 @@ export class AuthController {
     try {
       const profile =
         provider === 'google'
-          ? await this.oauth.exchangeGoogle(payload.code)
+          ? await this.oauth.exchangeGoogle(payload.code, parsed.nonce)
           : provider === 'apple'
             ? await this.oauth.exchangeApple(payload.code, parsed.nonce, payload.user)
             : await this.oauth.exchangeFacebook(payload.code);
 
-      const session = await this.authService.loginWithOAuth(profile);
+      const session = await this.authService.loginWithOAuth(profile, {
+        ip: getClientIp(req),
+        userAgent: req.headers['user-agent'] ?? null,
+      });
       this.setRefreshCookie(res, session.refreshToken, session.refreshDays);
       const callbackUrl = new URL(`${this.config.webOrigin}/auth/callback`);
       if (session.linkedAccount) {
@@ -331,6 +373,25 @@ export class AuthController {
       options.maxAge = days * 24 * 60 * 60 * 1000;
     }
     res.cookie(this.config.refreshCookieName, token, options);
+  }
+
+  private setTrustedDeviceCookie(res: Response, token: string) {
+    res.cookie(this.config.trustedDeviceCookieName, token, {
+      httpOnly: true,
+      secure: this.config.isProduction,
+      sameSite: 'lax',
+      path: '/auth',
+      maxAge: this.config.trustedDeviceDays * 24 * 60 * 60 * 1000,
+    });
+  }
+
+  private clearTrustedDeviceCookie(res: Response) {
+    res.clearCookie(this.config.trustedDeviceCookieName, {
+      httpOnly: true,
+      secure: this.config.isProduction,
+      sameSite: 'lax',
+      path: '/auth',
+    });
   }
 
   private clearRefreshCookie(res: Response) {

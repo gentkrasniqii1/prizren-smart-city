@@ -1,16 +1,5 @@
-import { Suspense, type ReactNode } from 'react';
-import { Spinner } from '@/components/ui';
+import type { ReactNode } from 'react';
 
-export default function Layout({ children }: { children: ReactNode }) {
-  return (
-    <Suspense
-      fallback={
-        <main className="flex min-h-dvh items-center justify-center">
-          <Spinner />
-        </main>
-      }
-    >
-      {children}
-    </Suspense>
-  );
+export default function VerifyEmailLayout({ children }: { children: ReactNode }) {
+  return children;
 }

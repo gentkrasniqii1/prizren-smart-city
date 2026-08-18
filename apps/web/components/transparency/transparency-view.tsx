@@ -10,14 +10,16 @@ import { apiFetch } from '@/lib/api';
 import { usePolling } from '@/lib/use-polling';
 import { PageContainer } from '@/components/layout/page-container';
 import { EmptyState, ErrorBanner, Skeleton, StatCard } from '@/components/ui';
+import { MapSkeleton, MetricGridSkeleton } from '@/components/ui/skeletons';
 import { getStatusLabel } from '@/lib/labels';
+import { useErrorMessage } from '@/lib/use-error-message';
 import type { AppLocale } from '@/i18n/request';
 import { cn } from '@/lib/utils';
 
 const ReportsMap = dynamic(() => import('@/components/reports-map').then((m) => m.ReportsMap), {
   ssr: false,
-  loading: function MapSkeleton() {
-    return <Skeleton className="h-[min(50vh,22rem)] w-full rounded-xl" />;
+  loading: function TransparencyMapFallback() {
+    return <MapSkeleton className="h-[min(50vh,22rem)] w-full rounded-xl" />;
   },
 });
 
@@ -56,6 +58,7 @@ export function TransparencyView() {
   const t = useTranslations('Transparency');
   const locale = useLocale() as AppLocale;
   const router = useRouter();
+  const errorMessage = useErrorMessage();
   const [stats, setStats] = useState<TransparencyStats | null>(null);
   const [mapReports, setMapReports] = useState<ReportDto[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -74,9 +77,9 @@ export function TransparencyView() {
         ]);
         setStats(data);
         setMapReports(reportsPage.data);
-      } catch {
+      } catch (err) {
         if (!opts?.background) {
-          setError(t('loadError'));
+          setError(errorMessage(err, t('loadError')));
           setStats(null);
           setMapReports([]);
         }
@@ -127,11 +130,23 @@ export function TransparencyView() {
         ) : null}
 
         {loading ? (
-          <div className="mt-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            <Skeleton className="h-24" />
-            <Skeleton className="h-24" />
-            <Skeleton className="h-24" />
-            <Skeleton className="h-24" />
+          <div className="mt-8 space-y-10">
+            <MetricGridSkeleton count={4} />
+            <div className="grid gap-6 md:grid-cols-2">
+              <div className="space-y-4 rounded-xl border border-stone-200 bg-card p-5">
+                <Skeleton className="h-5 w-32" />
+                <Skeleton className="h-2 w-full rounded-full" />
+                <Skeleton className="h-2 w-4/5 rounded-full" />
+                <Skeleton className="h-2 w-3/5 rounded-full" />
+              </div>
+              <div className="space-y-4 rounded-xl border border-stone-200 bg-card p-5">
+                <Skeleton className="h-5 w-32" />
+                <Skeleton className="h-2 w-full rounded-full" />
+                <Skeleton className="h-2 w-2/3 rounded-full" />
+                <Skeleton className="h-2 w-1/2 rounded-full" />
+              </div>
+            </div>
+            <MapSkeleton className="h-[min(50vh,22rem)] rounded-xl border border-stone-200" />
           </div>
         ) : null}
 

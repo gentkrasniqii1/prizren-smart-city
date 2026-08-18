@@ -94,6 +94,38 @@ export class MailService {
     });
   }
 
+  async sendSuspiciousLoginEmail(
+    to: string,
+    params: { ip: string | null; userAgent: string | null },
+  ): Promise<void> {
+    const ip = params.ip ?? 'i panjohur';
+    const agent = params.userAgent ?? 'i panjohur';
+    await this.send({
+      to,
+      subject: 'Hyrje e re në llogari — Prizren Smart City',
+      text: `U zbulua një hyrje e re në llogarinë tënde.\nIP: ${ip}\nPajisja: ${agent}\n\nNëse nuk ishe ti, ndrysho fjalëkalimin dhe dil nga të gjitha pajisjet.`,
+      html: this.layout(
+        'Hyrje e re në llogari',
+        `<p>U zbulua një hyrje e re në llogarinë tënde nga një adresë IP e ndryshme nga herët e fundit.</p>
+         <p style="padding:12px 16px;background:#f5f0e8;border-radius:8px;color:#4a3f33">IP: ${this.escapeHtml(ip)}<br/>Pajisja: ${this.escapeHtml(agent)}</p>
+         <p>Nëse nuk ishe ti, ndrysho fjalëkalimin dhe dil nga të gjitha pajisjet.</p>`,
+      ),
+    });
+  }
+
+  async sendAccountLockedEmail(to: string): Promise<void> {
+    await this.send({
+      to,
+      subject: 'Llogaria u bllokua përkohësisht — Prizren Smart City',
+      text: 'Llogaria jote u bllokua përkohësisht pas shumë tentativave të pasakta të hyrjes. Provo përsëri pas 15 minutash. Nëse nuk ishe ti, rikthe fjalëkalimin.',
+      html: this.layout(
+        'Llogaria u bllokua përkohësisht',
+        `<p>Llogaria jote u bllokua përkohësisht pas shumë tentativave të pasakta të hyrjes.</p>
+         <p>Provo përsëri pas 15 minutash. Nëse nuk ishe ti, përdor rikthimin e fjalëkalimit.</p>`,
+      ),
+    });
+  }
+
   async sendReportReceivedEmail(
     to: string,
     params: { reportId: string; description: string; reportUrl: string },
