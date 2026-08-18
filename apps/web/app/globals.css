@@ -67,11 +67,11 @@
   --input: var(--color-stone-200);
   --ring: var(--color-mosque-700);
 
-  --radius: 0.625rem;
-  --radius-sm: 0.375rem;
-  --radius-md: 0.625rem;
-  --radius-lg: 1rem;
-  --radius-xl: 1.25rem;
+  --radius: 0.5rem;
+  --radius-sm: 0.25rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.75rem;
+  --radius-xl: 1rem;
 
   --shadow-sm: 0 1px 2px rgb(39 33 28 / 0.06);
   --shadow-md: 0 8px 24px rgb(39 33 28 / 0.08);
@@ -97,43 +97,49 @@
 
   /* Brand mark accent (Monogram P signal lines + node). Intentionally fixed —
      not redefined in `.dark` — reads correctly against both the light-mode
-     ink ("P" fill) and dark-mode off-white "P" fill. */
+     ink ("P" fill) and dark-mode off-white "P" fill. Also the civic "gilt"
+     stamp for eyebrows and rare ceremonial marks. */
   --brand-accent-gold: #b8874f;
+  --gilt: #b8874f;
 }
 
 .dark {
-  --background: #12161c;
+  /*
+   * Night stone — warm espresso, not banking charcoal.
+   * Cool navy cockpits read as fintech. Prizren after dark is still limestone.
+   */
+  --background: #1a1714;
   --foreground: #f3efe8;
-  --card: #1a2029;
+  --card: #241f1a;
   --card-foreground: #f3efe8;
-  --popover: #1a2029;
+  --popover: #241f1a;
   --popover-foreground: #f3efe8;
   --primary: #6798cf;
   --primary-foreground: #0f1720;
   --primary-hover: #98bbe0;
-  --secondary: #232a35;
+  --secondary: #2e2822;
   --secondary-foreground: #f3efe8;
   --accent: #56b7a7;
   --accent-foreground: #0f2725;
-  --muted: #232a35;
+  --muted: #2e2822;
   --muted-foreground: #b8a48a;
   --destructive: #f87171;
   --destructive-foreground: #450a0a;
-  --border: #2e3642;
-  --input: #2e3642;
+  --border: #3d352c;
+  --input: #3d352c;
   --ring: #98bbe0;
 
-  --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.35);
-  --shadow-md: 0 8px 24px rgb(0 0 0 / 0.4);
-  --shadow-lg: 0 18px 48px rgb(0 0 0 / 0.5);
+  --shadow-sm: 0 1px 2px rgb(26 23 20 / 0.45);
+  --shadow-md: 0 8px 24px rgb(26 23 20 / 0.5);
+  --shadow-lg: 0 18px 48px rgb(26 23 20 / 0.55);
 
   /* Remap stone scale for dark surfaces (keeps existing class usage readable) */
-  --color-stone-50: #12161c;
-  --color-stone-100: #1a2029;
-  --color-stone-200: #2e3642;
-  --color-stone-300: #3d4654;
-  --color-stone-400: #6b7280;
-  --color-stone-500: #9ca3af;
+  --color-stone-50: #1a1714;
+  --color-stone-100: #241f1a;
+  --color-stone-200: #3d352c;
+  --color-stone-300: #53483d;
+  --color-stone-400: #7a6b58;
+  --color-stone-500: #9a856c;
   --color-stone-600: #b8a48a;
   --color-stone-700: #d4c5b0;
   --color-stone-800: #e6ddd0;

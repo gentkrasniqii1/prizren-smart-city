@@ -7,11 +7,16 @@ import { Toaster as Sonner } from 'sonner';
 type ToasterProps = React.ComponentProps<typeof Sonner>;
 
 const Toaster = ({ ...props }: ToasterProps) => {
-  const { theme = 'system' } = useTheme();
+  const { resolvedTheme } = useTheme();
+  const [mounted, setMounted] = React.useState(false);
+
+  React.useEffect(() => {
+    setMounted(true);
+  }, []);
 
   return (
     <Sonner
-      theme={theme as ToasterProps['theme']}
+      theme={(mounted ? resolvedTheme : 'system') as ToasterProps['theme']}
       className="toaster group"
       toastOptions={{
         classNames: {

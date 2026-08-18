@@ -3,7 +3,7 @@
  * Intentionally does NOT cache API responses or dynamic data — only static
  * assets needed to show a friendly page when the network is unavailable.
  */
-const CACHE_NAME = 'psc-static-v2';
+const CACHE_NAME = 'psc-static-v3';
 const OFFLINE_URL = '/offline.html';
 const PRECACHE_URLS = [
   OFFLINE_URL,
@@ -41,6 +41,11 @@ self.addEventListener('fetch', (event) => {
 
   const url = new URL(request.url);
   if (url.origin !== self.location.origin) return;
+
+  // Dev: unhashed /_next/static chunks must never be cache-first.
+  if (url.hostname === 'localhost' || url.hostname === '127.0.0.1') {
+    return;
+  }
 
   // Page navigations: network-first, fall back to the cached offline page.
   if (request.mode === 'navigate') {

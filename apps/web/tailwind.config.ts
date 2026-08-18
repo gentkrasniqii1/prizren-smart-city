@@ -120,6 +120,7 @@ const config: Config = {
         chip: {
           foreground: withOpacity('--chip-foreground'),
         },
+        gilt: withOpacity('--gilt'),
       },
       fontFamily: {
         display: ['var(--font-display)', 'Georgia', 'serif'],

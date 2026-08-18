@@ -1,7 +1,12 @@
 /**
  * Prizren Smart City — single source of visual truth.
  * Mirrored in `app/globals.css` (:root) and `tailwind.config.ts`.
- * Identity: stone (warm neutrals), mosque (civic blue), river (teal accent).
+ *
+ * Identity is drawn from the city, not from a dashboard kit:
+ *   stone  — Kalaja limestone, cobble, paper
+ *   mosque — civic authority (Sinan Pasha lead-blue, not “tech blue”)
+ *   river  — Lumbardh i Prizrenit
+ *   gilt   — ceremonial metal / evening copper. A stamp, never a fill.
  */
 
 export const colors = {
@@ -64,17 +69,20 @@ export const colors = {
     high: { bg: '#fed7aa', fg: '#7c2d12' },
     critical: { bg: '#fecaca', fg: '#7f1d1d' },
   },
-  /** Brand mark accent only (Monogram P signal lines + node) — fixed across themes. */
+  /**
+   * Ceremonial metal. Fixed across themes. Use for the mark, eyebrows, and
+   * rare civic stamps — never for primary buttons, charts, or large fills.
+   */
   brand: {
     gold: '#b8874f',
   },
 } as const;
 
 export const radii = {
-  sm: '0.375rem',
-  md: '0.625rem',
-  lg: '1rem',
-  xl: '1.25rem',
+  sm: '0.25rem',
+  md: '0.5rem',
+  lg: '0.75rem',
+  xl: '1rem',
   full: '9999px',
 } as const;
 
@@ -119,3 +127,45 @@ export const motion = {
 
 export const focusRing =
   'outline outline-2 outline-offset-2 outline-[var(--color-mosque-700)]' as const;
+
+/**
+ * Visual language — how the tokens are meant to be used.
+ * Living specimen: `/design` (unlisted, noindex).
+ */
+export const visualLanguage = {
+  name: 'Prizren Smart City',
+  product: 'Civic Reporting Platform',
+  personality: [
+    'trustworthy',
+    'civic',
+    'modern',
+    'accessible',
+    'professional',
+    'local',
+    'clean',
+    'technology-driven',
+  ] as const,
+  not: [
+    'overly futuristic',
+    'generic SaaS',
+    'banking dashboard',
+    'neon smart-city chrome',
+  ] as const,
+  /** Two typefaces only. Fraunces speaks for the city; Manrope runs the tools. */
+  typeRoles: {
+    display: {
+      family: 'Fraunces',
+      role: 'City voice — hero, page titles, card titles, wordmark',
+    },
+    sans: {
+      family: 'Manrope',
+      role: 'Institution tools — body, forms, tables, navigation, data',
+    },
+  },
+  surfaces: {
+    citizen: 'Editorial. Photography of Prizren, one primary action, map as the city.',
+    staff: 'Same materials, denser information. Warm paper — not a cool gray cockpit.',
+    admin: 'Audit-grade. Tables and logs first. Gilt is never used for alerts.',
+    public: 'A civic ledger. Counts and maps, not marketing metrics.',
+  },
+} as const;

@@ -13,7 +13,8 @@ const AUTH_PATHS = [
   '/auth/two-factor',
 ];
 
-function isAuthPath(pathname: string) {
+function isAuthPath(pathname: string | null) {
+  if (!pathname) return false;
   return AUTH_PATHS.some((path) => pathname === path || pathname.startsWith(`${path}/`));
 }
 
