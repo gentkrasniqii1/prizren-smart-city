@@ -3,13 +3,15 @@
 import { useState } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 import { useTranslations } from 'next-intl';
-import { ApiError, apiFetch } from '@/lib/api';
+import { apiFetch } from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import { Input, Label } from '@/components/ui/field';
 import { FieldError } from '@/components/ui';
+import { useErrorMessage } from '@/lib/use-error-message';
 
 export function TwoFactorSettings({ enabled }: { enabled: boolean }) {
   const t = useTranslations('Auth');
+  const errorMessage = useErrorMessage();
   const [active, setActive] = useState(enabled);
   const [otpauthUrl, setOtpauthUrl] = useState<string | null>(null);
   const [code, setCode] = useState('');
@@ -17,6 +19,7 @@ export function TwoFactorSettings({ enabled }: { enabled: boolean }) {
   const [busy, setBusy] = useState(false);
 
   async function start() {
+    if (busy) return;
     setBusy(true);
     setError(null);
     try {
@@ -26,13 +29,14 @@ export function TwoFactorSettings({ enabled }: { enabled: boolean }) {
       });
       setOtpauthUrl(data.otpauthUrl);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : t('twoFactorInvalid'));
+      setError(errorMessage(err, t('twoFactorInvalid')));
     } finally {
       setBusy(false);
     }
   }
 
   async function confirm() {
+    if (busy) return;
     setBusy(true);
     setError(null);
     try {
@@ -45,13 +49,14 @@ export function TwoFactorSettings({ enabled }: { enabled: boolean }) {
       setOtpauthUrl(null);
       setCode('');
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : t('twoFactorInvalid'));
+      setError(errorMessage(err, t('twoFactorInvalid')));
     } finally {
       setBusy(false);
     }
   }
 
   async function disable() {
+    if (busy) return;
     setBusy(true);
     setError(null);
     try {
@@ -63,7 +68,7 @@ export function TwoFactorSettings({ enabled }: { enabled: boolean }) {
       setActive(false);
       setCode('');
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : t('twoFactorInvalid'));
+      setError(errorMessage(err, t('twoFactorInvalid')));
     } finally {
       setBusy(false);
     }

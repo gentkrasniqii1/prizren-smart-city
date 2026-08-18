@@ -3,12 +3,13 @@
 import { useState, type FormEvent } from 'react';
 import { useTranslations } from 'next-intl';
 import type { PublicUser, UpdateProfileRequest } from '@prizren/shared-types';
-import { ApiError, apiFetch } from '@/lib/api';
+import { apiFetch } from '@/lib/api';
 import { useAuth } from '@/components/auth-provider';
 import { useToast } from '@/components/toast-provider';
 import { Button } from '@/components/ui/button';
 import { Input, Label } from '@/components/ui/field';
-import { Badge, FieldError } from '@/components/ui';
+import { Badge, FieldError, FormError } from '@/components/ui';
+import { useErrorMessage } from '@/lib/use-error-message';
 
 type FieldErrors = {
   firstName?: string;
@@ -28,6 +29,7 @@ export function ProfileSettings({
   const tAuth = useTranslations('Auth');
   const { updateUser } = useAuth();
   const toast = useToast();
+  const errorMessage = useErrorMessage();
 
   const [editing, setEditing] = useState(false);
   const [firstName, setFirstName] = useState(user.firstName ?? '');
@@ -83,7 +85,7 @@ export function ProfileSettings({
       setEditing(false);
       toast.push(t('profileUpdateSuccess'), 'success');
     } catch (err) {
-      setFormError(err instanceof ApiError ? err.message : t('profileUpdateFailed'));
+      setFormError(errorMessage(err, t('profileUpdateFailed')));
     } finally {
       setSubmitting(false);
     }
@@ -100,7 +102,7 @@ export function ProfileSettings({
       });
       toast.push(t('verifyEmailSent'), 'success');
     } catch (err) {
-      toast.push(err instanceof ApiError ? err.message : t('verifyEmailFailed'), 'error');
+      toast.push(errorMessage(err, t('verifyEmailFailed')), 'error');
     } finally {
       setVerifying(false);
     }
@@ -150,11 +152,7 @@ export function ProfileSettings({
           />
         </div>
 
-        {formError ? (
-          <p className="text-sm text-destructive" role="alert">
-            {formError}
-          </p>
-        ) : null}
+        <FormError message={formError} />
 
         <div className="flex gap-2">
           <Button type="submit" size="sm" loading={submitting}>

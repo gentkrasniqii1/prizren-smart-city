@@ -4,14 +4,15 @@ import { useState, type FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import type { PublicUser } from '@prizren/shared-types';
-import { ApiError, apiFetch } from '@/lib/api';
+import { apiFetch } from '@/lib/api';
 import { isPasswordStrong } from '@/lib/password';
 import { useAuth } from '@/components/auth-provider';
 import { useToast } from '@/components/toast-provider';
 import { PasswordStrength } from '@/components/auth/password-strength';
 import { Button } from '@/components/ui/button';
 import { Input, Label } from '@/components/ui/field';
-import { FieldError } from '@/components/ui';
+import { FieldError, FormError } from '@/components/ui';
+import { useErrorMessage } from '@/lib/use-error-message';
 
 type FieldErrors = {
   currentPassword?: string;
@@ -25,6 +26,7 @@ export function ChangePasswordForm({ user }: { user: PublicUser }) {
   const router = useRouter();
   const { logout } = useAuth();
   const toast = useToast();
+  const errorMessage = useErrorMessage();
 
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -44,6 +46,7 @@ export function ChangePasswordForm({ user }: { user: PublicUser }) {
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
+    if (submitting) return;
     setFormError(null);
     const next = validate();
     setFieldErrors(next);
@@ -61,7 +64,7 @@ export function ChangePasswordForm({ user }: { user: PublicUser }) {
       await logout();
       router.push('/login');
     } catch (err) {
-      setFormError(err instanceof ApiError ? err.message : t('changePasswordFailed'));
+      setFormError(errorMessage(err, t('changePasswordFailed')));
     } finally {
       setSubmitting(false);
     }
@@ -123,13 +126,13 @@ export function ChangePasswordForm({ user }: { user: PublicUser }) {
             <FieldError message={fieldErrors.confirmPassword} />
           </div>
 
-          {formError ? (
-            <p className="text-sm text-destructive" role="alert">
-              {formError}
-            </p>
-          ) : null}
+          <FormError message={formError} />
 
-          <Button type="submit" size="sm" loading={submitting}>
+          <Button
+            type="submit"
+            size="sm"
+            status={submitting ? 'loading' : formError ? 'error' : 'idle'}
+          >
             {t('changePasswordCta')}
           </Button>
         </form>
