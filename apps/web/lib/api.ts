@@ -114,10 +114,7 @@ async function rawFetch(path: string, init: RequestInit): Promise<Response> {
     return await fetch(`${API_URL}${path}`, init);
   } catch (err) {
     if (isNetworkError(err)) {
-      throw new ApiError(
-        0,
-        'Lidhja me API u ndërpre. Nëse serveri po riniset, provo përsëri pas pak.',
-      );
+      throw new ApiError(0, 'NETWORK');
     }
     throw err;
   }
@@ -166,7 +163,7 @@ export async function apiFetch<T>(path: string, options: RequestOptions = {}): P
   }
 
   if (!response.ok) {
-    let message = response.statusText || 'Request failed';
+    let message = '';
     try {
       const errorBody = (await response.json()) as { message?: string | string[] };
       if (Array.isArray(errorBody.message)) {
@@ -177,8 +174,9 @@ export async function apiFetch<T>(path: string, options: RequestOptions = {}): P
     } catch {
       // ignore parse errors
     }
-    if (response.status === 401) {
-      message = message || 'Sesioni skadoi. Hyr përsëri.';
+    if (!message) {
+      if (response.status === 401) message = 'SESSION_EXPIRED';
+      else message = 'GENERIC';
     }
     throw new ApiError(response.status, message);
   }
