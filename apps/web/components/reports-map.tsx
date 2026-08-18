@@ -1,10 +1,12 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import { useTranslations } from 'next-intl';
 import type { ReportDto } from '@prizren/shared-types';
+import { MapSkeleton } from '@/components/ui/skeletons';
+import { cn } from '@/lib/utils';
 
 const PRIZREN: [number, number] = [20.7397, 42.2139];
 
@@ -31,10 +33,12 @@ type Props = {
 
 export function ReportsMap({ reports, selectedId, onSelect, className }: Props) {
   const t = useTranslations('Reports');
+  const tCommon = useTranslations('Common');
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<mapboxgl.Map | null>(null);
   const onSelectRef = useRef(onSelect);
   onSelectRef.current = onSelect;
+  const [ready, setReady] = useState(false);
 
   useEffect(() => {
     const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
@@ -133,13 +137,23 @@ export function ReportsMap({ reports, selectedId, onSelect, className }: Props) 
       map.on('mouseleave', 'unclustered-point', () => {
         map.getCanvas().style.cursor = '';
       });
+      setReady(true);
     });
 
+    map.once('error', () => setReady(true));
+    const timeout = window.setTimeout(() => setReady(true), 8000);
+
     return () => {
+      window.clearTimeout(timeout);
       map.remove();
       mapRef.current = null;
+      setReady(false);
     };
   }, []);
+
+  useEffect(() => {
+    if (ready) mapRef.current?.resize();
+  }, [ready]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -196,12 +210,20 @@ export function ReportsMap({ reports, selectedId, onSelect, className }: Props) 
   }
 
   return (
-    <div
-      ref={containerRef}
-      role="region"
-      aria-label={t('mapAria')}
-      className={`h-full min-h-[320px] w-full ${className ?? ''}`}
-    />
+    <div className={cn('relative h-full min-h-[320px] w-full', className)}>
+      {!ready ? (
+        <div className="pointer-events-none absolute inset-0 z-[1]">
+          <MapSkeleton className="h-full min-h-[320px] w-full" />
+          <span className="sr-only">{tCommon('mapLoading')}</span>
+        </div>
+      ) : null}
+      <div
+        ref={containerRef}
+        role="region"
+        aria-label={t('mapAria')}
+        className="h-full min-h-[320px] w-full"
+      />
+    </div>
   );
 }
 

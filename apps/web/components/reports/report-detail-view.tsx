@@ -2,7 +2,7 @@
 
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { ArrowLeft, Bot, ExternalLink, MapPin, ThumbsUp } from 'lucide-react';
 import { useLocale, useTranslations } from 'next-intl';
@@ -15,15 +15,18 @@ import type {
   UpdateReportStatusRequest,
   VoteCountResponse,
 } from '@prizren/shared-types';
-import { ApiError, apiFetch } from '@/lib/api';
+import { apiFetch } from '@/lib/api';
 import { useAuth } from '@/components/auth-provider';
 import { Breadcrumbs } from '@/components/breadcrumbs';
 import { PageContainer } from '@/components/layout/page-container';
 import { RemoteImage } from '@/components/remote-image';
 import { ReportStatusTimeline } from '@/components/reports/report-status-timeline';
-import { Button, PriorityBadge, Skeleton, Spinner, StatusBadge } from '@/components/ui';
+import { Button, ErrorState, PriorityBadge, StatusBadge } from '@/components/ui';
+import { MapSkeleton, ReportDetailSkeleton } from '@/components/ui/skeletons';
 import { FieldError } from '@/components/ui/field-error';
 import { Input, Label, Select, Textarea } from '@/components/ui/field';
+import { useToast } from '@/components/toast-provider';
+import { useErrorMessage } from '@/lib/use-error-message';
 import { AI_CATEGORIES, AI_SEVERITIES, getAiCategoryLabel, getAiSeverityLabel } from '@/lib/labels';
 import { slaBucket, slaClass, slaLabel } from '@/lib/sla';
 import type { AppLocale } from '@/i18n/request';
@@ -33,8 +36,8 @@ const LocationPickerMap = dynamic(
   () => import('@/components/location-picker-map').then((m) => m.LocationPickerMap),
   {
     ssr: false,
-    loading: function MapLoading() {
-      return <Skeleton className="h-48 w-full rounded-md" />;
+    loading: function ReportLocationFallback() {
+      return <MapSkeleton className="h-48 w-full rounded-md" />;
     },
   },
 );
@@ -42,22 +45,22 @@ const LocationPickerMap = dynamic(
 export function ReportDetailView() {
   const params = useParams<{ id: string }>();
   const t = useTranslations('ReportDetail');
+  const tCommon = useTranslations('Common');
   const locale = useLocale() as AppLocale;
   const { user } = useAuth();
+  const toast = useToast();
+  const errorMessage = useErrorMessage();
 
   const [report, setReport] = useState<ReportDto | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState<AIClassification | null>(null);
   const [aiBusy, setAiBusy] = useState(false);
-  const [aiMessage, setAiMessage] = useState<string | null>(null);
   const [workflowBusy, setWorkflowBusy] = useState(false);
-  const [workflowMessage, setWorkflowMessage] = useState<string | null>(null);
   const [comments, setComments] = useState<CommentDto[]>([]);
   const [commentText, setCommentText] = useState('');
   const [commentError, setCommentError] = useState<string | null>(null);
   const [voteBusy, setVoteBusy] = useState(false);
-  const [citizenMessage, setCitizenMessage] = useState<string | null>(null);
   const [related, setRelated] = useState<ReportDto[]>([]);
   const [aiPolling, setAiPolling] = useState(false);
 
@@ -67,18 +70,21 @@ export function ReportDetailView() {
     user?.role === 'DEPARTMENT_ADMIN' ||
     user?.role === 'SUPER_ADMIN';
 
-  useEffect(() => {
+  const loadReport = useCallback(async () => {
     if (!params.id) return;
-    void (async () => {
-      try {
-        const data = await apiFetch<ReportDto>(`/reports/${params.id}`, { auth: true });
-        setReport(data);
-        setDraft(data.aiClassification);
-      } catch {
-        setError(t('notFound'));
-      }
-    })();
-  }, [params.id, t]);
+    setError(null);
+    try {
+      const data = await apiFetch<ReportDto>(`/reports/${params.id}`, { auth: true });
+      setReport(data);
+      setDraft(data.aiClassification);
+    } catch (err) {
+      setError(errorMessage(err, t('notFound')));
+    }
+  }, [params.id, errorMessage, t]);
+
+  useEffect(() => {
+    void loadReport();
+  }, [loadReport]);
 
   useEffect(() => {
     if (!params.id) return;
@@ -148,11 +154,10 @@ export function ReportDetailView() {
 
   async function toggleVote() {
     if (!report || !user) {
-      setCitizenMessage(t('loginToVote'));
+      toast.push(t('loginToVote'), 'info');
       return;
     }
     setVoteBusy(true);
-    setCitizenMessage(null);
     try {
       const path = `/reports/${report.id}/votes`;
       const res = report.votedByMe
@@ -162,7 +167,7 @@ export function ReportDetailView() {
         prev ? { ...prev, voteCount: res.voteCount, votedByMe: res.votedByMe } : prev,
       );
     } catch (err) {
-      setCitizenMessage(err instanceof ApiError ? err.message : t('voteFailed'));
+      toast.push(errorMessage(err, t('voteFailed')), 'error');
     } finally {
       setVoteBusy(false);
     }
@@ -170,7 +175,7 @@ export function ReportDetailView() {
 
   async function submitComment() {
     if (!report || !user) {
-      setCitizenMessage(t('loginToComment'));
+      toast.push(t('loginToComment'), 'info');
       return;
     }
     const text = commentText.trim();
@@ -178,7 +183,6 @@ export function ReportDetailView() {
       setCommentError(t('commentRequired'));
       return;
     }
-    setCitizenMessage(null);
     setCommentError(null);
     try {
       const created = await apiFetch<CommentDto>(`/reports/${report.id}/comments`, {
@@ -189,14 +193,13 @@ export function ReportDetailView() {
       setComments((prev) => [...prev, created]);
       setCommentText('');
     } catch (err) {
-      setCitizenMessage(err instanceof ApiError ? err.message : t('commentFailed'));
+      toast.push(errorMessage(err, t('commentFailed')), 'error');
     }
   }
 
   async function submitAi(action: 'accept' | 'edit') {
     if (!report) return;
     setAiBusy(true);
-    setAiMessage(null);
     try {
       const body: UpdateAiClassificationRequest =
         action === 'accept'
@@ -217,9 +220,9 @@ export function ReportDetailView() {
       setReport(updated);
       setDraft(updated.aiClassification);
       setEditing(false);
-      setAiMessage(action === 'accept' ? t('aiAccepted') : t('aiUpdated'));
+      toast.push(action === 'accept' ? t('aiAccepted') : t('aiUpdated'), 'success');
     } catch (err) {
-      setAiMessage(err instanceof ApiError ? err.message : t('aiFailed'));
+      toast.push(errorMessage(err, t('aiFailed')), 'error');
     } finally {
       setAiBusy(false);
     }
@@ -228,7 +231,6 @@ export function ReportDetailView() {
   async function uploadAfterPhoto(file: File | null) {
     if (!report || !file) return;
     setWorkflowBusy(true);
-    setWorkflowMessage(null);
     try {
       const form = new FormData();
       form.append('photo', file);
@@ -238,9 +240,9 @@ export function ReportDetailView() {
         body: form,
       });
       setReport(updated);
-      setWorkflowMessage(t('afterUploaded'));
+      toast.push(t('afterUploaded'), 'success');
     } catch (err) {
-      setWorkflowMessage(err instanceof ApiError ? err.message : t('afterFailed'));
+      toast.push(errorMessage(err, t('afterFailed')), 'error');
     } finally {
       setWorkflowBusy(false);
     }
@@ -249,7 +251,6 @@ export function ReportDetailView() {
   async function markResolved() {
     if (!report) return;
     setWorkflowBusy(true);
-    setWorkflowMessage(null);
     try {
       const body: UpdateReportStatusRequest = { status: 'RESOLVED' };
       const updated = await apiFetch<ReportDto>(`/reports/${report.id}/status`, {
@@ -258,9 +259,9 @@ export function ReportDetailView() {
         body,
       });
       setReport(updated);
-      setWorkflowMessage(t('markedResolved'));
+      toast.push(t('markedResolved'), 'success');
     } catch (err) {
-      setWorkflowMessage(err instanceof ApiError ? err.message : t('statusFailed'));
+      toast.push(errorMessage(err, t('statusFailed')), 'error');
     } finally {
       setWorkflowBusy(false);
     }
@@ -270,16 +271,16 @@ export function ReportDetailView() {
     return (
       <main className="py-16">
         <PageContainer width="narrow">
-          <p className="text-red-700 dark:text-red-400" role="alert">
-            {error}
-          </p>
-          <Link
-            href="/reports"
-            className="mt-4 inline-flex items-center gap-1.5 text-sm font-medium text-mosque-800 underline"
-          >
-            <ArrowLeft className="h-4 w-4" aria-hidden />
-            {t('backToList')}
-          </Link>
+          <ErrorState
+            title={tCommon('errorTitle')}
+            description={error}
+            onRetry={() => void loadReport()}
+            action={
+              <Link href="/reports">
+                <Button variant="secondary">{t('backToList')}</Button>
+              </Link>
+            }
+          />
         </PageContainer>
       </main>
     );
@@ -287,22 +288,8 @@ export function ReportDetailView() {
 
   if (!report) {
     return (
-      <main className="py-16">
-        <PageContainer width="wide">
-          <Spinner label={t('loading')} />
-          <div className="mt-8 grid gap-8 lg:grid-cols-[minmax(0,1.4fr)_minmax(280px,0.8fr)]">
-            <div className="space-y-4">
-              <Skeleton className="h-6 w-40" />
-              <Skeleton className="h-10 w-3/4 max-w-md" />
-              <Skeleton className="h-40 w-full" />
-              <Skeleton className="h-56 w-full" />
-            </div>
-            <div className="space-y-3">
-              <Skeleton className="h-48 w-full" />
-              <Skeleton className="h-32 w-full" />
-            </div>
-          </div>
-        </PageContainer>
+      <main>
+        <ReportDetailSkeleton label={t('loading')} />
       </main>
     );
   }
@@ -391,11 +378,6 @@ export function ReportDetailView() {
                   <ThumbsUp className="h-4 w-4" aria-hidden />
                   {report.votedByMe ? t('unvote') : t('vote')} · {report.voteCount ?? 0}
                 </Button>
-                {citizenMessage ? (
-                  <p className="text-sm text-muted-foreground" role="status">
-                    {citizenMessage}
-                  </p>
-                ) : null}
               </div>
             </section>
 
@@ -529,11 +511,6 @@ export function ReportDetailView() {
                 >
                   {t('markResolved')}
                 </Button>
-                {workflowMessage ? (
-                  <p className="mt-3 text-sm text-foreground" role="status">
-                    {workflowMessage}
-                  </p>
-                ) : null}
               </section>
             ) : null}
 
@@ -713,11 +690,6 @@ export function ReportDetailView() {
                           </>
                         )}
                       </div>
-                    ) : null}
-                    {aiMessage ? (
-                      <p className="mt-3 text-sm text-foreground" role="status">
-                        {aiMessage}
-                      </p>
                     ) : null}
                   </div>
                 </div>

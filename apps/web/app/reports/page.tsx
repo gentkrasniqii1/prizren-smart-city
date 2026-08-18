@@ -10,7 +10,9 @@ import { PageContainer } from '@/components/layout/page-container';
 import { ReportCard } from '@/components/reports/report-card';
 import { ReportDrawer } from '@/components/reports/report-drawer';
 import { ReportFilters, type ReportsFilterState } from '@/components/reports/report-filters';
-import { Button, EmptyState, ErrorBanner, Skeleton, Spinner } from '@/components/ui';
+import { Button, EmptyState, ErrorBanner } from '@/components/ui';
+import { MapSkeleton, ReportCardListSkeleton } from '@/components/ui/skeletons';
+import { useErrorMessage } from '@/lib/use-error-message';
 import {
   Sheet,
   SheetContent,
@@ -23,8 +25,8 @@ import { cn } from '@/lib/utils';
 
 const ReportsMap = dynamic(() => import('@/components/reports-map').then((m) => m.ReportsMap), {
   ssr: false,
-  loading: function MapSkeleton() {
-    return <Skeleton className="h-full min-h-[280px] w-full" />;
+  loading: function ReportsMapFallback() {
+    return <MapSkeleton className="h-full min-h-[280px] w-full" />;
   },
 });
 
@@ -41,6 +43,7 @@ const initialFilters: ReportsFilterState = {
 export default function ReportsPage() {
   const t = useTranslations('Reports');
   const locale = useLocale() as AppLocale;
+  const errorMessage = useErrorMessage();
   const [reports, setReports] = useState<ReportDto[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [filters, setFilters] = useState<ReportsFilterState>(initialFilters);
@@ -65,8 +68,8 @@ export default function ReportsPage() {
         }
         const res = await apiFetch<PaginatedReports>(`/reports?${params.toString()}`);
         setReports(res.data);
-      } catch {
-        setError(t('loadError'));
+      } catch (err) {
+        setError(errorMessage(err, t('loadError')));
       } finally {
         setLoading(false);
       }
@@ -128,8 +131,8 @@ export default function ReportsPage() {
           );
           setReports(data);
           setSelectedId(null);
-        } catch {
-          setError(t('nearbyFailed'));
+        } catch (err) {
+          setError(errorMessage(err, t('nearbyFailed')));
         } finally {
           setNearbyBusy(false);
         }
@@ -151,7 +154,11 @@ export default function ReportsPage() {
     <div className="flex h-full min-h-0 flex-col bg-card">
       <div className="flex items-center justify-between gap-2 border-b border-border px-3 py-2.5 text-sm text-muted-foreground">
         <span className="min-w-0 truncate">
-          {loading ? <Spinner label={t('loading')} /> : t('count', { count: visible.length })}
+          {loading ? (
+            <span className="inline-block h-4 w-28 animate-pulse rounded bg-muted" aria-hidden />
+          ) : (
+            t('count', { count: visible.length })
+          )}
         </span>
         <button
           type="button"
@@ -163,10 +170,9 @@ export default function ReportsPage() {
       </div>
 
       {loading ? (
-        <div className="space-y-2 p-3">
-          <Skeleton className="h-20 w-full" />
-          <Skeleton className="h-20 w-full" />
-          <Skeleton className="h-20 w-full" />
+        <div className="flex-1 overflow-hidden" role="status" aria-busy="true">
+          <span className="sr-only">{t('loading')}</span>
+          <ReportCardListSkeleton count={6} compact />
         </div>
       ) : visible.length === 0 ? (
         <div className="p-3">

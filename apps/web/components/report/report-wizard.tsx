@@ -7,7 +7,7 @@ import { useRouter } from 'next/navigation';
 import { Bot, CheckCircle2, MapPin } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import type { CategoryDto, ReportDto } from '@prizren/shared-types';
-import { ApiError, apiFetch } from '@/lib/api';
+import { apiFetch } from '@/lib/api';
 import { useAuth } from '@/components/auth-provider';
 import { PageContainer } from '@/components/layout/page-container';
 import { PhotoUploader } from '@/components/report/photo-uploader';
@@ -18,16 +18,17 @@ import { useToast } from '@/components/toast-provider';
 import { Button } from '@/components/ui/button';
 import { StatusBadge } from '@/components/ui/badge';
 import { FieldError } from '@/components/ui/field-error';
+import { FormError } from '@/components/ui/form-error';
 import { Label, Select, Textarea } from '@/components/ui/field';
-import { Spinner } from '@/components/ui/spinner';
-import { Skeleton } from '@/components/ui/skeleton';
+import { MapSkeleton, ReportFormSkeleton } from '@/components/ui/skeletons';
+import { useErrorMessage } from '@/lib/use-error-message';
 
 const LocationPickerMap = dynamic(
   () => import('@/components/location-picker-map').then((m) => m.LocationPickerMap),
   {
     ssr: false,
-    loading: function MapLoading() {
-      return <Skeleton className="h-64 w-full rounded-md sm:h-72" />;
+    loading: function LocationMapFallback() {
+      return <MapSkeleton className="h-64 w-full rounded-md sm:h-72" />;
     },
   },
 );
@@ -45,6 +46,7 @@ export function ReportWizard() {
   const router = useRouter();
   const { user, loading: authLoading, ensureSession } = useAuth();
   const toast = useToast();
+  const errorMessage = useErrorMessage();
 
   const [step, setStep] = useState(0);
   const [categories, setCategories] = useState<CategoryDto[]>([]);
@@ -90,7 +92,7 @@ export function ReportWizard() {
 
   function requestGeolocation() {
     if (!navigator.geolocation) {
-      setFormError(t('geoUnsupported'));
+      setFieldErrors((f) => ({ ...f, location: t('geoUnsupported') }));
       return;
     }
     setGeoBusy(true);
@@ -103,7 +105,7 @@ export function ReportWizard() {
         setGeoBusy(false);
       },
       () => {
-        setFormError(t('geoDenied'));
+        setFieldErrors((f) => ({ ...f, location: t('geoDenied') }));
         setGeoBusy(false);
       },
       { enableHighAccuracy: true, timeout: 10000 },
@@ -179,7 +181,7 @@ export function ReportWizard() {
       toast.push(t('successToast'), 'success');
       setCreated(report);
     } catch (err) {
-      setFormError(err instanceof ApiError ? err.message : t('submitFailed'));
+      setFormError(errorMessage(err, t('submitFailed')));
     } finally {
       setSubmitting(false);
     }
@@ -187,10 +189,8 @@ export function ReportWizard() {
 
   if (authLoading || !user) {
     return (
-      <main className="py-16">
-        <PageContainer width="narrow">
-          <Spinner label={t('loading')} />
-        </PageContainer>
+      <main>
+        <ReportFormSkeleton label={t('loading')} />
       </main>
     );
   }
@@ -320,7 +320,7 @@ export function ReportWizard() {
                     variant="secondary"
                     size="sm"
                     onClick={requestGeolocation}
-                    disabled={geoBusy}
+                    status={geoBusy ? 'loading' : 'idle'}
                   >
                     <MapPin className="h-4 w-4" aria-hidden />
                     {geoBusy ? t('locating') : t('useGps')}
@@ -462,11 +462,7 @@ export function ReportWizard() {
             </label>
           </div>
 
-          {formError ? (
-            <p className="mt-4 text-sm text-red-700 dark:text-red-400" role="alert">
-              {formError}
-            </p>
-          ) : null}
+          <FormError className="mt-4" message={formError} />
 
           <div className="sticky bottom-0 z-10 -mx-4 mt-8 border-t border-border bg-card/95 px-4 py-4 backdrop-blur-sm sm:static sm:mx-0 sm:bg-transparent sm:px-0 sm:backdrop-blur-none">
             <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-between">
@@ -487,7 +483,7 @@ export function ReportWizard() {
                 <Button
                   type="button"
                   onClick={() => void submit()}
-                  disabled={submitting}
+                  status={submitting ? 'loading' : 'idle'}
                   className="w-full sm:w-auto"
                 >
                   {submitting ? t('submitting') : t('submit')}
