@@ -6,7 +6,7 @@ import { useTranslations } from 'next-intl';
 import { apiFetch } from '@/lib/api';
 import { AuthShell } from '@/components/auth/auth-shell';
 import { FieldError } from '@/components/ui';
-import { Button } from '@/components/ui/button';
+import { Button, type ButtonStatus } from '@/components/ui/button';
 import { Input, Label } from '@/components/ui/field';
 
 export default function ForgotPasswordPage() {
@@ -15,32 +15,39 @@ export default function ForgotPasswordPage() {
   const [website, setWebsite] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [sent, setSent] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
+  const [submitStatus, setSubmitStatus] = useState<ButtonStatus>('idle');
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (submitStatus === 'loading' || submitStatus === 'success') return;
     setError(null);
     if (!email.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
       setError(t('emailInvalid'));
+      setSubmitStatus('error');
       return;
     }
-    setSubmitting(true);
+    setSubmitStatus('loading');
     try {
       await apiFetch('/auth/forgot-password', {
         method: 'POST',
         body: { email: email.trim(), website },
         skipRefresh: true,
       });
+      setSubmitStatus('success');
       setSent(true);
     } catch {
+      setSubmitStatus('success');
       setSent(true);
-    } finally {
-      setSubmitting(false);
     }
   }
 
   return (
-    <AuthShell imageSrc="/images/prizren/kalaja.jpg" imageAlt={t('loginPanelAlt')}>
+    <AuthShell
+      imageSrc="/images/prizren/kalaja.jpg"
+      imageAlt={t('loginPanelAlt')}
+      headline={t('panelHeadline')}
+      body={t('panelBody')}
+    >
       <h1 className="text-h1 tracking-tight text-foreground">{t('forgotTitle')}</h1>
       <p className="mt-2 text-sm text-muted-foreground">{t('forgotBody')}</p>
 
@@ -82,7 +89,7 @@ export default function ForgotPasswordPage() {
               onChange={(e) => setWebsite(e.target.value)}
             />
           </div>
-          <Button type="submit" className="w-full" size="lg" loading={submitting}>
+          <Button type="submit" className="w-full" size="lg" status={submitStatus}>
             {t('sendResetLink')}
           </Button>
           <p className="text-sm text-muted-foreground">

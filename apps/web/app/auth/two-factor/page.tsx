@@ -3,21 +3,22 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import { ApiError } from '@/lib/api';
 import { useAuth } from '@/components/auth-provider';
 import { AuthShell } from '@/components/auth/auth-shell';
 import { Checkbox, FieldError } from '@/components/ui';
-import { Button } from '@/components/ui/button';
+import { Button, type ButtonStatus } from '@/components/ui/button';
 import { Input, Label } from '@/components/ui/field';
+import { useErrorMessage } from '@/lib/use-error-message';
 
 export default function TwoFactorPage() {
   const t = useTranslations('Auth');
   const router = useRouter();
   const { completeTwoFactor } = useAuth();
+  const errorMessage = useErrorMessage();
   const [code, setCode] = useState('');
   const [trust, setTrust] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [submitting, setSubmitting] = useState(false);
+  const [submitStatus, setSubmitStatus] = useState<ButtonStatus>('idle');
   const [challenge, setChallenge] = useState<string | null>(null);
 
   useEffect(() => {
@@ -32,25 +33,32 @@ export default function TwoFactorPage() {
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!challenge) return;
+    if (submitStatus === 'loading' || submitStatus === 'success') return;
     setError(null);
     if (!/^\d{6}$/.test(code.replace(/\s/g, ''))) {
       setError(t('twoFactorInvalid'));
+      setSubmitStatus('error');
       return;
     }
-    setSubmitting(true);
+    setSubmitStatus('loading');
     try {
       await completeTwoFactor(challenge, code.replace(/\s/g, ''));
       sessionStorage.removeItem('psc.2fa');
+      setSubmitStatus('success');
       router.push('/account');
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : t('twoFactorInvalid'));
-    } finally {
-      setSubmitting(false);
+      setError(errorMessage(err, t('twoFactorInvalid')));
+      setSubmitStatus('error');
     }
   }
 
   return (
-    <AuthShell imageSrc="/images/prizren/sinan-pasha.jpg" imageAlt={t('loginPanelAlt')}>
+    <AuthShell
+      imageSrc="/images/prizren/sinan-pasha.jpg"
+      imageAlt={t('loginPanelAlt')}
+      headline={t('panelHeadline')}
+      body={t('panelBody')}
+    >
       <h1 className="text-h1 tracking-tight text-foreground">{t('twoFactorTitle')}</h1>
       <p className="mt-2 text-sm text-muted-foreground">{t('twoFactorBody')}</p>
 
@@ -75,7 +83,7 @@ export default function TwoFactorPage() {
           type="submit"
           className="w-full"
           size="lg"
-          loading={submitting}
+          status={submitStatus}
           disabled={!challenge}
         >
           {t('verify')}

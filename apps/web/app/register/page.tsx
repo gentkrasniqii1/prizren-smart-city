@@ -4,15 +4,15 @@ import Link from 'next/link';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import { ApiError } from '@/lib/api';
 import { isPasswordStrong } from '@/lib/password';
 import { useAuth } from '@/components/auth-provider';
 import { AuthShell } from '@/components/auth/auth-shell';
 import { OAuthButtons } from '@/components/auth/oauth-buttons';
 import { PasswordStrength } from '@/components/auth/password-strength';
-import { Checkbox, FieldError } from '@/components/ui';
-import { Button } from '@/components/ui/button';
+import { Checkbox, FieldError, FormError } from '@/components/ui';
+import { Button, type ButtonStatus } from '@/components/ui/button';
 import { Input, Label } from '@/components/ui/field';
+import { useErrorMessage } from '@/lib/use-error-message';
 
 type FieldErrors = {
   firstName?: string;
@@ -27,6 +27,7 @@ export default function RegisterPage() {
   const t = useTranslations('Auth');
   const router = useRouter();
   const { register } = useAuth();
+  const errorMessage = useErrorMessage();
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
@@ -37,7 +38,8 @@ export default function RegisterPage() {
   const [website, setWebsite] = useState('');
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [formError, setFormError] = useState<string | null>(null);
-  const [submitting, setSubmitting] = useState(false);
+  const [submitStatus, setSubmitStatus] = useState<ButtonStatus>('idle');
+  const [oauthBusy, setOauthBusy] = useState(false);
 
   function validate(): FieldErrors {
     const next: FieldErrors = {};
@@ -54,11 +56,12 @@ export default function RegisterPage() {
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (submitStatus === 'loading' || submitStatus === 'success' || oauthBusy) return;
     setFormError(null);
     const next = validate();
     setFieldErrors(next);
     if (Object.keys(next).length > 0) return;
-    setSubmitting(true);
+    setSubmitStatus('loading');
     try {
       await register({
         firstName: firstName.trim(),
@@ -69,16 +72,21 @@ export default function RegisterPage() {
         acceptedTerms: true,
         website,
       });
+      setSubmitStatus('success');
       router.push(`/verify-email?email=${encodeURIComponent(email.trim())}`);
     } catch (err) {
-      setFormError(err instanceof ApiError ? err.message : t('registerFailed'));
-    } finally {
-      setSubmitting(false);
+      setFormError(errorMessage(err, t('registerFailed')));
+      setSubmitStatus('error');
     }
   }
 
   return (
-    <AuthShell imageSrc="/images/prizren/stone-bridge.jpg" imageAlt={t('registerPanelAlt')}>
+    <AuthShell
+      imageSrc="/images/prizren/stone-bridge.jpg"
+      imageAlt={t('registerPanelAlt')}
+      headline={t('panelHeadline')}
+      body={t('panelBody')}
+    >
       <h1 className="text-h1 tracking-tight text-foreground">{t('registerTitle')}</h1>
       <p className="mt-2 text-sm text-muted-foreground">{t('registerSubtitle')}</p>
       <p className="mt-2 text-xs text-muted-foreground">
@@ -206,23 +214,28 @@ export default function RegisterPage() {
           </label>
         </div>
 
-        {formError ? (
-          <p className="text-sm text-destructive" role="alert">
-            {formError}
-          </p>
-        ) : null}
+        <FormError message={formError} />
 
-        <Button type="submit" className="w-full" size="lg" loading={submitting}>
-          {submitting ? t('registering') : t('submitRegister')}
+        <Button
+          type="submit"
+          className="w-full"
+          size="lg"
+          status={submitStatus}
+          disabled={oauthBusy}
+        >
+          {submitStatus === 'loading' ? t('registering') : t('submitRegister')}
         </Button>
       </form>
 
-      <OAuthButtons disabled={submitting} />
+      <OAuthButtons
+        disabled={submitStatus === 'loading' || submitStatus === 'success'}
+        onBusyChange={setOauthBusy}
+      />
 
       <p className="mt-6 text-sm text-muted-foreground">
         {t('hasAccount')}{' '}
         <Link href="/login" className="font-medium text-primary hover:underline">
-          {t('loginTitle')}
+          {t('loginCta')}
         </Link>
       </p>
     </AuthShell>
