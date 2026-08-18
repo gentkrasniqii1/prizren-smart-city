@@ -1,4 +1,4 @@
-import { createCipheriv, createDecipheriv, createHash, randomBytes } from 'crypto';
+import { createCipheriv, createDecipheriv, createHash, randomBytes, timingSafeEqual } from 'crypto';
 
 export function sha256Hex(raw: string): string {
   return createHash('sha256').update(raw).digest('hex');
@@ -6,6 +6,16 @@ export function sha256Hex(raw: string): string {
 
 export function randomToken(bytes = 32): string {
   return randomBytes(bytes).toString('base64url');
+}
+
+/** Constant-time string compare. Different lengths are not equal. */
+export function timingSafeEqualString(left: string, right: string): boolean {
+  const a = Buffer.from(left);
+  const b = Buffer.from(right);
+  if (a.length !== b.length) {
+    return false;
+  }
+  return timingSafeEqual(a, b);
 }
 
 /** AES-256-GCM. Key is derived from AUTH_ENCRYPTION_KEY / JWT secret. */

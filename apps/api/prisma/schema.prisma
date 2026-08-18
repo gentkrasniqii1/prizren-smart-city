@@ -25,6 +25,8 @@ model User {
   totpEnabled      Boolean        @default(false)
   failedLoginCount Int            @default(0)
   lockedUntil      DateTime?
+  lastLoginAt      DateTime?
+  lastLoginIp      String?
   createdAt        DateTime       @default(now())
   reports          Report[]
   votes            Vote[]
@@ -34,6 +36,7 @@ model User {
   departments      Department[]   @relation("DepartmentStaff")
   refreshTokens    RefreshToken[]
   authTokens       AuthToken[]
+  trustedDevices   TrustedDevice[]
 }
 
 model RefreshToken {
@@ -65,6 +68,21 @@ enum AuthTokenType {
   EMAIL_VERIFY
   PASSWORD_RESET
   TWO_FACTOR
+}
+
+/// "Trust this device" — lets a user skip the TOTP challenge on a device they
+/// recognize for a limited time. Only a hash of the device token is stored;
+/// it's revoked wholesale whenever 2FA is disabled or the password changes.
+model TrustedDevice {
+  id         String    @id @default(uuid())
+  userId     String
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash  String    @unique
+  expiresAt  DateTime
+  createdAt  DateTime  @default(now())
+  lastUsedAt DateTime?
+
+  @@index([userId])
 }
 
 enum Role {

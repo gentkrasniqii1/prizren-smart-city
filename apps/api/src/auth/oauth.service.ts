@@ -2,6 +2,7 @@ import { Injectable, ServiceUnavailableException } from '@nestjs/common';
 import { createHash, createPrivateKey, randomBytes, sign } from 'crypto';
 import { verifyIdToken } from 'apple-signin-auth';
 import { ConfigService } from './config.service';
+import { timingSafeEqualString } from './crypto';
 
 export type OAuthProvider = 'google' | 'apple' | 'facebook';
 
@@ -62,6 +63,7 @@ export class OauthService {
         response_type: 'code',
         scope: 'openid email profile',
         state,
+        nonce,
         access_type: 'online',
         prompt: 'select_account',
       });
@@ -89,7 +91,7 @@ export class OauthService {
     return `https://www.facebook.com/v21.0/dialog/oauth?${params.toString()}`;
   }
 
-  async exchangeGoogle(code: string): Promise<OAuthProfile> {
+  async exchangeGoogle(code: string, nonce: string): Promise<OAuthProfile> {
     const body = new URLSearchParams({
       code,
       client_id: this.config.googleClientId,
@@ -105,10 +107,11 @@ export class OauthService {
     if (!tokenRes.ok) {
       throw new ServiceUnavailableException('Google token exchange failed');
     }
-    const tokens = (await tokenRes.json()) as { access_token?: string };
+    const tokens = (await tokenRes.json()) as { access_token?: string; id_token?: string };
     if (!tokens.access_token) {
       throw new ServiceUnavailableException('Google did not return an access token');
     }
+    this.assertIdTokenNonce(tokens.id_token, nonce);
     const profileRes = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
       headers: { Authorization: `Bearer ${tokens.access_token}` },
     });
@@ -217,6 +220,17 @@ export class OauthService {
     };
   }
 
+  private assertIdTokenNonce(idToken: string | undefined, nonce: string): void {
+    if (!idToken) {
+      throw new ServiceUnavailableException('Google did not return an identity token');
+    }
+    const payload = decodeJwtPayload(idToken);
+    const tokenNonce = typeof payload?.nonce === 'string' ? payload.nonce : '';
+    if (!tokenNonce || !timingSafeEqualString(tokenNonce, nonce)) {
+      throw new ServiceUnavailableException('Google identity token nonce mismatch');
+    }
+  }
+
   private createAppleClientSecret(): string {
     const now = Math.floor(Date.now() / 1000);
     const header = Buffer.from(
@@ -237,5 +251,18 @@ export class OauthService {
       dsaEncoding: 'ieee-p1363',
     }).toString('base64url');
     return `${header}.${payload}.${signature}`;
+  }
+}
+
+function decodeJwtPayload(token: string): Record<string, unknown> | null {
+  const parts = token.split('.');
+  if (parts.length < 2 || !parts[1]) return null;
+  try {
+    return JSON.parse(Buffer.from(parts[1], 'base64url').toString('utf8')) as Record<
+      string,
+      unknown
+    >;
+  } catch {
+    return null;
   }
 }
