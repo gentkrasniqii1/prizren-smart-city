@@ -187,6 +187,7 @@ export class AnalyticsService {
       ReportStatus.PENDING,
       ReportStatus.IN_REVIEW,
       ReportStatus.ASSIGNED,
+      ReportStatus.ACCEPTED,
       ReportStatus.IN_PROGRESS,
       ReportStatus.WAITING_FOR_INFORMATION,
       ReportStatus.RESOLVED,

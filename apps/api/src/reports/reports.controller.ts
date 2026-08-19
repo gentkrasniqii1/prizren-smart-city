@@ -42,6 +42,7 @@ import {
   EscalateReportDto,
   UpdateReportPriorityDto,
 } from './dto/update-report-priority.dto';
+import { WorkflowActionDto } from './dto/workflow-action.dto';
 import { ReportsService } from './reports.service';
 
 @Controller('reports')
@@ -98,6 +99,16 @@ export class ReportsController {
   @UseGuards(JwtAuthGuard)
   myStats(@CurrentUser() user: AuthUser) {
     return this.reportsService.myStats(user.id);
+  }
+
+  @Get('queue')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.DEPARTMENT_STAFF, Role.DEPARTMENT_ADMIN, Role.SUPER_ADMIN)
+  listQueue(@Query() query: ListReportsQueryDto, @CurrentUser() user: AuthUser) {
+    if (!user) {
+      throw new BadRequestException('Unauthorized');
+    }
+    return this.reportsService.listQueue(user, query);
   }
 
   @Get(':id')
@@ -168,6 +179,24 @@ export class ReportsController {
       throw new BadRequestException('status is required');
     }
     return this.reportsService.updateStatus(id, user, dto, getClientIp(req));
+  }
+
+  @Post(':id/workflow')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.DEPARTMENT_STAFF, Role.DEPARTMENT_ADMIN, Role.SUPER_ADMIN)
+  applyWorkflow(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() user: AuthUser,
+    @Body() dto: WorkflowActionDto,
+    @Req() req: Request,
+  ) {
+    if (!user) {
+      throw new BadRequestException('Unauthorized');
+    }
+    if (!dto?.action) {
+      throw new BadRequestException('action is required');
+    }
+    return this.reportsService.applyWorkflowAction(id, user, dto, getClientIp(req));
   }
 
   @Patch(':id/assign')

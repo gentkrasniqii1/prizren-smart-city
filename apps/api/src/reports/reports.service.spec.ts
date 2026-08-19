@@ -71,6 +71,72 @@ describe('ReportsService.updateStatus', () => {
       service.updateStatus('r1', staff as never, { status: ReportStatus.RESOLVED }),
     ).rejects.toBeInstanceOf(BadRequestException);
   });
+
+  it('rejects an illegal jump that skips the institution queue', async () => {
+    prisma.report.findUnique.mockResolvedValue({
+      id: 'r1',
+      status: ReportStatus.PENDING,
+      photoAfterUrl: null,
+      userId: 'owner-1',
+      priority: null,
+      dueAt: null,
+    });
+    await expect(
+      service.updateStatus('r1', staff as never, { status: ReportStatus.IN_PROGRESS }),
+    ).rejects.toBeInstanceOf(BadRequestException);
+  });
+
+  it('allows institution accept from the queue', async () => {
+    prisma.report.findUnique.mockResolvedValue({
+      id: 'r1',
+      status: ReportStatus.ASSIGNED,
+      photoAfterUrl: null,
+      userId: 'owner-1',
+      priority: Priority.MEDIUM,
+      dueAt: null,
+    });
+    const updated = {
+      id: 'r1',
+      publicId: 'PRZ-2026-000001',
+      userId: 'owner-1',
+      categoryId: null,
+      subcategory: null,
+      departmentId: 'd1',
+      institutionId: 'i1',
+      description: 'x',
+      status: ReportStatus.ACCEPTED,
+      priority: Priority.MEDIUM,
+      lat: 42.2,
+      lng: 20.7,
+      address: null,
+      photoUrl: null,
+      photoAfterUrl: null,
+      aiClassification: null,
+      aiConfidence: null,
+      duplicateOfId: null,
+      isDuplicate: false,
+      assignedStaffId: null,
+      dueAt: new Date(),
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      category: null,
+      department: null,
+      institution: null,
+      _count: { votes: 0 },
+      statusHistory: [],
+    };
+    prisma.$transaction.mockImplementation(async (cb: (tx: unknown) => unknown) =>
+      cb({
+        report: { update: vi.fn().mockResolvedValue(updated) },
+        statusHistory: { create: vi.fn() },
+        auditLog: { create: vi.fn() },
+      }),
+    );
+
+    const dto = await service.applyWorkflowAction('r1', staff as never, { action: 'accept' });
+    expect(dto.status).toBe(ReportStatus.ACCEPTED);
+    expect(events.emit).toHaveBeenCalled();
+  });
 });
 
 describe('ReportsService.create', () => {
@@ -95,14 +161,29 @@ describe('ReportsService.create', () => {
       value: opts.counterValue,
     });
 
+    const reportUpdate = vi
+      .fn()
+      .mockImplementation(async ({ data }: { data: Record<string, unknown> }) => {
+        const created = (await reportCreate.mock.results.at(-1)?.value) as Record<string, unknown>;
+        return { ...created, ...data };
+      });
+
     const prisma = {
       $transaction: vi.fn().mockImplementation(async (cb: (tx: unknown) => unknown) =>
         cb({
           sequenceCounter: { upsert: sequenceCounterUpsert },
-          report: { create: reportCreate },
+          report: { create: reportCreate, update: reportUpdate },
+          statusHistory: { create: vi.fn() },
         }),
       ),
       $executeRaw: vi.fn().mockResolvedValue(undefined),
+      report: {
+        findUnique: vi.fn().mockImplementation(async () => {
+          const last = reportCreate.mock.results.at(-1)?.value as
+            Promise<Record<string, unknown>> | undefined;
+          return last ? await last : null;
+        }),
+      },
     };
 
     const routing = { routeByCategory: vi.fn().mockResolvedValue(opts.routed) };
@@ -153,6 +234,7 @@ describe('ReportsService.create', () => {
     );
     expect(dto.publicId).toBe(expectedPublicId);
     expect(dto.institutionId).toBe('inst-1');
+    expect(dto.status).toBe(ReportStatus.ASSIGNED);
   });
 
   it('leaves institutionId unset when the category has no routing result', async () => {

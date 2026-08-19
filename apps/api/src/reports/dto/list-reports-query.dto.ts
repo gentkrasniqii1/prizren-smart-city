@@ -1,4 +1,4 @@
-import { IsEnum, IsInt, IsOptional, IsString, IsUUID, Max, Min } from 'class-validator';
+import { IsEnum, IsIn, IsInt, IsOptional, IsString, IsUUID, Max, Min } from 'class-validator';
 import { Transform, Type } from 'class-transformer';
 import { Priority, ReportStatus } from '@prisma/client';
 
@@ -22,6 +22,11 @@ export class ListReportsQueryDto {
   @IsOptional()
   @IsEnum(Priority)
   priority?: Priority;
+
+  /** Institution desk lane — used by GET /reports/queue */
+  @IsOptional()
+  @IsIn(['incoming', 'active', 'waiting', 'done'])
+  lane?: 'incoming' | 'active' | 'waiting' | 'done';
 
   /** Format: minLng,minLat,maxLng,maxLat */
   @IsOptional()
