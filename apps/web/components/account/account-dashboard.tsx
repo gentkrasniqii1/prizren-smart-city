@@ -3,7 +3,16 @@
 import Link from 'next/link';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Bell, FilePlus2, FileText, Inbox, LayoutDashboard, LogOut, Map } from 'lucide-react';
+import {
+  Bell,
+  FilePlus2,
+  FileText,
+  GitBranch,
+  Inbox,
+  LayoutDashboard,
+  LogOut,
+  Map,
+} from 'lucide-react';
 import { useLocale, useTranslations } from 'next-intl';
 import type {
   MyReportStats,
@@ -239,6 +248,7 @@ export function AccountDashboard() {
             <>
               <QuickLink href="/queue" icon={Inbox} label={t('quickQueue')} />
               <QuickLink href="/admin" icon={LayoutDashboard} label={t('quickAdmin')} />
+              <QuickLink href="/admin/routing" icon={GitBranch} label={t('quickRouting')} />
             </>
           ) : null}
         </nav>
