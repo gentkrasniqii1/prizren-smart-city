@@ -14,8 +14,9 @@ type MailPayload = {
 const STATUS_LABELS_SQ: Record<string, string> = {
   PENDING: 'Në pritje',
   IN_REVIEW: 'Në shqyrtim',
-  ASSIGNED: 'I caktuar',
-  IN_PROGRESS: 'Në progres',
+  ASSIGNED: 'Në radhën e institucionit',
+  ACCEPTED: 'I pranuar nga institucioni',
+  IN_PROGRESS: 'Në hetim',
   WAITING_FOR_INFORMATION: 'Në pritje të informacionit',
   RESOLVED: 'I zgjidhur',
   REJECTED: 'I refuzuar',
@@ -179,11 +180,41 @@ export class MailService {
     if (params.newStatus === 'ASSIGNED') {
       await this.send({
         to,
-        subject: 'Raporti yt u caktua te departamenti — Prizren Smart City',
-        text: `Raporti yt u kalua te departamenti përgjegjës dhe do të trajtohet.${noteText}\n\nShiko detajet këtu:\n${params.reportUrl}`,
+        subject: 'Raporti yt hyri në radhën e institucionit — Prizren Smart City',
+        text: `Raporti yt u kalua te institucioni përgjegjës dhe pret pranimin.${noteText}\n\nShiko detajet këtu:\n${params.reportUrl}`,
         html: this.layout(
-          'Raporti u caktua',
-          `<p>Raporti yt u kalua te departamenti përgjegjës dhe do të trajtohet së shpejti.</p>
+          'Në radhën e institucionit',
+          `<p>Raporti yt u kalua te institucioni përgjegjës dhe pret pranimin.</p>
+           ${noteBlock}
+           ${cta('Shiko raportin')}`,
+        ),
+      });
+      return;
+    }
+
+    if (params.newStatus === 'ACCEPTED') {
+      await this.send({
+        to,
+        subject: 'Institucioni e pranoi raportin tënd — Prizren Smart City',
+        text: `Institucioni përgjegjës e pranoi raportin tënd dhe do ta hetojë.${noteText}\n\nShiko detajet këtu:\n${params.reportUrl}`,
+        html: this.layout(
+          'Raporti u pranua',
+          `<p>Institucioni përgjegjës e <strong>pranoi</strong> raportin tënd dhe do ta hetojë.</p>
+           ${noteBlock}
+           ${cta('Shiko raportin')}`,
+        ),
+      });
+      return;
+    }
+
+    if (params.newStatus === 'IN_PROGRESS') {
+      await this.send({
+        to,
+        subject: 'Raporti yt është në hetim — Prizren Smart City',
+        text: `Institucioni po heton raportin tënd.${noteText}\n\nShiko detajet këtu:\n${params.reportUrl}`,
+        html: this.layout(
+          'Në hetim',
+          `<p>Institucioni po <strong>heton</strong> raportin tënd.</p>
            ${noteBlock}
            ${cta('Shiko raportin')}`,
         ),
