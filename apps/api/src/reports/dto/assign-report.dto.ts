@@ -10,4 +10,9 @@ export class AssignReportDto {
   @ValidateIf((_, value) => value !== null && value !== undefined)
   @IsUUID()
   assignedStaffId?: string | null;
+
+  @IsOptional()
+  @ValidateIf((_, value) => value !== null && value !== undefined)
+  @IsUUID()
+  institutionId?: string | null;
 }

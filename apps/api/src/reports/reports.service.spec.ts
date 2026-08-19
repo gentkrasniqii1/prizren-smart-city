@@ -174,3 +174,158 @@ describe('ReportsService.create', () => {
     );
   });
 });
+
+describe('ReportsService.escalate', () => {
+  const staff = {
+    id: 'staff-1',
+    email: 'staff@test.local',
+    role: Role.DEPARTMENT_STAFF,
+  };
+
+  function buildService() {
+    const reportRow = {
+      id: 'r1',
+      publicId: 'PRZ-2026-000001',
+      userId: 'owner-1',
+      categoryId: null,
+      subcategory: null,
+      departmentId: null,
+      institutionId: null,
+      description: 'x',
+      status: ReportStatus.IN_REVIEW,
+      priority: Priority.HIGH,
+      lat: 42.2,
+      lng: 20.7,
+      address: null,
+      photoUrl: null,
+      photoAfterUrl: null,
+      aiClassification: null,
+      aiConfidence: null,
+      duplicateOfId: null,
+      isDuplicate: false,
+      assignedStaffId: null,
+      dueAt: new Date(),
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      category: null,
+      department: null,
+      institution: null,
+      _count: { votes: 0 },
+    };
+    const reportUpdate = vi.fn().mockResolvedValue(reportRow);
+    const prisma = {
+      report: {
+        findUnique: vi.fn().mockResolvedValue({
+          id: 'r1',
+          userId: 'owner-1',
+          status: ReportStatus.PENDING,
+          priority: Priority.MEDIUM,
+          dueAt: null,
+        }),
+      },
+      $transaction: vi.fn().mockImplementation(async (cb: (tx: unknown) => unknown) =>
+        cb({
+          report: { update: reportUpdate },
+          statusHistory: { create: vi.fn() },
+          auditLog: { create: vi.fn() },
+        }),
+      ),
+    };
+    const events = { emit: vi.fn() };
+    const service = new ReportsService(
+      prisma as unknown as PrismaService,
+      { uploadImage: vi.fn() } as unknown as CloudinaryService,
+      { classifyReportPhoto: vi.fn() } as unknown as AiClassificationService,
+      events as unknown as EventEmitter2,
+      { routeByCategory: vi.fn() } as unknown as RoutingService,
+      { sendReportReceivedEmail: vi.fn() } as unknown as MailService,
+      { webOrigin: 'http://localhost:3000' } as unknown as ConfigService,
+    );
+    return { service, reportUpdate, events };
+  }
+
+  it('forbids citizens', async () => {
+    const { service } = buildService();
+    await expect(
+      service.escalate('r1', { id: 'c1', email: 'c@t.local', role: Role.CITIZEN }, {}),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+  });
+
+  it('raises priority and moves pending to review', async () => {
+    const { service, reportUpdate, events } = buildService();
+    await service.escalate('r1', staff as never, { note: 'flooding' });
+    expect(reportUpdate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          priority: Priority.HIGH,
+          status: ReportStatus.IN_REVIEW,
+        }),
+      }),
+    );
+    expect(events.emit).toHaveBeenCalled();
+  });
+});
+
+describe('ReportsService.addStaffNote', () => {
+  it('stores an audit log note', async () => {
+    const auditCreate = vi.fn();
+    const prisma = {
+      report: {
+        findUnique: vi.fn().mockResolvedValue({
+          id: 'r1',
+          publicId: 'PRZ-2026-000001',
+          userId: 'owner-1',
+          categoryId: null,
+          subcategory: null,
+          departmentId: null,
+          institutionId: null,
+          description: 'x',
+          status: ReportStatus.PENDING,
+          priority: Priority.LOW,
+          lat: 42.2,
+          lng: 20.7,
+          address: null,
+          photoUrl: null,
+          photoAfterUrl: null,
+          aiClassification: null,
+          aiConfidence: null,
+          duplicateOfId: null,
+          isDuplicate: false,
+          assignedStaffId: null,
+          dueAt: null,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          category: null,
+          department: null,
+          institution: null,
+          _count: { votes: 0 },
+        }),
+      },
+      auditLog: { create: auditCreate },
+    };
+    const service = new ReportsService(
+      prisma as unknown as PrismaService,
+      { uploadImage: vi.fn() } as unknown as CloudinaryService,
+      { classifyReportPhoto: vi.fn() } as unknown as AiClassificationService,
+      { emit: vi.fn() } as unknown as EventEmitter2,
+      { routeByCategory: vi.fn() } as unknown as RoutingService,
+      { sendReportReceivedEmail: vi.fn() } as unknown as MailService,
+      { webOrigin: 'http://localhost:3000' } as unknown as ConfigService,
+    );
+
+    await service.addStaffNote(
+      'r1',
+      { id: 'staff-1', email: 's@t.local', role: Role.DEPARTMENT_STAFF },
+      { note: '  site visit  ' },
+    );
+
+    expect(auditCreate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          action: 'report.note',
+          metadata: { note: 'site visit' },
+        }),
+      }),
+    );
+  });
+});
