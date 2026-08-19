@@ -3,10 +3,18 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import { FileText, Home, Map, Plus, UserRound } from 'lucide-react';
+import { BarChart3, Home, Map, Plus, UserRound } from 'lucide-react';
+import { useAuth } from '@/components/auth-provider';
 import { cn } from '@/lib/utils';
 
-const HIDDEN_PREFIXES = ['/login', '/register', '/auth'];
+const HIDDEN_PREFIXES = [
+  '/login',
+  '/register',
+  '/auth',
+  '/forgot-password',
+  '/reset-password',
+  '/verify-email',
+];
 
 type NavItem = {
   href: string;
@@ -19,10 +27,14 @@ type NavItem = {
 export function MobileBottomNav() {
   const t = useTranslations('Nav');
   const pathname = usePathname();
+  const { user } = useAuth();
 
   if (HIDDEN_PREFIXES.some((p) => pathname === p || pathname.startsWith(`${p}/`))) {
     return null;
   }
+
+  const accountHref = user ? '/account' : '/login';
+  const accountLabel = user ? t('account') : t('login');
 
   const items: NavItem[] = [
     {
@@ -45,22 +57,22 @@ export function MobileBottomNav() {
       isActive: (p) => p === '/report',
     },
     {
-      href: '/account#reports',
-      label: t('myReports'),
-      icon: FileText,
-      isActive: (p) => p === '/account',
+      href: '/transparency',
+      label: t('transparency'),
+      icon: BarChart3,
+      isActive: (p) => p === '/transparency',
     },
     {
-      href: '/account#profile',
-      label: t('profile'),
+      href: accountHref,
+      label: accountLabel,
       icon: UserRound,
-      isActive: (p) => p === '/notifications',
+      isActive: (p) => p === '/account' || p.startsWith('/account') || p === '/notifications',
     },
   ];
 
   return (
     <nav
-      className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-background/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-md md:hidden"
+      className="mobile-bottom-nav fixed inset-x-0 bottom-0 z-40 border-t border-border bg-background/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-md lg:hidden"
       aria-label={t('mobileNav')}
     >
       <ul className="mx-auto grid max-w-lg grid-cols-5 items-end px-1 pt-1">
@@ -74,18 +86,18 @@ export function MobileBottomNav() {
               <li key={key} className="flex justify-center">
                 <Link
                   href={item.href}
-                  className="-mt-4 flex flex-col items-center gap-0.5"
+                  className="-mt-4 flex min-w-11 flex-col items-center gap-0.5"
                   aria-current={active ? 'page' : undefined}
                 >
                   <span
                     className={cn(
-                      'inline-flex h-12 w-12 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-soft ring-4 ring-stone-50 transition duration-normal ease-product hover:bg-primary-hover active:scale-95',
+                      'inline-flex h-12 w-12 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-soft ring-4 ring-background transition duration-normal ease-product hover:bg-primary-hover active:scale-95',
                       active && 'ring-mosque-200',
                     )}
                   >
                     <Icon className="h-5 w-5" aria-hidden />
                   </span>
-                  <span className="text-[10px] font-medium text-mosque-800">{item.label}</span>
+                  <span className="text-[10px] font-medium text-primary">{item.label}</span>
                 </Link>
               </li>
             );
@@ -96,13 +108,13 @@ export function MobileBottomNav() {
               <Link
                 href={item.href}
                 className={cn(
-                  'flex min-h-[3.25rem] w-full flex-col items-center justify-center gap-0.5 px-1 text-[10px] font-medium',
-                  active ? 'text-mosque-800' : 'text-stone-600',
+                  'flex min-h-11 w-full flex-col items-center justify-center gap-0.5 px-1 py-1 text-[10px] font-medium',
+                  active ? 'text-primary' : 'text-muted-foreground',
                 )}
                 aria-current={active ? 'page' : undefined}
               >
-                <Icon className={cn('h-5 w-5', active && 'text-mosque-700')} aria-hidden />
-                <span className="truncate">{item.label}</span>
+                <Icon className={cn('h-5 w-5', active && 'text-primary')} aria-hidden />
+                <span className="max-w-full truncate">{item.label}</span>
               </Link>
             </li>
           );

@@ -77,7 +77,7 @@ export default async function RootLayout({
   return (
     <html lang={locale} suppressHydrationWarning>
       <body
-        className={`${display.variable} ${sans.variable} min-h-screen bg-background font-sans text-body text-foreground antialiased`}
+        className={`${display.variable} ${sans.variable} min-h-dvh bg-background font-sans text-body text-foreground antialiased`}
         suppressHydrationWarning
       >
         <ThemeProvider>

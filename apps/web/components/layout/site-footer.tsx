@@ -17,7 +17,7 @@ export async function SiteFooter() {
   ];
 
   return (
-    <footer className="border-t border-border bg-muted/40 pb-[calc(4.25rem+env(safe-area-inset-bottom))] md:pb-0">
+    <footer className="border-t border-border bg-muted/40 pb-[var(--bottom-nav-h)] lg:pb-0">
       <PageContainer className="py-10 md:py-12">
         <div className="flex flex-col gap-8 md:flex-row md:items-start md:justify-between">
           <div className="max-w-sm">
@@ -33,7 +33,7 @@ export async function SiteFooter() {
               <Link
                 key={link.href}
                 href={link.href}
-                className="text-sm font-medium text-muted-foreground hover:text-foreground"
+                className="inline-flex min-h-11 items-center text-sm font-medium text-muted-foreground hover:text-foreground"
               >
                 {link.label}
               </Link>

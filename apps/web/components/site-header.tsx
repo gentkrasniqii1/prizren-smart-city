@@ -1,9 +1,9 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useId, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { usePathname } from 'next/navigation';
-import { Menu, X } from 'lucide-react';
+import { LogOut, Menu } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useAuth } from '@/components/auth-provider';
 import { Logo } from '@/components/brand/Logo';
@@ -13,43 +13,28 @@ import { PageContainer } from '@/components/layout/page-container';
 import { UserMenu } from '@/components/layout/user-menu';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { Button } from '@/components/ui/button';
-import { cn } from '@/lib/utils';
-
-function navLinkClass(active: boolean) {
-  return cn(
-    'rounded-md px-2.5 py-1.5 text-sm font-medium transition',
-    active
-      ? 'bg-muted text-foreground'
-      : 'text-muted-foreground hover:bg-muted hover:text-foreground',
-  );
-}
+import {
+  Navbar,
+  NavbarBrand,
+  NavbarCTA,
+  NavbarDrawerLink,
+  NavbarLink,
+  NavbarLinks,
+  NavbarRow,
+  NavbarUtilities,
+  skipLinkClassName,
+} from '@/components/ui/navbar';
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 
 export function SiteHeader() {
   const t = useTranslations('Nav');
-  const { user, loading } = useAuth();
+  const { user, loading, logout } = useAuth();
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
-  const menuId = useId();
 
   useEffect(() => {
     setOpen(false);
   }, [pathname]);
-
-  useEffect(() => {
-    if (!open) return;
-    function onKey(e: KeyboardEvent) {
-      if (e.key === 'Escape') setOpen(false);
-    }
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-    window.addEventListener('keydown', onKey);
-    const first = document.getElementById(menuId)?.querySelector<HTMLElement>('a, button');
-    first?.focus();
-    return () => {
-      document.body.style.overflow = prev;
-      window.removeEventListener('keydown', onKey);
-    };
-  }, [open, menuId]);
 
   const primaryLinks = [
     {
@@ -70,127 +55,150 @@ export function SiteHeader() {
   ];
 
   return (
-    <header className="sticky top-0 z-40 border-b border-border/80 bg-background/95 backdrop-blur-sm">
-      <a
-        href="#main-content"
-        className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded-md focus:bg-primary focus:px-3 focus:py-2 focus:text-sm focus:text-primary-foreground"
-      >
+    <Navbar>
+      <a href="#main-content" className={skipLinkClassName()}>
         {t('skipToContent')}
       </a>
 
-      <PageContainer className="flex h-14 items-center justify-between gap-3 sm:h-16">
-        <Link href="/" className="min-w-0 shrink" onClick={() => setOpen(false)}>
-          <span className="md:hidden">
-            <Logo variant="full" size={32} compact />
-          </span>
-          <span className="hidden md:inline-flex">
-            <Logo variant="full" size={32} />
-          </span>
-        </Link>
-
-        {/* Desktop primary nav — kept lean; account actions sit on the right */}
-        <nav className="hidden items-center gap-0.5 md:flex" aria-label={t('mainNav')}>
-          {primaryLinks.map((link) => (
-            <Link key={link.href} href={link.href} className={navLinkClass(link.active)}>
-              {link.label}
+      <PageContainer>
+        <NavbarRow>
+          <NavbarBrand>
+            <Link
+              href="/"
+              className="inline-flex min-h-11 items-center"
+              onClick={() => setOpen(false)}
+            >
+              <span className="lg:hidden">
+                <Logo variant="full" size={32} compact />
+              </span>
+              <span className="hidden lg:inline-flex">
+                <Logo variant="full" size={32} />
+              </span>
             </Link>
-          ))}
-          <Link href="/report" className="ml-2">
-            <Button size="sm">{t('reportCta')}</Button>
-          </Link>
-        </nav>
+          </NavbarBrand>
 
-        <div className="hidden items-center gap-1 md:flex">
-          <ThemeToggle />
-          {!loading && user ? (
-            <>
-              <NotificationBell />
-              <UserMenu />
-            </>
-          ) : !loading ? (
-            <>
-              <Link href="/login" className={navLinkClass(pathname === '/login')}>
-                {t('login')}
-              </Link>
-              <Link href="/register">
-                <Button size="sm" variant="secondary">
-                  {t('register')}
+          <NavbarLinks label={t('mainNav')}>
+            {primaryLinks.map((link) => (
+              <NavbarLink key={link.href} href={link.href} active={link.active}>
+                {link.label}
+              </NavbarLink>
+            ))}
+            <NavbarCTA>
+              <Button asChild size="sm">
+                <Link href="/report">{t('reportCta')}</Link>
+              </Button>
+            </NavbarCTA>
+          </NavbarLinks>
+
+          <NavbarUtilities>
+            <ThemeToggle />
+            {!loading && user ? <NotificationBell /> : null}
+            {!loading && user ? <UserMenu /> : null}
+            <LanguageSwitcher variant="compact" />
+            {!loading && user ? (
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => void logout()}
+                aria-label={t('logout')}
+              >
+                <LogOut className="h-4 w-4" aria-hidden />
+                {t('logout')}
+              </Button>
+            ) : null}
+            {!loading && !user ? (
+              <>
+                <Button asChild variant="ghost" size="sm">
+                  <Link href="/login">{t('login')}</Link>
                 </Button>
-              </Link>
-            </>
-          ) : null}
-          <LanguageSwitcher />
-        </div>
+                <Button asChild variant="secondary" size="sm">
+                  <Link href="/register">{t('register')}</Link>
+                </Button>
+              </>
+            ) : null}
+          </NavbarUtilities>
 
-        {/* Mobile top bar: language + menu (primary actions live in bottom nav) */}
-        <div className="flex items-center gap-1 md:hidden">
-          {!loading && user ? <NotificationBell /> : null}
-          <ThemeToggle />
-          <LanguageSwitcher />
-          <Button
-            type="button"
-            variant="icon"
-            size="sm"
-            aria-expanded={open}
-            aria-controls={menuId}
-            onClick={() => setOpen((v) => !v)}
-            aria-label={open ? t('closeMenu') : t('openMenu')}
-          >
-            {open ? (
-              <X className="h-5 w-5" aria-hidden />
-            ) : (
+          <div className="lg:hidden">
+            <Button
+              type="button"
+              variant="icon"
+              size="sm"
+              aria-expanded={open}
+              onClick={() => setOpen(true)}
+              aria-label={t('openMenu')}
+            >
               <Menu className="h-5 w-5" aria-hidden />
-            )}
-          </Button>
-        </div>
+            </Button>
+          </div>
+        </NavbarRow>
       </PageContainer>
 
-      {open ? (
-        <nav
-          id={menuId}
-          className="border-t border-border bg-muted md:hidden"
-          aria-label={t('mainNav')}
-        >
-          <PageContainer className="flex flex-col gap-1 py-3 pb-bottom-nav">
+      <Sheet open={open} onOpenChange={setOpen}>
+        <SheetContent side="right" className="flex w-full max-w-sm flex-col gap-0 p-0 lg:hidden">
+          <SheetHeader className="border-b border-border px-inset py-gutter pr-14 text-left">
+            <SheetTitle>{t('mainNav')}</SheetTitle>
+          </SheetHeader>
+
+          <nav
+            className="flex min-h-0 flex-1 flex-col overflow-y-auto py-3"
+            aria-label={t('mainNav')}
+          >
             {primaryLinks.map((link) => (
-              <Link
+              <NavbarDrawerLink
                 key={link.href}
                 href={link.href}
-                className={cn(navLinkClass(link.active), 'min-h-11 px-3 py-3')}
+                active={link.active}
                 onClick={() => setOpen(false)}
               >
                 {link.label}
-              </Link>
+              </NavbarDrawerLink>
             ))}
-            <Link href="/report" onClick={() => setOpen(false)} className="pt-1">
-              <Button size="sm" className="w-full min-h-11">
-                {t('reportCta')}
+
+            <div className="px-gutter pt-3">
+              <Button asChild className="w-full">
+                <Link href="/report" onClick={() => setOpen(false)}>
+                  {t('reportCtaShort')}
+                </Link>
               </Button>
-            </Link>
-            {!loading && !user ? (
-              <div className="mt-2 flex flex-col gap-1 border-t border-stone-200 pt-2">
-                <Link
-                  href="/login"
-                  className={cn(navLinkClass(pathname === '/login'), 'min-h-11 px-3 py-3')}
+            </div>
+
+            <div className="mt-3 border-t border-border pt-3">
+              {!loading && user ? (
+                <NavbarDrawerLink
+                  href="/account"
+                  active={pathname === '/account' || pathname.startsWith('/account')}
                   onClick={() => setOpen(false)}
                 >
-                  {t('login')}
-                </Link>
-                <Link href="/register" onClick={() => setOpen(false)}>
-                  <Button size="sm" variant="secondary" className="w-full min-h-11">
+                  {t('profile')}
+                </NavbarDrawerLink>
+              ) : !loading ? (
+                <>
+                  <NavbarDrawerLink
+                    href="/login"
+                    active={pathname === '/login'}
+                    onClick={() => setOpen(false)}
+                  >
+                    {t('login')}
+                  </NavbarDrawerLink>
+                  <NavbarDrawerLink
+                    href="/register"
+                    active={pathname === '/register'}
+                    onClick={() => setOpen(false)}
+                  >
                     {t('register')}
-                  </Button>
-                </Link>
-              </div>
-            ) : null}
-            {!loading && user ? (
-              <div className="mt-2 border-t border-border pt-2">
-                <UserMenu />
-              </div>
-            ) : null}
-          </PageContainer>
-        </nav>
-      ) : null}
-    </header>
+                  </NavbarDrawerLink>
+                </>
+              ) : null}
+            </div>
+          </nav>
+
+          <div className="mt-auto flex items-center justify-between gap-2 border-t border-border px-inset py-gutter pb-[max(1rem,env(safe-area-inset-bottom))]">
+            <ThemeToggle />
+            <LanguageSwitcher variant="compact" />
+          </div>
+        </SheetContent>
+      </Sheet>
+    </Navbar>
   );
 }
