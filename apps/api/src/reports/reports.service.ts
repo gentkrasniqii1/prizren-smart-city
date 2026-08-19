@@ -62,10 +62,10 @@ import { RoutingService } from '../routing/routing.service';
 const STAFF_ROLES: Role[] = [Role.DEPARTMENT_STAFF, Role.DEPARTMENT_ADMIN, Role.SUPER_ADMIN];
 const AI_ADMIN_ROLES: Role[] = [Role.DEPARTMENT_ADMIN, Role.SUPER_ADMIN];
 const OPEN_STATUSES: ReportStatus[] = [
-  ReportStatus.PENDING,
-  ReportStatus.IN_REVIEW,
+  ReportStatus.SUBMITTED,
+  ReportStatus.UNDER_REVIEW,
   ReportStatus.ASSIGNED,
-  ReportStatus.ACCEPTED,
+  ReportStatus.RECEIVED,
   ReportStatus.IN_PROGRESS,
   ReportStatus.WAITING_FOR_INFORMATION,
 ];
@@ -143,7 +143,7 @@ export class ReportsService {
           institutionId: routed?.institutionId ?? undefined,
           priority: routed?.defaultPriority ?? null,
           photoUrl,
-          status: ReportStatus.PENDING,
+          status: ReportStatus.SUBMITTED,
         },
         include: REPORT_INCLUDE,
       });
@@ -162,7 +162,7 @@ export class ReportsService {
 
     let result = classified ?? report;
     const slaHours = routed?.slaHours;
-    if (result.status === ReportStatus.PENDING && (result.departmentId || result.institutionId)) {
+    if (result.status === ReportStatus.SUBMITTED && (result.departmentId || result.institutionId)) {
       result = await this.enterInstitutionQueue(result.id, SYSTEM_ACTOR, slaHours);
     }
 
@@ -397,7 +397,7 @@ export class ReportsService {
       this.prisma.report.count({
         where: {
           userId,
-          status: { in: [ReportStatus.ASSIGNED, ReportStatus.ACCEPTED, ReportStatus.IN_PROGRESS] },
+          status: { in: [ReportStatus.ASSIGNED, ReportStatus.RECEIVED, ReportStatus.IN_PROGRESS] },
         },
       }),
       this.prisma.report.count({ where: { userId, status: ReportStatus.RESOLVED } }),
@@ -432,7 +432,7 @@ export class ReportsService {
     }
 
     const nextDueAt =
-      (dto.status === ReportStatus.ASSIGNED || dto.status === ReportStatus.ACCEPTED) &&
+      (dto.status === ReportStatus.ASSIGNED || dto.status === ReportStatus.RECEIVED) &&
       !existing.dueAt
         ? computeDueAt(existing.priority)
         : undefined;
@@ -595,7 +595,7 @@ export class ReportsService {
     }
 
     const nextStatus =
-      existing.status === ReportStatus.PENDING || existing.status === ReportStatus.IN_REVIEW
+      existing.status === ReportStatus.SUBMITTED || existing.status === ReportStatus.UNDER_REVIEW
         ? ReportStatus.ASSIGNED
         : existing.status;
 
@@ -727,7 +727,7 @@ export class ReportsService {
       currentIndex < 0 ? Priority.HIGH : order[Math.min(currentIndex + 1, order.length - 1)];
 
     const nextStatus =
-      existing.status === ReportStatus.PENDING ? ReportStatus.IN_REVIEW : existing.status;
+      existing.status === ReportStatus.SUBMITTED ? ReportStatus.UNDER_REVIEW : existing.status;
     const dueAt = OPEN_STATUSES.includes(nextStatus) ? computeDueAt(nextPriority) : existing.dueAt;
 
     const updated = await this.prisma.$transaction(async (tx) => {
@@ -994,10 +994,10 @@ export class ReportsService {
 
     const routed = await this.routeFromClassification(classification);
     const nextStatus =
-      existing.status === ReportStatus.PENDING || existing.status === ReportStatus.IN_REVIEW
+      existing.status === ReportStatus.SUBMITTED || existing.status === ReportStatus.UNDER_REVIEW
         ? routed?.departmentId || routed?.institutionId
           ? ReportStatus.ASSIGNED
-          : ReportStatus.IN_REVIEW
+          : ReportStatus.UNDER_REVIEW
         : existing.status;
     const dueAt =
       nextStatus === ReportStatus.ASSIGNED && !existing.dueAt
@@ -1100,7 +1100,7 @@ export class ReportsService {
     }
 
     const needsReview = classification.confidence < AI_CONFIDENCE_THRESHOLD;
-    const nextStatus = needsReview ? ReportStatus.IN_REVIEW : input.currentStatus;
+    const nextStatus = needsReview ? ReportStatus.UNDER_REVIEW : input.currentStatus;
     const routed =
       !needsReview && !input.categoryId ? await this.routeFromClassification(classification) : null;
 
@@ -1237,7 +1237,7 @@ export class ReportsService {
     if (!existing) {
       throw new NotFoundException('Report not found');
     }
-    if (existing.status !== ReportStatus.PENDING) {
+    if (existing.status !== ReportStatus.SUBMITTED) {
       return existing;
     }
     if (!existing.departmentId && !existing.institutionId) {
@@ -1256,7 +1256,7 @@ export class ReportsService {
       await tx.statusHistory.create({
         data: {
           reportId,
-          oldStatus: ReportStatus.PENDING,
+          oldStatus: ReportStatus.SUBMITTED,
           newStatus: ReportStatus.ASSIGNED,
           changedBy,
           note: existing.institutionId
@@ -1272,7 +1272,7 @@ export class ReportsService {
       new StatusChangedEvent(
         updated.id,
         existing.userId,
-        ReportStatus.PENDING,
+        ReportStatus.SUBMITTED,
         ReportStatus.ASSIGNED,
         changedBy,
       ),

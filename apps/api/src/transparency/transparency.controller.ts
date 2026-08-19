@@ -15,7 +15,10 @@ export class TransparencyController {
       this.analytics.byCategory(emptyQuery),
     ]);
 
-    const pendingOpen = summary.pending + summary.inReview + summary.assigned + summary.inProgress;
+    const closed = new Set(['RESOLVED', 'REJECTED', 'DUPLICATE']);
+    const pendingOpen = byStatus
+      .filter((row) => !closed.has(row.status))
+      .reduce((sum, row) => sum + row.count, 0);
     const resolutionRate =
       summary.total > 0 ? Math.round((summary.resolved / summary.total) * 1000) / 10 : null;
 

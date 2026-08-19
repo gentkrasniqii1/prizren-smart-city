@@ -75,7 +75,7 @@ describe('ReportsService.updateStatus', () => {
   it('rejects an illegal jump that skips the institution queue', async () => {
     prisma.report.findUnique.mockResolvedValue({
       id: 'r1',
-      status: ReportStatus.PENDING,
+      status: ReportStatus.SUBMITTED,
       photoAfterUrl: null,
       userId: 'owner-1',
       priority: null,
@@ -104,7 +104,7 @@ describe('ReportsService.updateStatus', () => {
       departmentId: 'd1',
       institutionId: 'i1',
       description: 'x',
-      status: ReportStatus.ACCEPTED,
+      status: ReportStatus.RECEIVED,
       priority: Priority.MEDIUM,
       lat: 42.2,
       lng: 20.7,
@@ -134,7 +134,7 @@ describe('ReportsService.updateStatus', () => {
     );
 
     const dto = await service.applyWorkflowAction('r1', staff as never, { action: 'accept' });
-    expect(dto.status).toBe(ReportStatus.ACCEPTED);
+    expect(dto.status).toBe(ReportStatus.RECEIVED);
     expect(events.emit).toHaveBeenCalled();
   });
 });
@@ -282,7 +282,7 @@ describe('ReportsService.escalate', () => {
       departmentId: null,
       institutionId: null,
       description: 'x',
-      status: ReportStatus.IN_REVIEW,
+      status: ReportStatus.UNDER_REVIEW,
       priority: Priority.HIGH,
       lat: 42.2,
       lng: 20.7,
@@ -308,7 +308,7 @@ describe('ReportsService.escalate', () => {
         findUnique: vi.fn().mockResolvedValue({
           id: 'r1',
           userId: 'owner-1',
-          status: ReportStatus.PENDING,
+          status: ReportStatus.SUBMITTED,
           priority: Priority.MEDIUM,
           dueAt: null,
         }),
@@ -348,7 +348,7 @@ describe('ReportsService.escalate', () => {
       expect.objectContaining({
         data: expect.objectContaining({
           priority: Priority.HIGH,
-          status: ReportStatus.IN_REVIEW,
+          status: ReportStatus.UNDER_REVIEW,
         }),
       }),
     );
@@ -370,7 +370,7 @@ describe('ReportsService.addStaffNote', () => {
           departmentId: null,
           institutionId: null,
           description: 'x',
-          status: ReportStatus.PENDING,
+          status: ReportStatus.SUBMITTED,
           priority: Priority.LOW,
           lat: 42.2,
           lng: 20.7,

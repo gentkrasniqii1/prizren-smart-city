@@ -39,7 +39,7 @@ describe('AuditService.log', () => {
       action: 'report.status_update',
       entityType: 'Report',
       entityId: 'r1',
-      oldValue: { status: 'PENDING' },
+      oldValue: { status: 'SUBMITTED' },
       newValue: { status: 'ASSIGNED' },
       ipAddress: '127.0.0.1',
       userAgent: 'vitest',
@@ -48,7 +48,7 @@ describe('AuditService.log', () => {
     expect(prisma.auditLog.create).toHaveBeenCalledWith({
       data: expect.objectContaining({
         actorType: 'SYSTEM',
-        oldValue: { status: 'PENDING' },
+        oldValue: { status: 'SUBMITTED' },
         newValue: { status: 'ASSIGNED' },
         ipAddress: '127.0.0.1',
         userAgent: 'vitest',

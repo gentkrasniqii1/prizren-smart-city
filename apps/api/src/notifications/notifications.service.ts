@@ -1,9 +1,12 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { OnEvent } from '@nestjs/event-emitter';
+import { EventEmitter2, OnEvent } from '@nestjs/event-emitter';
+import { Role } from '@prisma/client';
 import { ConfigService } from '../auth/config.service';
 import { MailService } from '../mail/mail.service';
 import { PrismaService } from '../prisma/prisma.service';
 import {
+  NOTIFICATION_CREATED_EVENT,
+  NotificationCreatedEvent,
   REPORT_CREATED_EVENT,
   REPORT_STATUS_CHANGED_EVENT,
   ReportCreatedEvent,
@@ -19,32 +22,22 @@ export class NotificationsService {
     private readonly prisma: PrismaService,
     private readonly mail: MailService,
     private readonly config: ConfigService,
+    private readonly events: EventEmitter2,
   ) {}
 
   @OnEvent(REPORT_CREATED_EVENT)
   async handleReportCreated(event: ReportCreatedEvent) {
-    await this.prisma.notification.create({
-      data: {
-        userId: event.ownerUserId,
-        reportId: event.reportId,
-        type: 'REPORT_RECEIVED',
-        channel: 'IN_APP',
-        read: false,
-      },
-    });
+    await this.createInApp(event.ownerUserId, event.reportId, 'REPORT_RECEIVED');
+    await this.notifyInstitutionStaff(event.reportId, event.ownerUserId);
   }
 
   @OnEvent(REPORT_STATUS_CHANGED_EVENT)
   async handleStatusChanged(event: StatusChangedEvent) {
-    await this.prisma.notification.create({
-      data: {
-        userId: event.ownerUserId,
-        reportId: event.reportId,
-        type: notificationTypeForStatus(event.newStatus),
-        channel: 'IN_APP',
-        read: false,
-      },
-    });
+    await this.createInApp(
+      event.ownerUserId,
+      event.reportId,
+      notificationTypeForStatus(event.newStatus),
+    );
 
     const owner = await this.prisma.user.findUnique({
       where: { id: event.ownerUserId },
@@ -119,7 +112,9 @@ export class NotificationsService {
                             ? 'Raporti juaj u shënua si duplikat.'
                             : n.type === 'INFO_REQUESTED'
                               ? 'Institucioni kërkoi informacion shtesë.'
-                              : n.type,
+                              : n.type === 'INSTITUTION_NEW_REPORT'
+                                ? 'Një raport i ri hyri në radhën tuaj.'
+                                : n.type,
       })),
       meta: {
         page,
@@ -158,5 +153,46 @@ export class NotificationsService {
       data: { read: true },
     });
     return { updated: result.count };
+  }
+
+  private async createInApp(userId: string, reportId: string | null, type: string) {
+    await this.prisma.notification.create({
+      data: {
+        userId,
+        reportId,
+        type,
+        channel: 'IN_APP',
+        read: false,
+      },
+    });
+    this.events.emit(NOTIFICATION_CREATED_EVENT, new NotificationCreatedEvent(userId, reportId));
+  }
+
+  private async notifyInstitutionStaff(reportId: string, ownerUserId: string) {
+    const report = await this.prisma.report.findUnique({
+      where: { id: reportId },
+      select: { departmentId: true, institutionId: true },
+    });
+    if (!report?.departmentId && !report?.institutionId) return;
+
+    const staff = await this.prisma.user.findMany({
+      where: {
+        id: { not: ownerUserId },
+        role: { in: [Role.DEPARTMENT_STAFF, Role.DEPARTMENT_ADMIN] },
+        departments: {
+          some: {
+            OR: [
+              ...(report.departmentId ? [{ id: report.departmentId }] : []),
+              ...(report.institutionId ? [{ institutionId: report.institutionId }] : []),
+            ],
+          },
+        },
+      },
+      select: { id: true },
+    });
+
+    for (const user of staff) {
+      await this.createInApp(user.id, reportId, 'INSTITUTION_NEW_REPORT');
+    }
   }
 }

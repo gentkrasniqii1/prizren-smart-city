@@ -23,10 +23,10 @@ export class AnalyticsService {
     const [total, pending, resolved, rejected, inReview, assigned, inProgress, newToday, critical] =
       await Promise.all([
         this.prisma.report.count({ where }),
-        this.prisma.report.count({ where: { ...where, status: ReportStatus.PENDING } }),
+        this.prisma.report.count({ where: { ...where, status: ReportStatus.SUBMITTED } }),
         this.prisma.report.count({ where: { ...where, status: ReportStatus.RESOLVED } }),
         this.prisma.report.count({ where: { ...where, status: ReportStatus.REJECTED } }),
-        this.prisma.report.count({ where: { ...where, status: ReportStatus.IN_REVIEW } }),
+        this.prisma.report.count({ where: { ...where, status: ReportStatus.UNDER_REVIEW } }),
         this.prisma.report.count({ where: { ...where, status: ReportStatus.ASSIGNED } }),
         this.prisma.report.count({ where: { ...where, status: ReportStatus.IN_PROGRESS } }),
         this.prisma.report.count({
@@ -184,10 +184,10 @@ export class AnalyticsService {
     });
 
     const order: ReportStatus[] = [
-      ReportStatus.PENDING,
-      ReportStatus.IN_REVIEW,
+      ReportStatus.SUBMITTED,
+      ReportStatus.RECEIVED,
+      ReportStatus.UNDER_REVIEW,
       ReportStatus.ASSIGNED,
-      ReportStatus.ACCEPTED,
       ReportStatus.IN_PROGRESS,
       ReportStatus.WAITING_FOR_INFORMATION,
       ReportStatus.RESOLVED,
