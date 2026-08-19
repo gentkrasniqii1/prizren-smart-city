@@ -282,6 +282,7 @@ enum ReportStatus {
   PENDING
   IN_REVIEW
   ASSIGNED
+  ACCEPTED
   IN_PROGRESS
   WAITING_FOR_INFORMATION
   RESOLVED
@@ -303,6 +304,7 @@ model StatusHistory {
   oldStatus ReportStatus
   newStatus ReportStatus
   changedBy String
+  note      String?
   changedAt DateTime     @default(now())
 }
 
