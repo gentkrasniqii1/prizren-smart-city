@@ -208,6 +208,19 @@ export interface UpdateReportStatusRequest {
   note?: string;
 }
 
+export interface UpdateReportPriorityRequest {
+  priority: Priority;
+  note?: string;
+}
+
+export interface EscalateReportRequest {
+  note?: string;
+}
+
+export interface AddReportNoteRequest {
+  note: string;
+}
+
 export interface UpdateAiClassificationRequest {
   action: 'accept' | 'edit';
   category?: AICategory;
@@ -226,6 +239,10 @@ export interface AnalyticsSummary {
   assigned: number;
   inProgress: number;
   avgResolutionHours: number | null;
+  /** Reports created since local midnight. */
+  newToday: number;
+  /** Open reports with CRITICAL priority. */
+  critical: number;
 }
 
 export interface AnalyticsByCategoryItem {
@@ -245,6 +262,12 @@ export interface AnalyticsByDepartmentItem {
   count: number;
 }
 
+export interface AnalyticsByInstitutionItem {
+  institutionId: string | null;
+  institution: string;
+  count: number;
+}
+
 export interface AnalyticsOverTimeItem {
   date: string;
   count: number;
@@ -260,6 +283,7 @@ export interface MyReportStats {
 export interface AssignReportRequest {
   departmentId?: string | null;
   assignedStaffId?: string | null;
+  institutionId?: string | null;
 }
 
 export interface AnalyticsSla {
