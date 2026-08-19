@@ -68,7 +68,7 @@ export function ResetPasswordForm() {
       headline={t('panelHeadline')}
       body={t('panelBody')}
     >
-      <h1 className="text-h1 tracking-tight text-foreground">{t('resetTitle')}</h1>
+      <h1 className="ds-page-title">{t('resetTitle')}</h1>
       <p className="mt-2 text-sm text-muted-foreground">{t('resetBody')}</p>
 
       <form onSubmit={onSubmit} className="mt-8 space-y-4" noValidate>

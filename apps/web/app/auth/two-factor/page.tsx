@@ -59,7 +59,7 @@ export default function TwoFactorPage() {
       headline={t('panelHeadline')}
       body={t('panelBody')}
     >
-      <h1 className="text-h1 tracking-tight text-foreground">{t('twoFactorTitle')}</h1>
+      <h1 className="ds-page-title">{t('twoFactorTitle')}</h1>
       <p className="mt-2 text-sm text-muted-foreground">{t('twoFactorBody')}</p>
 
       <form onSubmit={onSubmit} className="mt-8 space-y-4">

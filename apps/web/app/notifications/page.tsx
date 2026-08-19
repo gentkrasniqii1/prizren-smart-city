@@ -85,8 +85,8 @@ export default function NotificationsPage() {
     return (
       <main className="py-16">
         <PageContainer width="narrow">
-          <h1 className="font-display text-2xl tracking-tight text-stone-950">{t('title')}</h1>
-          <p className="mt-3 text-stone-600">{t('loginRequired')}</p>
+          <h1 className="ds-page-title">{t('title')}</h1>
+          <p className="mt-cluster text-muted-foreground">{t('loginRequired')}</p>
           <Link
             href="/login"
             className="mt-6 inline-flex min-h-11 items-center font-medium text-mosque-800 underline"
@@ -103,9 +103,7 @@ export default function NotificationsPage() {
       <PageContainer width="narrow">
         <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end sm:justify-between">
           <div>
-            <h1 className="font-display text-h1 tracking-tight text-stone-950 sm:text-3xl">
-              {t('title')}
-            </h1>
+            <h1 className="ds-page-title">{t('title')}</h1>
             <p className="mt-1 text-sm text-stone-600">{t('unread', { count: unreadCount })}</p>
           </div>
           <Button

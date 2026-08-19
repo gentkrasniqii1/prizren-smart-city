@@ -204,9 +204,7 @@ export function ReportWizard() {
             role="status"
           >
             <CheckCircle2 className="mx-auto h-12 w-12 text-river-600" aria-hidden />
-            <h1 className="mt-4 font-display text-h1 tracking-tight text-foreground sm:text-3xl">
-              {t('successTitle')}
-            </h1>
+            <h1 className="ds-page-title mt-4">{t('successTitle')}</h1>
             <p className="mt-2 text-muted-foreground">{t('successBody')}</p>
 
             <dl className="mx-auto mt-6 max-w-sm space-y-3 rounded-lg border border-border bg-muted/40 p-4 text-left text-sm">
@@ -245,9 +243,7 @@ export function ReportWizard() {
   return (
     <main className="pb-bottom-nav pt-6 sm:pt-8">
       <PageContainer width="narrow">
-        <h1 className="font-display text-h1 tracking-tight text-foreground sm:text-3xl">
-          {t('title')}
-        </h1>
+        <h1 className="ds-page-title">{t('title')}</h1>
         <p className="mt-2 text-muted-foreground">{t('subtitle')}</p>
 
         <div className="mt-8 rounded-xl border border-border bg-card p-4 sm:p-6">

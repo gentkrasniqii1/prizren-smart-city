@@ -346,9 +346,7 @@ export function ReportDetailView() {
             ) : null}
           </div>
 
-          <h1 className="mt-3 font-display text-h1 tracking-tight text-foreground sm:text-3xl">
-            {t('title')}
-          </h1>
+          <h1 className="ds-page-title mt-3">{t('title')}</h1>
           <p className="mt-1 text-sm text-muted-foreground">
             {t('idLabel', { id: shortId })}
             {report.categoryName ? ` · ${report.categoryName}` : ''}
@@ -382,10 +380,7 @@ export function ReportDetailView() {
             </section>
 
             <section aria-labelledby="report-photos-heading">
-              <h2
-                id="report-photos-heading"
-                className="font-display text-xl tracking-tight text-foreground"
-              >
+              <h2 id="report-photos-heading" className="ds-section-title">
                 {t('photosHeading')}
               </h2>
               <div className="mt-4 grid gap-4 sm:grid-cols-2">
@@ -428,10 +423,7 @@ export function ReportDetailView() {
               aria-labelledby="report-comments-heading"
               className="border-t border-border pt-8"
             >
-              <h2
-                id="report-comments-heading"
-                className="font-display text-xl tracking-tight text-foreground"
-              >
+              <h2 id="report-comments-heading" className="ds-section-title">
                 {t('commentsHeading')}
               </h2>
               <ul className="mt-4 space-y-4">
@@ -485,10 +477,7 @@ export function ReportDetailView() {
                 aria-labelledby="report-workflow-heading"
                 className="rounded-xl border border-border bg-card p-5"
               >
-                <h2
-                  id="report-workflow-heading"
-                  className="font-display text-lg tracking-tight text-foreground"
-                >
+                <h2 id="report-workflow-heading" className="ds-card-title">
                   {t('workflowHeading')}
                 </h2>
                 <p className="mt-1 text-sm text-muted-foreground">{t('workflowIntro')}</p>
@@ -524,10 +513,7 @@ export function ReportDetailView() {
                     <Bot className="h-4 w-4" aria-hidden />
                   </span>
                   <div className="min-w-0 flex-1">
-                    <h2
-                      id="report-ai-heading"
-                      className="font-display text-lg tracking-tight text-foreground"
-                    >
+                    <h2 id="report-ai-heading" className="ds-card-title">
                       {t('aiHeading')}
                     </h2>
                     {!editing ? (
@@ -705,10 +691,7 @@ export function ReportDetailView() {
                     <Bot className="h-4 w-4 animate-pulse" aria-hidden />
                   </span>
                   <div>
-                    <h2
-                      id="report-ai-heading"
-                      className="font-display text-lg tracking-tight text-foreground"
-                    >
+                    <h2 id="report-ai-heading" className="ds-card-title">
                       {t('aiHeading')}
                     </h2>
                     <p className="mt-2 text-sm text-foreground" role="status">
@@ -722,10 +705,7 @@ export function ReportDetailView() {
             )}
 
             <section aria-labelledby="report-related-heading">
-              <h2
-                id="report-related-heading"
-                className="font-display text-xl tracking-tight text-foreground"
-              >
+              <h2 id="report-related-heading" className="ds-section-title">
                 {t('relatedHeading')}
               </h2>
               {related.length === 0 ? (

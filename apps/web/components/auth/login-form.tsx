@@ -86,9 +86,7 @@ export function LoginForm() {
       <p className="mt-8 text-xs font-semibold uppercase tracking-[0.18em] text-gilt">
         {t('welcomeBack')}
       </p>
-      <h1 className="mt-2 font-display text-3xl font-semibold tracking-tight text-foreground sm:text-[2rem]">
-        {t('loginTitle')}
-      </h1>
+      <h1 className="ds-page-title mt-2">{t('loginTitle')}</h1>
 
       <form onSubmit={onSubmit} className="relative mt-8 space-y-4" noValidate>
         <div>

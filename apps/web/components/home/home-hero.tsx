@@ -22,30 +22,25 @@ export async function HomeHero() {
         aria-hidden
       />
       <PageContainer className="relative flex min-h-[min(92svh,52rem)] flex-col justify-end pb-20 pt-28 sm:justify-center sm:pb-24">
-        <p className="motion-fade-up text-xs font-semibold uppercase tracking-[0.22em] text-gilt sm:text-sm">
-          {t('eyebrow')}
-        </p>
-        <h1 className="motion-fade-up motion-delay-1 mt-4 max-w-3xl font-display text-4xl font-semibold tracking-tight text-overlay-foreground sm:text-5xl md:text-6xl">
+        <p className="motion-fade-up ds-kicker sm:text-sm">{t('eyebrow')}</p>
+        <h1 className="ds-display motion-fade-up motion-delay-1 mt-gutter max-w-3xl text-overlay-foreground sm:text-display-lg md:text-display-xl">
           {t('title')}
         </h1>
         <p className="motion-fade-up motion-delay-2 mt-4 max-w-xl text-base text-overlay-muted sm:text-lg">
           {t('subtitle')}
         </p>
-        <div className="motion-fade-up motion-delay-3 mt-8 flex flex-col gap-3 sm:flex-row sm:items-center">
-          <Link href="/report">
-            <Button size="lg" className="w-full sm:w-auto">
-              {t('ctaReport')}
-            </Button>
-          </Link>
-          <Link href="/reports">
-            <Button
-              size="lg"
-              variant="secondary"
-              className="w-full border-white/35 bg-white/95 text-chip-foreground sm:w-auto"
-            >
-              {t('ctaBrowse')}
-            </Button>
-          </Link>
+        <div className="motion-fade-up motion-delay-3 mt-8 flex flex-col gap-cluster sm:flex-row sm:items-center">
+          <Button asChild size="lg" className="w-full sm:w-auto">
+            <Link href="/report">{t('ctaReport')}</Link>
+          </Button>
+          <Button
+            asChild
+            size="lg"
+            variant="secondary"
+            className="w-full border-white/35 bg-white/95 text-chip-foreground sm:w-auto"
+          >
+            <Link href="/reports">{t('ctaBrowse')}</Link>
+          </Button>
         </div>
       </PageContainer>
     </section>

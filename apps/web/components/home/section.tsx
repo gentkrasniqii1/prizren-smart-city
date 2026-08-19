@@ -26,8 +26,8 @@ export function SectionHeading({
       ) : null}
       <h2
         className={cn(
-          'font-display text-h2 tracking-tight sm:text-[1.75rem]',
-          dark ? 'text-overlay-foreground' : 'text-stone-950',
+          'font-sans text-h2',
+          dark ? 'text-overlay-foreground' : 'text-foreground',
           eyebrow && 'mt-2',
         )}
       >

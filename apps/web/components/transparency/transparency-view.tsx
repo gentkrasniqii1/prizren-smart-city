@@ -9,7 +9,7 @@ import type { PaginatedReports, ReportDto, TransparencyStats } from '@prizren/sh
 import { apiFetch } from '@/lib/api';
 import { usePolling } from '@/lib/use-polling';
 import { PageContainer } from '@/components/layout/page-container';
-import { EmptyState, ErrorBanner, Skeleton, StatCard } from '@/components/ui';
+import { Button, EmptyState, ErrorBanner, Skeleton, StatCard } from '@/components/ui';
 import { MapSkeleton, MetricGridSkeleton } from '@/components/ui/skeletons';
 import { getStatusLabel } from '@/lib/labels';
 import { useErrorMessage } from '@/lib/use-error-message';
@@ -117,9 +117,7 @@ export function TransparencyView() {
       <PageContainer width="default">
         <header className="max-w-2xl">
           <p className="text-caption uppercase tracking-[0.14em] text-mosque-800">{t('eyebrow')}</p>
-          <h1 className="mt-2 font-display text-h1 tracking-tight text-stone-950 sm:text-3xl">
-            {t('title')}
-          </h1>
+          <h1 className="ds-page-title mt-2">{t('title')}</h1>
           <p className="mt-3 text-stone-600">{t('subtitle')}</p>
         </header>
 
@@ -156,12 +154,9 @@ export function TransparencyView() {
               title={t('emptyTitle')}
               description={t('emptyBody')}
               action={
-                <Link
-                  href="/report"
-                  className="inline-flex items-center justify-center rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground hover:bg-primary-hover"
-                >
-                  {t('ctaReport')}
-                </Link>
+                <Button asChild size="sm">
+                  <Link href="/report">{t('ctaReport')}</Link>
+                </Button>
               }
             />
           </div>
@@ -195,25 +190,18 @@ export function TransparencyView() {
 
             <section className="mt-10 grid gap-6 md:grid-cols-2">
               <div className="rounded-xl border border-stone-200 bg-card p-5">
-                <h2 className="font-display text-lg tracking-tight text-stone-950">
-                  {t('byStatus')}
-                </h2>
+                <h2 className="ds-card-title">{t('byStatus')}</h2>
                 <DistributionList items={statusItems} emptyLabel={t('noData')} />
               </div>
               <div className="rounded-xl border border-stone-200 bg-card p-5">
-                <h2 className="font-display text-lg tracking-tight text-stone-950">
-                  {t('byCategory')}
-                </h2>
+                <h2 className="ds-card-title">{t('byCategory')}</h2>
                 <DistributionList items={categoryItems} emptyLabel={t('noData')} />
               </div>
             </section>
 
             {mapReports.length > 0 ? (
               <section aria-labelledby="transparency-map" className="mt-10">
-                <h2
-                  id="transparency-map"
-                  className="font-display text-lg tracking-tight text-stone-950"
-                >
+                <h2 id="transparency-map" className="ds-card-title">
                   {t('mapHeading')}
                 </h2>
                 <p className="mt-1 text-sm text-stone-600">{t('mapHint')}</p>
@@ -228,19 +216,13 @@ export function TransparencyView() {
               </section>
             ) : null}
 
-            <div className={cn('mt-10 flex flex-wrap gap-3')}>
-              <Link
-                href="/reports"
-                className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground shadow-sm hover:bg-primary-hover"
-              >
-                {t('ctaMap')}
-              </Link>
-              <Link
-                href="/report"
-                className="inline-flex items-center justify-center rounded-md border border-stone-300 bg-card px-4 py-2.5 text-sm font-medium text-stone-900 hover:bg-muted"
-              >
-                {t('ctaReport')}
-              </Link>
+            <div className={cn('mt-section flex flex-wrap gap-cluster')}>
+              <Button asChild>
+                <Link href="/reports">{t('ctaMap')}</Link>
+              </Button>
+              <Button asChild variant="secondary">
+                <Link href="/report">{t('ctaReport')}</Link>
+              </Button>
             </div>
 
             <p className="mt-6 text-xs text-stone-600">{t('privacyNote')}</p>

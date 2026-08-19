@@ -208,9 +208,7 @@ export default function ReportsPage() {
       <PageContainer className="py-5 sm:py-6">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
           <div className="min-w-0">
-            <h1 className="font-display text-h1 tracking-tight text-foreground sm:text-3xl">
-              {t('title')}
-            </h1>
+            <h1 className="ds-page-title">{t('title')}</h1>
             <p className="mt-1.5 text-sm text-muted-foreground sm:text-base">{t('subtitle')}</p>
           </div>
           <Link href="/report" className="hidden sm:block sm:w-auto">

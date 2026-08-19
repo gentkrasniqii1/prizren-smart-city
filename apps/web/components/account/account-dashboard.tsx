@@ -207,30 +207,26 @@ export function AccountDashboard() {
             <UserAvatar name={user.name} size={56} />
             <div>
               <p className="text-sm text-stone-600">{t('greeting')}</p>
-              <h1 className="text-h1 tracking-tight text-foreground sm:text-3xl">
-                {t('welcome', { name: firstName })}
-              </h1>
+              <h1 className="ds-page-title">{t('welcome', { name: firstName })}</h1>
               <p className="mt-1 text-sm text-stone-600">
                 {getRoleLabel(user.role, locale)} · {user.email}
               </p>
             </div>
           </div>
-          <div className="flex flex-wrap gap-2">
-            <Link
-              href="/report"
-              className="inline-flex items-center justify-center gap-2 rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground shadow-sm transition hover:bg-primary-hover"
-            >
-              <FilePlus2 className="h-4 w-4" aria-hidden />
-              {t('ctaReport')}
-            </Link>
-            <Link
-              href="/notifications"
-              className="inline-flex items-center justify-center gap-2 rounded-md border border-stone-300 bg-card px-3 py-1.5 text-sm font-medium text-stone-900 transition hover:bg-muted"
-            >
-              <Bell className="h-4 w-4" aria-hidden />
-              {t('ctaNotifications')}
-              {unreadCount > 0 ? ` (${unreadCount})` : ''}
-            </Link>
+          <div className="flex flex-wrap gap-cluster">
+            <Button asChild size="sm">
+              <Link href="/report">
+                <FilePlus2 className="h-4 w-4" aria-hidden />
+                {t('ctaReport')}
+              </Link>
+            </Button>
+            <Button asChild size="sm" variant="secondary">
+              <Link href="/notifications">
+                <Bell className="h-4 w-4" aria-hidden />
+                {t('ctaNotifications')}
+                {unreadCount > 0 ? ` (${unreadCount})` : ''}
+              </Link>
+            </Button>
           </div>
         </header>
 
@@ -273,16 +269,13 @@ export function AccountDashboard() {
           <section id="reports" aria-labelledby="account-reports-heading" className="scroll-mt-24">
             <div className="flex flex-wrap items-end justify-between gap-3">
               <div>
-                <h2
-                  id="account-reports-heading"
-                  className="font-display text-xl tracking-tight text-stone-950"
-                >
+                <h2 id="account-reports-heading" className="ds-section-title">
                   {t('reportsHeading')}
                 </h2>
                 <p className="mt-1 text-sm text-stone-600">{t('reportsSubtitle')}</p>
               </div>
               <div
-                className="inline-flex rounded-md border border-stone-200 bg-card p-0.5"
+                className="inline-flex rounded-md border border-border bg-card p-0.5"
                 role="group"
                 aria-label={t('filterLabel')}
               >
@@ -298,10 +291,10 @@ export function AccountDashboard() {
                     type="button"
                     onClick={() => setFilter(key)}
                     className={cn(
-                      'rounded px-2.5 py-1 text-xs font-medium transition',
+                      'rounded-md px-2.5 py-1 text-caption font-medium transition duration-fast ease-product',
                       filter === key
                         ? 'bg-primary text-primary-foreground'
-                        : 'text-stone-600 hover:bg-muted',
+                        : 'text-muted-foreground hover:bg-muted',
                     )}
                     aria-pressed={filter === key}
                   >
@@ -324,12 +317,9 @@ export function AccountDashboard() {
                 description={filter === 'all' ? t('emptyBody') : t('emptyFilteredBody')}
                 action={
                   filter === 'all' ? (
-                    <Link
-                      href="/report"
-                      className="inline-flex items-center justify-center gap-2 rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground shadow-sm transition hover:bg-primary-hover"
-                    >
-                      {t('ctaReport')}
-                    </Link>
+                    <Button asChild size="sm">
+                      <Link href="/report">{t('ctaReport')}</Link>
+                    </Button>
                   ) : undefined
                 }
               />
@@ -356,19 +346,16 @@ export function AccountDashboard() {
                     <FilePlus2 className="h-5 w-5" aria-hidden />
                   </span>
                   <div>
-                    <p className="font-display text-base font-semibold tracking-tight text-foreground">
-                      {t('ctaCardTitle')}
-                    </p>
+                    <p className="ds-card-title">{t('ctaCardTitle')}</p>
                     <p className="mt-1 text-sm text-stone-600">{t('ctaCardBody')}</p>
                   </div>
                 </div>
-                <Link
-                  href="/report"
-                  className="inline-flex shrink-0 items-center justify-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow-sm transition hover:bg-primary-hover"
-                >
-                  <FilePlus2 className="h-4 w-4" aria-hidden />
-                  {t('ctaCardCta')}
-                </Link>
+                <Button asChild className="shrink-0">
+                  <Link href="/report">
+                    <FilePlus2 className="h-4 w-4" aria-hidden />
+                    {t('ctaCardCta')}
+                  </Link>
+                </Button>
               </div>
             ) : null}
           </section>
@@ -380,10 +367,7 @@ export function AccountDashboard() {
               className="rounded-xl border border-stone-200 bg-card p-5"
             >
               <div className="flex items-center justify-between gap-2">
-                <h2
-                  id="account-notif-heading"
-                  className="font-display text-lg tracking-tight text-stone-950"
-                >
+                <h2 id="account-notif-heading" className="ds-card-title">
                   {t('notifHeading')}
                 </h2>
                 {unreadCount > 0 ? (
@@ -422,10 +406,7 @@ export function AccountDashboard() {
               aria-labelledby="account-profile-heading"
               className="scroll-mt-24 rounded-xl border border-stone-200 bg-card p-5"
             >
-              <h2
-                id="account-profile-heading"
-                className="font-display text-lg tracking-tight text-stone-950"
-              >
+              <h2 id="account-profile-heading" className="ds-card-title">
                 {t('profileHeading')}
               </h2>
               <ProfileSettings

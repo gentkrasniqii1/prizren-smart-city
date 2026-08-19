@@ -87,7 +87,7 @@ export default function RegisterPage() {
       headline={t('panelHeadline')}
       body={t('panelBody')}
     >
-      <h1 className="text-h1 tracking-tight text-foreground">{t('registerTitle')}</h1>
+      <h1 className="ds-page-title">{t('registerTitle')}</h1>
       <p className="mt-2 text-sm text-muted-foreground">{t('registerSubtitle')}</p>
       <p className="mt-2 text-xs text-muted-foreground">
         {t('accountType')}: <span className="font-medium text-foreground">{t('citizenRole')}</span>
