@@ -110,6 +110,8 @@
   --status-review-foreground: #19253a;
   --status-assigned: #d4c5b0;
   --status-assigned-foreground: #27211c;
+  --status-accepted: #98bbe0;
+  --status-accepted-foreground: #19253a;
   --status-progress: #fde68a;
   --status-progress-foreground: #78350f;
   --status-waiting: #fed7aa;

@@ -59,6 +59,7 @@ export const colors = {
     pending: { bg: '#e6ddd0', fg: '#473e35' },
     inReview: { bg: '#c2d7ed', fg: '#19253a' },
     assigned: { bg: '#d4c5b0', fg: '#27211c' },
+    accepted: { bg: '#98bbe0', fg: '#19253a' },
     inProgress: { bg: '#fde68a', fg: '#78350f' },
     waiting: { bg: '#fed7aa', fg: '#7c2d12' },
     resolved: { bg: '#b8e6dc', fg: '#0f2725' },

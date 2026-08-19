@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Bell, FilePlus2, FileText, LayoutDashboard, LogOut, Map } from 'lucide-react';
+import { Bell, FilePlus2, FileText, Inbox, LayoutDashboard, LogOut, Map } from 'lucide-react';
 import { useLocale, useTranslations } from 'next-intl';
 import type {
   MyReportStats,
@@ -40,6 +40,7 @@ const OPEN_STATUSES = new Set([
   'PENDING',
   'IN_REVIEW',
   'ASSIGNED',
+  'ACCEPTED',
   'IN_PROGRESS',
   'WAITING_FOR_INFORMATION',
 ]);
@@ -235,7 +236,10 @@ export function AccountDashboard() {
           <QuickLink href="/reports" icon={Map} label={t('quickMap')} />
           <QuickLink href="#reports" icon={FileText} label={t('quickMyReports')} />
           {staff ? (
-            <QuickLink href="/admin" icon={LayoutDashboard} label={t('quickAdmin')} />
+            <>
+              <QuickLink href="/queue" icon={Inbox} label={t('quickQueue')} />
+              <QuickLink href="/admin" icon={LayoutDashboard} label={t('quickAdmin')} />
+            </>
           ) : null}
         </nav>
 

@@ -10,6 +10,7 @@ const FILL: Record<string, string> = {
   PENDING: colors.status.pending.fg,
   IN_REVIEW: colors.mosque[600],
   ASSIGNED: colors.status.assigned.fg,
+  ACCEPTED: colors.mosque[500],
   IN_PROGRESS: colors.semantic.warning.fg,
   WAITING_FOR_INFORMATION: colors.priority.high.fg,
   RESOLVED: colors.river[600],

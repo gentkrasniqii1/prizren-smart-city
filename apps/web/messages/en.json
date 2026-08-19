@@ -386,12 +386,41 @@
     "timelineAi": "AI classification available",
     "timelinePhotoAfter": "After photo uploaded",
     "timeline": {
-      "PENDING": "Pending",
-      "IN_REVIEW": "Under review",
-      "ASSIGNED": "Assigned",
-      "IN_PROGRESS": "In progress",
+      "PENDING": "Submitted",
+      "IN_REVIEW": "Category under review",
+      "ASSIGNED": "In the institution queue",
+      "ACCEPTED": "Institution accepted",
+      "IN_PROGRESS": "Investigating",
       "WAITING_FOR_INFORMATION": "Waiting for information",
-      "RESOLVED": "Resolved"
+      "RESOLVED": "Resolved",
+      "REJECTED": "Rejected",
+      "DUPLICATE": "Marked as duplicate"
+    },
+    "timelineWaiting": "The institution asked for more information.",
+    "timelineDuplicate": "This report was marked as a duplicate.",
+    "institution": "Responsible institution",
+    "institutionUnknown": "Not yet assigned",
+    "resolutionHeading": "Resolution",
+    "resolutionBody": "The institution marked this issue as resolved. The after photo is the public record of the work.",
+    "resolutionBy": "Closed by {name}.",
+    "workflowHeading": "Institution workflow",
+    "workflowIntro": "Accept the report, investigate, then upload an after photo before resolving. Reject and duplicate need a note.",
+    "workflowNote": "Note to the citizen (required for reject / duplicate)",
+    "workflowActions": {
+      "accept": "Accept",
+      "investigate": "Start investigation",
+      "request_info": "Request information",
+      "resolve": "Mark resolved",
+      "reject": "Reject",
+      "mark_duplicate": "Mark duplicate"
+    },
+    "workflowDone": {
+      "accept": "Report accepted into the institution desk.",
+      "investigate": "Investigation started.",
+      "request_info": "Information requested from the citizen.",
+      "resolve": "Report marked as resolved.",
+      "reject": "Report rejected.",
+      "mark_duplicate": "Report marked as duplicate."
     },
     "metaHeading": "Location & deadlines",
     "location": "Location",
@@ -399,8 +428,6 @@
     "created": "Created",
     "dueAt": "SLA due",
     "openMap": "Open in map",
-    "workflowHeading": "Department workflow",
-    "workflowIntro": "Upload the after photo, then mark as resolved. Resolve requires an after photo.",
     "afterUploadLabel": "After photo",
     "markResolved": "Mark as resolved",
     "afterUploaded": "After photo uploaded.",
@@ -437,6 +464,7 @@
     "quickMap": "Public map",
     "quickMyReports": "My reports",
     "quickAdmin": "Operations desk",
+    "quickQueue": "Institution queue",
     "statsHeading": "Your stats",
     "statTotal": "Total reports",
     "statOpen": "Open",
@@ -621,7 +649,53 @@
     "emptyTitle": "No notifications",
     "emptyBody": "When report status changes, notifications appear here.",
     "loadError": "Could not load notifications.",
-    "actionFailed": "That action failed."
+    "actionFailed": "That action failed.",
+    "types": {
+      "REPORT_RECEIVED": "Your report was received.",
+      "REPORT_ASSIGNED": "Your report entered the institution queue.",
+      "REPORT_ACCEPTED": "The institution accepted your report.",
+      "REPORT_IN_PROGRESS": "The institution is investigating your report.",
+      "REPORT_IN_REVIEW": "The category of your report is under review.",
+      "REPORT_RESOLVED": "Your report was resolved.",
+      "REPORT_REJECTED": "Your report was rejected.",
+      "REPORT_DUPLICATE": "Your report was marked as a duplicate.",
+      "INFO_REQUESTED": "The institution asked for more information.",
+      "STATUS_CHANGED": "The status of your report was updated."
+    }
+  },
+  "Queue": {
+    "kicker": "Institution desk",
+    "title": "Institution queue",
+    "intro": "Reports do not disappear after submission. They enter this queue after category and institution routing. Accept, investigate, then resolve with an after photo.",
+    "lanesLabel": "Queue lanes",
+    "lanes": {
+      "incoming": "Incoming",
+      "active": "In progress",
+      "waiting": "Waiting",
+      "done": "Closed"
+    },
+    "open": "Open",
+    "loadError": "Could not load the queue.",
+    "actionFailed": "That action failed.",
+    "emptyTitle": "Nothing in this lane",
+    "emptyBody": "When citizens submit reports, routed cases appear here for the responsible institution.",
+    "showing": "Showing {count} of {total}",
+    "actions": {
+      "accept": "Accept",
+      "investigate": "Investigate",
+      "request_info": "Request info",
+      "resolve": "Resolve",
+      "reject": "Reject",
+      "mark_duplicate": "Duplicate"
+    },
+    "done": {
+      "accept": "Accepted.",
+      "investigate": "Investigation started.",
+      "request_info": "Information requested.",
+      "resolve": "Resolved.",
+      "reject": "Rejected.",
+      "mark_duplicate": "Marked as duplicate."
+    }
   },
   "NotFound": {
     "title": "Page not found",

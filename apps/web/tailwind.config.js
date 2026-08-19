@@ -171,6 +171,10 @@ const config = {
             DEFAULT: withOpacity('--status-assigned'),
             foreground: withOpacity('--status-assigned-foreground'),
           },
+          accepted: {
+            DEFAULT: withOpacity('--status-accepted'),
+            foreground: withOpacity('--status-accepted-foreground'),
+          },
           progress: {
             DEFAULT: withOpacity('--status-progress'),
             foreground: withOpacity('--status-progress-foreground'),

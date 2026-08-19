@@ -85,7 +85,8 @@ export function AdminReportActions({
     setAction(next);
   }
 
-  const closed = report.status === 'RESOLVED' || report.status === 'REJECTED';
+  const closed =
+    report.status === 'RESOLVED' || report.status === 'REJECTED' || report.status === 'DUPLICATE';
   const needsAfterPhoto = !report.photoAfterUrl;
 
   return (

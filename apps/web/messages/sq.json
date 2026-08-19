@@ -386,12 +386,41 @@
     "timelineAi": "Klasifikimi AI është i disponueshëm",
     "timelinePhotoAfter": "Fotoja pas zgjidhjes u ngarkua",
     "timeline": {
-      "PENDING": "Në pritje",
-      "IN_REVIEW": "Në shqyrtim",
-      "ASSIGNED": "I caktuar",
-      "IN_PROGRESS": "Në progres",
+      "PENDING": "U dërgua",
+      "IN_REVIEW": "Kategoria në shqyrtim",
+      "ASSIGNED": "Në radhën e institucionit",
+      "ACCEPTED": "Institucioni e pranoi",
+      "IN_PROGRESS": "Në hetim",
       "WAITING_FOR_INFORMATION": "Në pritje të informacionit",
-      "RESOLVED": "I zgjidhur"
+      "RESOLVED": "I zgjidhur",
+      "REJECTED": "I refuzuar",
+      "DUPLICATE": "U shënua si duplikat"
+    },
+    "timelineWaiting": "Institucioni kërkoi informacion shtesë.",
+    "timelineDuplicate": "Ky raport u shënua si duplikat.",
+    "institution": "Institucioni përgjegjës",
+    "institutionUnknown": "Ende i pacaktuar",
+    "resolutionHeading": "Zgjidhja",
+    "resolutionBody": "Institucioni e shënoi këtë problem si të zgjidhur. Fotoja pas punës është evidenca publike.",
+    "resolutionBy": "Mbyllur nga {name}.",
+    "workflowHeading": "Workflow i institucionit",
+    "workflowIntro": "Pranoje raportin, hetoje, pastaj ngarko foton pas punës para se ta shënosh si të zgjidhur. Refuzimi dhe duplikati kërkojnë shënim.",
+    "workflowNote": "Shënim për qytetarin (i detyrueshëm për refuzim / duplikat)",
+    "workflowActions": {
+      "accept": "Prano",
+      "investigate": "Fillo hetimin",
+      "request_info": "Kërko informacion",
+      "resolve": "Shëno si të zgjidhur",
+      "reject": "Refuzo",
+      "mark_duplicate": "Shëno si duplikat"
+    },
+    "workflowDone": {
+      "accept": "Raporti u pranua në tavolinën e institucionit.",
+      "investigate": "Hetimi filloi.",
+      "request_info": "U kërkua informacion nga qytetari.",
+      "resolve": "Raporti u shënua si i zgjidhur.",
+      "reject": "Raporti u refuzua.",
+      "mark_duplicate": "Raporti u shënua si duplikat."
     },
     "metaHeading": "Vendndodhja & afatet",
     "location": "Lokacioni",
@@ -399,8 +428,6 @@
     "created": "Krijuar",
     "dueAt": "Afati SLA",
     "openMap": "Hap në hartë",
-    "workflowHeading": "Workflow i departamentit",
-    "workflowIntro": "Ngarko foton pas zgjidhjes, pastaj shëno si të zgjidhur. Resolve kërkon foto after.",
     "afterUploadLabel": "Foto pas zgjidhjes",
     "markResolved": "Shëno si të zgjidhur",
     "afterUploaded": "Fotoja after u ngarkua.",
@@ -437,6 +464,7 @@
     "quickMap": "Harta publike",
     "quickMyReports": "Raportet e mia",
     "quickAdmin": "Tavolina e operacioneve",
+    "quickQueue": "Radha e institucionit",
     "statsHeading": "Statistikat e tua",
     "statTotal": "Raporte gjithsej",
     "statOpen": "Të hapura",
@@ -621,7 +649,53 @@
     "emptyTitle": "Nuk ka njoftime",
     "emptyBody": "Kur statusi i raporteve ndryshon, njoftimet shfaqen këtu.",
     "loadError": "Nuk u ngarkuan njoftimet.",
-    "actionFailed": "Veprimi dështoi."
+    "actionFailed": "Veprimi dështoi.",
+    "types": {
+      "REPORT_RECEIVED": "Raporti juaj u pranua.",
+      "REPORT_ASSIGNED": "Raporti juaj hyri në radhën e institucionit.",
+      "REPORT_ACCEPTED": "Institucioni e pranoi raportin tuaj.",
+      "REPORT_IN_PROGRESS": "Institucioni po heton raportin tuaj.",
+      "REPORT_IN_REVIEW": "Kategoria e raportit tuaj po rishikohet.",
+      "REPORT_RESOLVED": "Raporti juaj u zgjidh.",
+      "REPORT_REJECTED": "Raporti juaj u refuzua.",
+      "REPORT_DUPLICATE": "Raporti juaj u shënua si duplikat.",
+      "INFO_REQUESTED": "Institucioni kërkoi informacion shtesë.",
+      "STATUS_CHANGED": "Statusi i raportit tuaj u përditësua."
+    }
+  },
+  "Queue": {
+    "kicker": "Tavolina e institucionit",
+    "title": "Radha e institucionit",
+    "intro": "Raportet nuk zhduken pas dërgimit. Hyjnë në këtë radhë pasi sistemi cakton kategorinë dhe institucionin. Prano, heto, pastaj zgjidh me foto pas punës.",
+    "lanesLabel": "Radhët",
+    "lanes": {
+      "incoming": "Të reja",
+      "active": "Në trajtim",
+      "waiting": "Në pritje",
+      "done": "Të mbyllura"
+    },
+    "open": "Hap",
+    "loadError": "Radha nuk u ngarkua.",
+    "actionFailed": "Veprimi dështoi.",
+    "emptyTitle": "Asgjë në këtë radhë",
+    "emptyBody": "Kur qytetarët dërgojnë raporte, rastet e rrugëzuara shfaqen këtu për institucionin përgjegjës.",
+    "showing": "Duke treguar {count} nga {total}",
+    "actions": {
+      "accept": "Prano",
+      "investigate": "Heto",
+      "request_info": "Kërko info",
+      "resolve": "Zgjidh",
+      "reject": "Refuzo",
+      "mark_duplicate": "Duplikat"
+    },
+    "done": {
+      "accept": "U pranua.",
+      "investigate": "Hetimi filloi.",
+      "request_info": "U kërkua informacion.",
+      "resolve": "U zgjidh.",
+      "reject": "U refuzua.",
+      "mark_duplicate": "U shënua si duplikat."
+    }
   },
   "NotFound": {
     "title": "Faqja nuk u gjet",
