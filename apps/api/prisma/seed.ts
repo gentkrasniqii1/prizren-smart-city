@@ -264,18 +264,30 @@ async function main() {
     officialDeptByName.set(name, created);
   }
 
-  // --- RoutingRule (Master Spec §8 examples) ---------------------------------
-  // Domain model + seed data only for Phase 1. Priority-ordered rule
-  // evaluation is wired into RoutingService in Phase 3 — these rows give that
-  // phase concrete, realistic data to evaluate against.
+  // --- RoutingRule -----------------------------------------------------------
+  // Evaluated by RoutingService (category → institution → department).
+  // Example *configuration*, not engine logic. Names like Eco Regjioni / KEDS
+  // never appear in RoutingService. Operators can change targets in /admin/routing
+  // without a deploy.
   const findCategoryByName = (name: string) => prisma.category.findFirst({ where: { name } });
   const fireCategory = await findCategoryByName('Zjarr / emergjencë');
   const electricityCategory = await findCategoryByName('Elektricitet');
   const waterCategory = await findCategoryByName('Ujë / kanalizim');
+  const wasteCategory = await findCategoryByName('Mbeturina');
+  const roadCategory = await findCategoryByName('Dëmtim rruge');
+  const lightingCategory = await findCategoryByName('Ndriçim');
+  const publicSpaceCategory = await findCategoryByName('Hapësirë publike');
+  const policeCategory = await findCategoryByName('Siguri / polici');
+  const otherCategory = await findCategoryByName('Tjetër');
 
   const zjarrfikesiaDept = createdDepts.find((d) => d.name === 'Zjarrfikësia');
   const rrjetiElektrikDept = createdDepts.find((d) => d.name === 'Rrjeti elektrik');
   const ujesjellesiDept = createdDepts.find((d) => d.name === 'Ujësjellësi');
+  const wasteDept = createdDepts.find((d) => d.name === 'Mjedisi & Mbeturinat');
+  const roadDept = createdDepts.find((d) => d.name === 'Rruga & Infrastrukturë');
+  const lightingDept = createdDepts.find((d) => d.name === 'Ndriçimi Publik');
+  const publicSpaceDept = createdDepts.find((d) => d.name === 'Hapësira Publike');
+  const policeDept = createdDepts.find((d) => d.name === 'Siguria publike');
   const inspektoratetDept = officialDeptByName.get('Inspektoratet');
   const punaSocialeDept = officialDeptByName.get('Puna dhe Mirëqenia Sociale');
 
@@ -288,6 +300,8 @@ async function main() {
     departmentId?: string | null;
     institutionId?: string | null;
     priority: number;
+    slaHours?: number | null;
+    defaultPriority?: Priority | null;
   }[] = [
     {
       name: 'Emergjencë zjarri → Zjarrfikësia',
@@ -296,6 +310,8 @@ async function main() {
       departmentId: zjarrfikesiaDept?.id ?? null,
       institutionId: fire.id,
       priority: 10,
+      slaHours: 4,
+      defaultPriority: Priority.CRITICAL,
     },
     {
       name: 'Ndërtim i paligjshëm → Inspektoratet',
@@ -309,13 +325,71 @@ async function main() {
       departmentId: rrjetiElektrikDept?.id ?? null,
       institutionId: keds.id,
       priority: 30,
+      slaHours: 24,
+      defaultPriority: Priority.HIGH,
     },
     {
-      name: 'Rrjedhje uji → KRU Prizreni',
+      name: 'Ujë / kanalizim → KRU Prizreni',
       categoryId: waterCategory?.id ?? null,
       departmentId: ujesjellesiDept?.id ?? null,
       institutionId: kru.id,
       priority: 30,
+      slaHours: 24,
+      defaultPriority: Priority.HIGH,
+    },
+    {
+      name: 'Mbeturina → Eco Regjioni',
+      categoryId: wasteCategory?.id ?? null,
+      departmentId: wasteDept?.id ?? null,
+      institutionId: eco.id,
+      priority: 40,
+      slaHours: 48,
+      defaultPriority: Priority.MEDIUM,
+    },
+    {
+      name: 'Dëmtim rruge → Komuna e Prizrenit',
+      categoryId: roadCategory?.id ?? null,
+      departmentId: roadDept?.id ?? null,
+      institutionId: komuna.id,
+      priority: 40,
+      slaHours: 72,
+      defaultPriority: Priority.MEDIUM,
+    },
+    {
+      name: 'Ndriçim publik → operatori komunal',
+      categoryId: lightingCategory?.id ?? null,
+      departmentId: lightingDept?.id ?? null,
+      institutionId: komuna.id,
+      priority: 40,
+      slaHours: 48,
+      defaultPriority: Priority.MEDIUM,
+    },
+    {
+      name: 'Hapësirë publike → Komuna e Prizrenit',
+      categoryId: publicSpaceCategory?.id ?? null,
+      departmentId: publicSpaceDept?.id ?? null,
+      institutionId: komuna.id,
+      priority: 50,
+      slaHours: 72,
+      defaultPriority: Priority.LOW,
+    },
+    {
+      name: 'Siguri / polici → Policia e Kosovës',
+      categoryId: policeCategory?.id ?? null,
+      departmentId: policeDept?.id ?? null,
+      institutionId: police.id,
+      priority: 20,
+      slaHours: 8,
+      defaultPriority: Priority.HIGH,
+    },
+    {
+      name: 'Tjetër → fallback komunal',
+      categoryId: otherCategory?.id ?? null,
+      departmentId: publicSpaceDept?.id ?? null,
+      institutionId: komuna.id,
+      priority: 90,
+      slaHours: 72,
+      defaultPriority: Priority.LOW,
     },
     {
       name: 'Ndihmë sociale → Puna dhe Mirëqenia Sociale',
