@@ -1,6 +1,6 @@
 /**
  * Prizren Smart City — single source of visual truth.
- * Mirrored in `app/globals.css` (:root) and `tailwind.config.ts`.
+ * Mirrored in `app/globals.css` (:root) and `tailwind.config.js`.
  *
  * Identity is drawn from the city, not from a dashboard kit:
  *   stone  — Kalaja limestone, cobble, paper
@@ -60,8 +60,10 @@ export const colors = {
     inReview: { bg: '#c2d7ed', fg: '#19253a' },
     assigned: { bg: '#d4c5b0', fg: '#27211c' },
     inProgress: { bg: '#fde68a', fg: '#78350f' },
+    waiting: { bg: '#fed7aa', fg: '#7c2d12' },
     resolved: { bg: '#b8e6dc', fg: '#0f2725' },
     rejected: { bg: '#fecaca', fg: '#7f1d1d' },
+    duplicate: { bg: '#e6ddd0', fg: '#54483c' },
   },
   priority: {
     low: { bg: '#e6ddd0', fg: '#473e35' },
@@ -92,17 +94,96 @@ export const shadows = {
   lg: '0 18px 48px rgb(39 33 28 / 0.12)',
 } as const;
 
-/** Typography scale — Fraunces = display, Manrope = sans body */
+/**
+ * Type hierarchy. Manrope is the UI face. Fraunces is Display only —
+ * civic/editorial branding (hero, wordmark), never every heading.
+ *
+ * Display · H1 · H2 · H3 · Body · Small · Caption · Label
+ */
 export const typography = {
-  display: { size: '2.25rem', lineHeight: '1.15', weight: 600 },
-  h1: { size: '1.875rem', lineHeight: '1.2', weight: 600 },
-  h2: { size: '1.5rem', lineHeight: '1.25', weight: 600 },
-  h3: { size: '1.25rem', lineHeight: '1.3', weight: 600 },
-  body: { size: '1rem', lineHeight: '1.55', weight: 400 },
-  small: { size: '0.875rem', lineHeight: '1.45', weight: 400 },
-  caption: { size: '0.75rem', lineHeight: '1.4', weight: 500 },
-  label: { size: '0.875rem', lineHeight: '1.4', weight: 500 },
+  displayXl: {
+    family: 'Fraunces',
+    size: '3.75rem',
+    lineHeight: '1.1',
+    weight: 600,
+    letterSpacing: '-0.03em',
+  },
+  displayLg: {
+    family: 'Fraunces',
+    size: '3rem',
+    lineHeight: '1.15',
+    weight: 600,
+    letterSpacing: '-0.025em',
+  },
+  display: {
+    family: 'Fraunces',
+    size: '2.25rem',
+    lineHeight: '1.15',
+    weight: 600,
+    letterSpacing: '-0.02em',
+  },
+  h1: {
+    family: 'Manrope',
+    size: '1.875rem',
+    lineHeight: '1.2',
+    weight: 600,
+    letterSpacing: '-0.02em',
+  },
+  h2: {
+    family: 'Manrope',
+    size: '1.5rem',
+    lineHeight: '1.25',
+    weight: 600,
+    letterSpacing: '-0.015em',
+  },
+  h3: {
+    family: 'Manrope',
+    size: '1.25rem',
+    lineHeight: '1.3',
+    weight: 600,
+    letterSpacing: '-0.01em',
+  },
+  body: {
+    family: 'Manrope',
+    size: '1rem',
+    lineHeight: '1.55',
+    weight: 400,
+    letterSpacing: '0',
+  },
+  small: {
+    family: 'Manrope',
+    size: '0.875rem',
+    lineHeight: '1.45',
+    weight: 400,
+    letterSpacing: '0',
+  },
+  caption: {
+    family: 'Manrope',
+    size: '0.75rem',
+    lineHeight: '1.4',
+    weight: 500,
+    letterSpacing: '0.01em',
+  },
+  label: {
+    family: 'Manrope',
+    size: '0.875rem',
+    lineHeight: '1.4',
+    weight: 500,
+    letterSpacing: '0',
+  },
 } as const;
+
+/** Named roles for the specimen — Display has responsive steps (lg / xl). */
+export const typeHierarchy = [
+  { name: 'Display', token: 'display', use: 'Hero, wordmark, rare civic/editorial moments' },
+  { name: 'H1', token: 'h1', use: 'Page titles' },
+  { name: 'H2', token: 'h2', use: 'Section titles' },
+  { name: 'H3', token: 'h3', use: 'Card and dialog titles' },
+  { name: 'Body', token: 'body', use: 'Default copy' },
+  { name: 'Small', token: 'small', use: 'Secondary copy, help text' },
+  { name: 'Caption', token: 'caption', use: 'Meta, timestamps, footnotes' },
+  { name: 'Label', token: 'label', use: 'Form labels, compact UI labels' },
+] as const;
 
 export const spacing = {
   0: '0',
@@ -116,6 +197,21 @@ export const spacing = {
   10: '2.5rem',
   12: '3rem',
   16: '4rem',
+} as const;
+
+/** Named spacing — prefer these over ad-hoc Tailwind steps. */
+export const space = {
+  cluster: spacing[3],
+  gutter: spacing[4],
+  inset: spacing[5],
+  stack: spacing[6],
+  section: spacing[10],
+} as const;
+
+export const control = {
+  sm: '2.5rem',
+  md: '2.75rem',
+  lg: '3rem',
 } as const;
 
 export const motion = {
@@ -151,15 +247,17 @@ export const visualLanguage = {
     'banking dashboard',
     'neon smart-city chrome',
   ] as const,
-  /** Two typefaces only. Fraunces speaks for the city; Manrope runs the tools. */
+  /**
+   * Two typefaces, strict roles. Fraunces is a stamp — not the heading system.
+   */
   typeRoles: {
     display: {
       family: 'Fraunces',
-      role: 'City voice — hero, page titles, card titles, wordmark',
+      role: 'Selective civic/editorial — hero, wordmark. Never H1–H3 or app chrome.',
     },
     sans: {
       family: 'Manrope',
-      role: 'Institution tools — body, forms, tables, navigation, data',
+      role: 'Application UI — H1, H2, H3, body, small, caption, label, forms, tables, data',
     },
   },
   surfaces: {
@@ -168,4 +266,39 @@ export const visualLanguage = {
     admin: 'Audit-grade. Tables and logs first. Gilt is never used for alerts.',
     public: 'A civic ledger. Counts and maps, not marketing metrics.',
   },
+} as const;
+
+/**
+ * Component recipes — the only radii, type, and spacing the UI should use.
+ * Living specimen: `/design`.
+ */
+export const recipes = {
+  radius: {
+    control: 'md',
+    nested: 'lg',
+    surface: 'xl',
+  },
+  type: {
+    display: 'Fraunces — hero / wordmark only (display → display-lg → display-xl)',
+    pageTitle: 'H1 · Manrope · ds-page-title',
+    sectionTitle: 'H2 · Manrope · ds-section-title',
+    cardTitle: 'H3 · Manrope · ds-card-title',
+    body: 'Body · Manrope · text-body',
+    small: 'Small · Manrope · text-small',
+    meta: 'Caption · Manrope · text-caption',
+    label: 'Label · Manrope · text-label',
+  },
+  space: {
+    cluster: 'gap-cluster (0.75rem) — chips, button groups',
+    gutter: 'px-gutter (1rem) — page edges',
+    inset: 'p-inset (1.25rem) — card / dialog padding',
+    stack: 'space-y-stack (1.5rem) — form stacks',
+    section: 'mt-section (2.5rem) — page sections',
+  },
+  shadow: {
+    rest: 'sm — cards, buttons, table chrome',
+    overlay: 'soft — dropdowns, popovers, tooltips',
+    modal: 'lift — dialogs, toasts',
+  },
+  overlay: 'bg-overlay-surface/70',
 } as const;

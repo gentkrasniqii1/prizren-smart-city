@@ -93,7 +93,7 @@ export function VerifyEmailForm() {
       <div className="flex h-12 w-12 items-center justify-center rounded-full bg-mosque-100 text-mosque-800 dark:bg-mosque-950 dark:text-mosque-200">
         <Mail className="h-6 w-6" aria-hidden />
       </div>
-      <h1 className="mt-4 text-h1 tracking-tight text-foreground">{t('verifyTitle')}</h1>
+      <h1 className="ds-page-title mt-4">{t('verifyTitle')}</h1>
       <p className="mt-2 text-sm text-muted-foreground">{t('verifyBody')}</p>
 
       {status === 'verifying' ? (

@@ -18,8 +18,8 @@ export function LegalDocument({
       <PageContainer width="default">
         <div className="mx-auto max-w-3xl">
           <Logo variant="full" size={32} />
-          <h1 className="mt-8 text-h1 tracking-tight text-foreground">{title}</h1>
-          <p className="mt-2 text-sm text-muted-foreground">{updated}</p>
+          <h1 className="ds-page-title mt-8">{title}</h1>
+          <p className="mt-2 text-small text-muted-foreground">{updated}</p>
           <p className="mt-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-100">
             {disclaimer}
           </p>

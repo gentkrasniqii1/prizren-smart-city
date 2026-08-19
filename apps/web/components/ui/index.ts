@@ -31,3 +31,15 @@ export {
   TransparencyPageSkeleton,
 } from './skeletons';
 export { Spinner } from './spinner';
+export {
+  Table,
+  TableHeader,
+  TableBody,
+  TableFooter,
+  TableHead,
+  TableRow,
+  TableCell,
+  TableCaption,
+} from './table';
+export { Tabs, TabsList, TabsTrigger, TabsContent } from './tabs';
+export { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from './tooltip';

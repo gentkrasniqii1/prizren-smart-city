@@ -6,18 +6,26 @@ import type {
 } from 'react';
 import { cn } from '@/lib/utils';
 
-const fieldBase =
-  'mt-1 w-full min-h-11 rounded-md border bg-card px-3 py-2.5 text-base text-foreground outline-none transition duration-fast ease-product placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:bg-muted disabled:text-muted-foreground sm:min-h-10 sm:py-2 sm:text-sm';
+const fieldMd =
+  'mt-1 w-full min-h-11 rounded-md border bg-card px-3 py-2.5 text-body text-foreground outline-none transition duration-fast ease-product placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:bg-muted disabled:text-muted-foreground sm:min-h-10 sm:py-2 sm:text-small';
+
+const fieldSm =
+  'mt-0 w-full min-h-9 rounded-md border bg-card px-2.5 py-1.5 text-small text-foreground outline-none transition duration-fast ease-product placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:bg-muted disabled:text-muted-foreground';
 
 const fieldOk =
-  'border-input hover:border-stone-400 focus:border-primary focus:ring-2 focus:ring-mosque-200 dark:focus:ring-mosque-800';
+  'border-input hover:border-muted-foreground/40 focus:border-primary focus:ring-2 focus:ring-ring/20';
 
 const fieldErr =
-  'border-destructive focus:border-destructive focus:ring-2 focus:ring-red-100 dark:focus:ring-red-950';
+  'border-destructive focus:border-destructive focus:ring-2 focus:ring-destructive/20';
 
 type FieldState = {
   invalid?: boolean;
+  fieldSize?: 'sm' | 'md';
 };
+
+function fieldClass(invalid?: boolean, fieldSize: 'sm' | 'md' = 'md') {
+  return cn(fieldSize === 'sm' ? fieldSm : fieldMd, invalid ? fieldErr : fieldOk);
+}
 
 export function Label({
   htmlFor,
@@ -38,11 +46,12 @@ export function Label({
 export function Input({
   className,
   invalid,
+  fieldSize = 'md',
   ...rest
 }: InputHTMLAttributes<HTMLInputElement> & FieldState) {
   return (
     <input
-      className={cn(fieldBase, invalid ? fieldErr : fieldOk, className)}
+      className={cn(fieldClass(invalid, fieldSize), className)}
       aria-invalid={invalid || undefined}
       {...rest}
     />
@@ -52,11 +61,12 @@ export function Input({
 export function Select({
   className,
   invalid,
+  fieldSize = 'md',
   ...rest
 }: SelectHTMLAttributes<HTMLSelectElement> & FieldState) {
   return (
     <select
-      className={cn(fieldBase, invalid ? fieldErr : fieldOk, className)}
+      className={cn(fieldClass(invalid, fieldSize), className)}
       aria-invalid={invalid || undefined}
       {...rest}
     />
@@ -96,11 +106,12 @@ export function Checkbox({
 export function Textarea({
   className,
   invalid,
+  fieldSize = 'md',
   ...rest
 }: TextareaHTMLAttributes<HTMLTextAreaElement> & FieldState) {
   return (
     <textarea
-      className={cn(fieldBase, invalid ? fieldErr : fieldOk, className)}
+      className={cn(fieldClass(invalid, fieldSize), className)}
       aria-invalid={invalid || undefined}
       {...rest}
     />

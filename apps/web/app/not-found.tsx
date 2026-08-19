@@ -19,15 +19,15 @@ export default async function NotFound() {
         <div className="absolute inset-0 bg-overlay-surface/35" />
       </div>
       <p className="text-sm font-semibold uppercase tracking-[0.2em] text-mosque-700">404</p>
-      <h1 className="mt-2 font-display text-3xl font-semibold text-stone-950">{t('title')}</h1>
-      <p className="mt-3 max-w-md text-stone-600">{t('body')}</p>
-      <div className="mt-8 flex flex-wrap justify-center gap-3">
-        <Link href="/">
-          <Button>{t('home')}</Button>
-        </Link>
-        <Link href="/reports">
-          <Button variant="secondary">{t('reports')}</Button>
-        </Link>
+      <h1 className="mt-2 ds-page-title">{t('title')}</h1>
+      <p className="mt-cluster max-w-md text-muted-foreground">{t('body')}</p>
+      <div className="mt-8 flex flex-wrap justify-center gap-cluster">
+        <Button asChild>
+          <Link href="/">{t('home')}</Link>
+        </Button>
+        <Button asChild variant="secondary">
+          <Link href="/reports">{t('reports')}</Link>
+        </Button>
       </div>
     </main>
   );

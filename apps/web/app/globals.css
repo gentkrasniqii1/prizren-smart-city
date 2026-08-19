@@ -3,7 +3,7 @@
 @tailwind utilities;
 
 /**
- * Design tokens — keep in sync with lib/design-tokens.ts and tailwind.config.ts
+ * Design tokens — keep in sync with lib/design-tokens.ts and tailwind.config.js
  * Light + dark (class="dark" via next-themes). Brand: stone / mosque / river.
  */
 :root {
@@ -73,6 +73,16 @@
   --radius-lg: 0.75rem;
   --radius-xl: 1rem;
 
+  --space-cluster: 0.75rem;
+  --space-gutter: 1rem;
+  --space-inset: 1.25rem;
+  --space-stack: 1.5rem;
+  --space-section: 2.5rem;
+
+  --control-sm: 2.5rem;
+  --control-md: 2.75rem;
+  --control-lg: 3rem;
+
   --shadow-sm: 0 1px 2px rgb(39 33 28 / 0.06);
   --shadow-md: 0 8px 24px rgb(39 33 28 / 0.08);
   --shadow-lg: 0 18px 48px rgb(39 33 28 / 0.12);
@@ -81,6 +91,35 @@
   --motion-normal: 200ms;
   --motion-slow: 320ms;
   --motion-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+
+  /* Semantic / status / priority — theme-invariant stamps */
+  --semantic-success: #b8e6dc;
+  --semantic-success-foreground: #0f2725;
+  --semantic-warning: #fde68a;
+  --semantic-warning-foreground: #78350f;
+  --semantic-danger: #fecaca;
+  --semantic-danger-foreground: #7f1d1d;
+  --semantic-info: #c2d7ed;
+  --semantic-info-foreground: #19253a;
+  --semantic-caution: #fed7aa;
+  --semantic-caution-foreground: #7c2d12;
+
+  --status-pending: #e6ddd0;
+  --status-pending-foreground: #473e35;
+  --status-review: #c2d7ed;
+  --status-review-foreground: #19253a;
+  --status-assigned: #d4c5b0;
+  --status-assigned-foreground: #27211c;
+  --status-progress: #fde68a;
+  --status-progress-foreground: #78350f;
+  --status-waiting: #fed7aa;
+  --status-waiting-foreground: #7c2d12;
+  --status-resolved: #b8e6dc;
+  --status-resolved-foreground: #0f2725;
+  --status-rejected: #fecaca;
+  --status-rejected-foreground: #7f1d1d;
+  --status-duplicate: #e6ddd0;
+  --status-duplicate-foreground: #54483c;
 
   /*
    * Theme-invariant tokens for content pinned to a fixed surface regardless of
@@ -157,6 +196,38 @@
 @layer base {
   * {
     @apply border-border;
+  }
+}
+
+@layer components {
+  .ds-kicker {
+    @apply text-caption font-semibold uppercase tracking-[0.22em] text-gilt;
+  }
+
+  /* Display = Fraunces. Colour is left to the caller (foreground vs overlay). */
+  .ds-display {
+    @apply font-display text-display;
+  }
+
+  /* H1–H3 are Manrope. Serif is not the heading system. */
+  .ds-page-title {
+    @apply font-sans text-h1 text-foreground;
+  }
+
+  .ds-section-title {
+    @apply font-sans text-h2 text-foreground;
+  }
+
+  .ds-card-title {
+    @apply font-sans text-h3 text-foreground;
+  }
+
+  .surface-card {
+    @apply rounded-xl border border-border bg-card text-card-foreground shadow-sm;
+  }
+
+  .surface-popover {
+    @apply rounded-lg border border-border bg-popover text-popover-foreground shadow-soft;
   }
 }
 

@@ -24,15 +24,16 @@ export function ErrorState({
   return (
     <div
       role="alert"
-      className={cn('rounded-xl border border-border bg-card px-5 py-10 text-center', className)}
+      className={cn(
+        'rounded-xl border border-border bg-card px-inset py-10 text-center',
+        className,
+      )}
     >
       <div className="mx-auto mb-3 flex h-11 w-11 items-center justify-center rounded-full bg-destructive/10 text-destructive">
         <CircleAlert className="h-5 w-5" aria-hidden />
       </div>
-      <p className="font-display text-lg tracking-tight text-foreground">
-        {title ?? t('errorTitle')}
-      </p>
-      <p className="mx-auto mt-2 max-w-md text-sm text-muted-foreground">
+      <p className="ds-card-title">{title ?? t('errorTitle')}</p>
+      <p className="mx-auto mt-2 max-w-md text-small text-muted-foreground">
         {description ?? t('errorHint')}
       </p>
       {onRetry || action ? (

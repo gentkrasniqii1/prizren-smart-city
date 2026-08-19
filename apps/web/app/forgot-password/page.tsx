@@ -48,7 +48,7 @@ export default function ForgotPasswordPage() {
       headline={t('panelHeadline')}
       body={t('panelBody')}
     >
-      <h1 className="text-h1 tracking-tight text-foreground">{t('forgotTitle')}</h1>
+      <h1 className="ds-page-title">{t('forgotTitle')}</h1>
       <p className="mt-2 text-sm text-muted-foreground">{t('forgotBody')}</p>
 
       {sent ? (

@@ -1,5 +1,3 @@
-import type { Config } from 'tailwindcss';
-
 /**
  * Our CSS custom properties hold plain hex strings (e.g. `--color-stone-950: #27211c`),
  * not the space-separated `R G B` channel format Tailwind's `rgb(var(--x) / <alpha-value>)`
@@ -8,15 +6,17 @@ import type { Config } from 'tailwindcss';
  * compiles to nothing, so the "opacity" variant is simply invisible/inert everywhere it's
  * used. `color-mix()` works directly against a hex-valued custom property, so we use it as
  * the opacity mechanism instead. Supported by all evergreen browsers.
+ *
+ * Plain JS (not TS) so Tailwind can `require()` this file on Windows without jiti writing
+ * a transform cache under `%TEMP%\node-jiti\`.
  */
-// Tailwind's own `Config['theme']['colors']` type doesn't model per-key
-// functions (only `theme.colors` as a whole may be a function), even though
-// Tailwind fully supports function-valued colors at runtime — this is a
-// known gap in `tailwindcss`'s bundled types. We declare the return type as
-// `string` and cast the actual function value through `unknown` so the
-// config still type-checks while Tailwind receives the real function.
-function withOpacity(varName: string): string {
-  const resolver = ({ opacityValue }: { opacityValue?: string }) => {
+
+/**
+ * @param {string} varName
+ * @returns {(info: { opacityValue?: string }) => string}
+ */
+function withOpacity(varName) {
+  return ({ opacityValue }) => {
     // Tailwind passes a `var(--tw-bg-opacity, 1)`-style string here even for
     // unmodified utilities (legacy opacity-utility compat) — only engage
     // color-mix() when we get a genuine numeric fraction from a `/NN` modifier,
@@ -26,10 +26,10 @@ function withOpacity(varName: string): string {
       ? `color-mix(in srgb, var(${varName}) ${fraction * 100}%, transparent)`
       : `var(${varName})`;
   };
-  return resolver as unknown as string;
 }
 
-const config: Config = {
+/** @type {import('tailwindcss').Config} */
+const config = {
   darkMode: ['class'],
   content: [
     './pages/**/*.{js,ts,jsx,tsx,mdx}',
@@ -121,18 +121,91 @@ const config: Config = {
           foreground: withOpacity('--chip-foreground'),
         },
         gilt: withOpacity('--gilt'),
+        semantic: {
+          success: {
+            DEFAULT: withOpacity('--semantic-success'),
+            foreground: withOpacity('--semantic-success-foreground'),
+          },
+          warning: {
+            DEFAULT: withOpacity('--semantic-warning'),
+            foreground: withOpacity('--semantic-warning-foreground'),
+          },
+          danger: {
+            DEFAULT: withOpacity('--semantic-danger'),
+            foreground: withOpacity('--semantic-danger-foreground'),
+          },
+          info: {
+            DEFAULT: withOpacity('--semantic-info'),
+            foreground: withOpacity('--semantic-info-foreground'),
+          },
+          caution: {
+            DEFAULT: withOpacity('--semantic-caution'),
+            foreground: withOpacity('--semantic-caution-foreground'),
+          },
+        },
+        status: {
+          pending: {
+            DEFAULT: withOpacity('--status-pending'),
+            foreground: withOpacity('--status-pending-foreground'),
+          },
+          review: {
+            DEFAULT: withOpacity('--status-review'),
+            foreground: withOpacity('--status-review-foreground'),
+          },
+          assigned: {
+            DEFAULT: withOpacity('--status-assigned'),
+            foreground: withOpacity('--status-assigned-foreground'),
+          },
+          progress: {
+            DEFAULT: withOpacity('--status-progress'),
+            foreground: withOpacity('--status-progress-foreground'),
+          },
+          waiting: {
+            DEFAULT: withOpacity('--status-waiting'),
+            foreground: withOpacity('--status-waiting-foreground'),
+          },
+          resolved: {
+            DEFAULT: withOpacity('--status-resolved'),
+            foreground: withOpacity('--status-resolved-foreground'),
+          },
+          rejected: {
+            DEFAULT: withOpacity('--status-rejected'),
+            foreground: withOpacity('--status-rejected-foreground'),
+          },
+          duplicate: {
+            DEFAULT: withOpacity('--status-duplicate'),
+            foreground: withOpacity('--status-duplicate-foreground'),
+          },
+        },
+      },
+      spacing: {
+        cluster: 'var(--space-cluster)',
+        gutter: 'var(--space-gutter)',
+        inset: 'var(--space-inset)',
+        stack: 'var(--space-stack)',
+        section: 'var(--space-section)',
       },
       fontFamily: {
         display: ['var(--font-display)', 'Georgia', 'serif'],
         sans: ['var(--font-sans)', 'system-ui', 'sans-serif'],
       },
       fontSize: {
-        display: ['2.25rem', { lineHeight: '1.15', fontWeight: '600' }],
-        h1: ['1.875rem', { lineHeight: '1.2', fontWeight: '600' }],
-        h2: ['1.5rem', { lineHeight: '1.25', fontWeight: '600' }],
-        h3: ['1.25rem', { lineHeight: '1.3', fontWeight: '600' }],
-        caption: ['0.75rem', { lineHeight: '1.4', fontWeight: '500' }],
-        label: ['0.875rem', { lineHeight: '1.4', fontWeight: '500' }],
+        display: ['2.25rem', { lineHeight: '1.15', fontWeight: '600', letterSpacing: '-0.02em' }],
+        'display-lg': [
+          '3rem',
+          { lineHeight: '1.15', fontWeight: '600', letterSpacing: '-0.025em' },
+        ],
+        'display-xl': [
+          '3.75rem',
+          { lineHeight: '1.1', fontWeight: '600', letterSpacing: '-0.03em' },
+        ],
+        h1: ['1.875rem', { lineHeight: '1.2', fontWeight: '600', letterSpacing: '-0.02em' }],
+        h2: ['1.5rem', { lineHeight: '1.25', fontWeight: '600', letterSpacing: '-0.015em' }],
+        h3: ['1.25rem', { lineHeight: '1.3', fontWeight: '600', letterSpacing: '-0.01em' }],
+        body: ['1rem', { lineHeight: '1.55', fontWeight: '400', letterSpacing: '0' }],
+        small: ['0.875rem', { lineHeight: '1.45', fontWeight: '400', letterSpacing: '0' }],
+        caption: ['0.75rem', { lineHeight: '1.4', fontWeight: '500', letterSpacing: '0.01em' }],
+        label: ['0.875rem', { lineHeight: '1.4', fontWeight: '500', letterSpacing: '0' }],
       },
       borderRadius: {
         sm: 'var(--radius-sm)',
@@ -181,4 +254,5 @@ const config: Config = {
   },
   plugins: [require('tailwindcss-animate')],
 };
-export default config;
+
+module.exports = config;

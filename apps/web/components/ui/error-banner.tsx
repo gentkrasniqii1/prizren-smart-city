@@ -22,7 +22,7 @@ export function ErrorBanner({
     <div
       role="alert"
       className={cn(
-        'flex gap-3 rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2.5 text-sm text-destructive',
+        'flex gap-3 rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2.5 text-sm text-destructive',
         className,
       )}
     >

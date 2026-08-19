@@ -53,7 +53,7 @@ export function AuthShell({
             <Link href="/" className="inline-flex text-overlay-foreground">
               <Logo variant="full" theme="dark" size={44} />
             </Link>
-            <h2 className="mt-10 font-display text-4xl font-semibold leading-[1.15] tracking-tight text-overlay-foreground xl:text-5xl">
+            <h2 className="ds-display mt-10 text-overlay-foreground xl:text-display-lg">
               {headline}
             </h2>
             <p className="mt-4 max-w-sm text-base leading-relaxed text-overlay-muted xl:text-lg">
@@ -82,7 +82,7 @@ export function AuthShell({
             <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-gilt">
               Prizren Smart City
             </p>
-            <p className="mt-1 font-display text-2xl font-semibold leading-tight text-overlay-foreground">
+            <p className="mt-1 font-display text-h1 leading-tight text-overlay-foreground">
               {headline}
             </p>
           </div>

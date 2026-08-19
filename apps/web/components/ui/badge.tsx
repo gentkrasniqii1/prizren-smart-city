@@ -12,33 +12,33 @@ import {
 import type { AppLocale } from '@/i18n/request';
 
 const STATUS_CLASS: Record<ReportStatusKey, string> = {
-  PENDING: 'bg-stone-200 text-stone-900 dark:bg-stone-300 dark:text-stone-950',
-  IN_REVIEW: 'bg-mosque-200 text-mosque-950 dark:bg-mosque-100 dark:text-mosque-200',
-  ASSIGNED: 'bg-stone-300 text-stone-950',
-  IN_PROGRESS: 'bg-amber-200 text-amber-950',
-  WAITING_FOR_INFORMATION: 'bg-orange-200 text-orange-950',
-  RESOLVED: 'bg-river-200 text-river-950',
-  REJECTED: 'bg-red-200 text-red-950',
-  DUPLICATE: 'bg-stone-200 text-stone-800',
+  PENDING: 'bg-status-pending text-status-pending-foreground',
+  IN_REVIEW: 'bg-status-review text-status-review-foreground',
+  ASSIGNED: 'bg-status-assigned text-status-assigned-foreground',
+  IN_PROGRESS: 'bg-status-progress text-status-progress-foreground',
+  WAITING_FOR_INFORMATION: 'bg-status-waiting text-status-waiting-foreground',
+  RESOLVED: 'bg-status-resolved text-status-resolved-foreground',
+  REJECTED: 'bg-status-rejected text-status-rejected-foreground',
+  DUPLICATE: 'bg-status-duplicate text-status-duplicate-foreground',
 };
 
 const PRIORITY_CLASS: Record<ReportPriorityKey, string> = {
-  LOW: 'bg-stone-200 text-stone-900',
-  MEDIUM: 'bg-amber-200 text-amber-950',
-  HIGH: 'bg-orange-200 text-orange-950',
-  CRITICAL: 'bg-red-200 text-red-950',
+  LOW: 'bg-status-pending text-status-pending-foreground',
+  MEDIUM: 'bg-semantic-warning text-semantic-warning-foreground',
+  HIGH: 'bg-semantic-caution text-semantic-caution-foreground',
+  CRITICAL: 'bg-semantic-danger text-semantic-danger-foreground',
 };
 
 const TONE_CLASS = {
-  neutral: 'bg-stone-200 text-stone-900',
-  success: 'bg-river-200 text-river-950',
-  warning: 'bg-amber-200 text-amber-950',
-  danger: 'bg-red-200 text-red-950',
-  info: 'bg-mosque-200 text-mosque-950 dark:bg-mosque-100 dark:text-mosque-200',
+  neutral: 'bg-status-pending text-status-pending-foreground',
+  success: 'bg-semantic-success text-semantic-success-foreground',
+  warning: 'bg-semantic-warning text-semantic-warning-foreground',
+  danger: 'bg-semantic-danger text-semantic-danger-foreground',
+  info: 'bg-semantic-info text-semantic-info-foreground',
 } as const;
 
 const badgeBase =
-  'inline-flex items-center rounded-md px-2 py-0.5 text-[11px] font-semibold tracking-wide';
+  'inline-flex items-center rounded-md px-2 py-0.5 text-caption font-semibold tracking-wide';
 
 export function Badge({
   children,

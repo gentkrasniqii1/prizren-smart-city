@@ -17,7 +17,7 @@ export function StatCard({
   return (
     <div
       className={cn(
-        'rounded-md border px-4 py-3',
+        'rounded-lg border px-gutter py-3',
         dark ? 'border-white/10 bg-white/5' : 'border-border bg-card',
         className,
       )}
@@ -32,14 +32,16 @@ export function StatCard({
       </p>
       <p
         className={cn(
-          'mt-1 text-2xl font-semibold tabular-nums',
+          'mt-1 text-h2 tabular-nums',
           dark ? 'text-overlay-foreground' : 'text-card-foreground',
         )}
       >
         {value}
       </p>
       {hint ? (
-        <p className={cn('mt-1 text-xs', dark ? 'text-mosque-200/80' : 'text-muted-foreground')}>
+        <p
+          className={cn('mt-1 text-caption', dark ? 'text-mosque-200/80' : 'text-muted-foreground')}
+        >
           {hint}
         </p>
       ) : null}

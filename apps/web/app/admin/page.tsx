@@ -26,7 +26,18 @@ import { useAuth } from '@/components/auth-provider';
 import { useToast } from '@/components/toast-provider';
 import { Breadcrumbs } from '@/components/breadcrumbs';
 import { PageContainer } from '@/components/layout/page-container';
-import { Button, EmptyState, ErrorBanner, StatCard } from '@/components/ui';
+import {
+  Button,
+  EmptyState,
+  ErrorBanner,
+  StatCard,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui';
 import {
   ChartSkeleton,
   DashboardSkeleton,
@@ -321,8 +332,8 @@ export default function AdminPage() {
     return (
       <main className="py-16">
         <PageContainer width="narrow">
-          <h1 className="font-display text-2xl tracking-tight text-stone-950">{t('title')}</h1>
-          <p className="mt-3 text-stone-600">{t('forbidden')}</p>
+          <h1 className="ds-page-title">{t('title')}</h1>
+          <p className="mt-cluster text-muted-foreground">{t('forbidden')}</p>
           <Link href="/login" className="mt-6 inline-block font-medium text-mosque-800 underline">
             {t('loginLink')}
           </Link>
@@ -346,10 +357,8 @@ export default function AdminPage() {
 
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div>
-            <h1 className="font-display text-h1 tracking-tight text-stone-950 sm:text-3xl">
-              {t('title')}
-            </h1>
-            <p className="mt-1 text-sm text-stone-600">{t('subtitle')}</p>
+            <h1 className="ds-page-title">{t('title')}</h1>
+            <p className="mt-1 text-sm text-muted-foreground">{t('subtitle')}</p>
           </div>
           <Button
             type="button"
@@ -389,21 +398,19 @@ export default function AdminPage() {
         </section>
 
         <section className="mt-10">
-          <h2 className="font-display text-xl tracking-tight text-stone-950">
-            {t('chartHeading')}
-          </h2>
-          <div className="mt-3 grid gap-4 lg:grid-cols-2">
-            <div className="rounded-xl border border-stone-200 bg-card p-4">
+          <h2 className="ds-section-title">{t('chartHeading')}</h2>
+          <div className="mt-cluster grid gap-gutter lg:grid-cols-2">
+            <div className="rounded-xl border border-border bg-card p-gutter">
               <CategoryBarChart data={byCategory} emptyLabel={t('chartEmpty')} />
             </div>
-            <div className="rounded-xl border border-stone-200 bg-card p-4">
-              <h3 className="text-sm font-medium text-stone-700">{t('chartDepartment')}</h3>
+            <div className="rounded-xl border border-border bg-card p-gutter">
+              <h3 className="text-sm font-medium text-muted-foreground">{t('chartDepartment')}</h3>
               <div className="mt-2">
                 <DepartmentBarChart data={byDepartment} emptyLabel={t('chartEmpty')} />
               </div>
             </div>
-            <div className="rounded-xl border border-stone-200 bg-card p-4 lg:col-span-2">
-              <h3 className="text-sm font-medium text-stone-700">{t('chartOverTime')}</h3>
+            <div className="rounded-xl border border-border bg-card p-gutter lg:col-span-2">
+              <h3 className="text-sm font-medium text-muted-foreground">{t('chartOverTime')}</h3>
               <div className="mt-2">
                 <ReportsOverTimeChart data={overTime} emptyLabel={t('chartEmpty')} />
               </div>
@@ -411,16 +418,14 @@ export default function AdminPage() {
           </div>
         </section>
 
-        <section className="mt-10">
-          <h2 className="font-display text-xl tracking-tight text-stone-950">
-            {t('heatmapHeading')}
-          </h2>
-          <p className="mt-1 text-sm text-stone-600">{t('heatmapHint')}</p>
-          <div className="mt-3 h-72 overflow-hidden rounded-xl border border-stone-200 bg-stone-100">
+        <section className="mt-section">
+          <h2 className="ds-section-title">{t('heatmapHeading')}</h2>
+          <p className="mt-1 text-sm text-muted-foreground">{t('heatmapHint')}</p>
+          <div className="mt-cluster h-72 overflow-hidden rounded-xl border border-border bg-muted">
             {loading && reports.length === 0 ? (
               <MapSkeleton className="h-full" />
             ) : reports.length === 0 ? (
-              <p className="flex h-full items-center justify-center text-sm text-stone-600">
+              <p className="flex h-full items-center justify-center text-sm text-muted-foreground">
                 {t('heatmapEmpty')}
               </p>
             ) : (
@@ -434,15 +439,13 @@ export default function AdminPage() {
           </div>
         </section>
 
-        <section className="mt-10 space-y-4">
+        <section className="mt-section space-y-gutter">
           <div>
-            <h2 className="font-display text-xl tracking-tight text-stone-950">
-              {t('tableHeading')}
-            </h2>
-            <p className="mt-1 text-sm text-stone-600">{t('tableSubtitle')}</p>
+            <h2 className="ds-section-title">{t('tableHeading')}</h2>
+            <p className="mt-1 text-sm text-muted-foreground">{t('tableSubtitle')}</p>
           </div>
 
-          <div className="flex flex-col gap-2 rounded-xl border border-stone-200 bg-card p-3 sm:flex-row sm:flex-wrap">
+          <div className="flex flex-col gap-2 rounded-xl border border-border bg-card p-cluster sm:flex-row sm:flex-wrap">
             <div className="min-w-0 flex-1 sm:min-w-[9rem] sm:flex-none">
               <Label htmlFor="admin-status" className="sr-only">
                 {t('filterStatus')}
@@ -528,52 +531,55 @@ export default function AdminPage() {
           </div>
 
           {error ? <ErrorBanner message={error} onRetry={() => void loadDashboard()} /> : null}
-          <p className="text-xs text-stone-600">{t('tableCount', { total: metaTotal })}</p>
-          <p className="text-xs text-stone-600 md:hidden">{t('tableScrollHint')}</p>
+          <p className="text-caption text-muted-foreground">
+            {t('tableCount', { total: metaTotal })}
+          </p>
+          <p className="text-caption text-muted-foreground md:hidden">{t('tableScrollHint')}</p>
 
-          <div className="-mx-4 overflow-x-auto border-y border-stone-200 bg-card sm:mx-0 sm:rounded-xl sm:border">
-            <table className="min-w-[720px] w-full text-left text-sm md:min-w-full">
-              <thead className="border-b border-stone-200 bg-stone-50 text-xs uppercase tracking-wide text-stone-600">
-                <tr>
-                  <th className="px-3 py-2.5 font-medium">{t('colId')}</th>
-                  <th className="px-3 py-2.5 font-medium">{t('colCategory')}</th>
-                  <th className="px-3 py-2.5 font-medium">{t('colStatus')}</th>
-                  <th className="px-3 py-2.5 font-medium">{t('colDepartment')}</th>
-                  {canAssign ? <th className="px-3 py-2.5 font-medium">{t('colStaff')}</th> : null}
-                  <th className="px-3 py-2.5 font-medium">{t('colSla')}</th>
-                  <th className="px-3 py-2.5 font-medium">{t('colDate')}</th>
-                  <th className="px-3 py-2.5 font-medium">{t('colDetail')}</th>
-                </tr>
-              </thead>
-              <tbody>
+          <div className="-mx-gutter overflow-hidden border-y border-border bg-card sm:mx-0 sm:rounded-xl sm:border">
+            <Table className="min-w-[720px] md:min-w-full">
+              <TableHeader>
+                <TableRow>
+                  <TableHead>{t('colId')}</TableHead>
+                  <TableHead>{t('colCategory')}</TableHead>
+                  <TableHead>{t('colStatus')}</TableHead>
+                  <TableHead>{t('colDepartment')}</TableHead>
+                  {canAssign ? <TableHead>{t('colStaff')}</TableHead> : null}
+                  <TableHead>{t('colSla')}</TableHead>
+                  <TableHead>{t('colDate')}</TableHead>
+                  <TableHead>{t('colDetail')}</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
                 {loading && reports.length === 0 ? (
                   Array.from({ length: 6 }, (_, i) => (
                     <TableRowSkeleton key={i} cols={canAssign ? 8 : 7} />
                   ))
                 ) : !loading && reports.length === 0 ? (
-                  <tr>
-                    <td colSpan={canAssign ? 8 : 7} className="px-3 py-6">
+                  <TableRow>
+                    <TableCell colSpan={canAssign ? 8 : 7} className="py-6">
                       <EmptyState title={t('emptyTitle')} description={t('emptyBody')} />
-                    </td>
-                  </tr>
+                    </TableCell>
+                  </TableRow>
                 ) : (
                   reports.map((report) => {
                     const busy = rowBusy === report.id;
                     const bucket = slaBucket(report.dueAt);
                     return (
-                      <tr key={report.id} className="border-b border-stone-100 align-top">
-                        <td className="px-3 py-2 font-mono text-xs text-stone-600">
+                      <TableRow key={report.id} className="align-top">
+                        <TableCell className="font-mono text-caption text-muted-foreground">
                           {report.id.slice(0, 8)}
-                        </td>
-                        <td className="px-3 py-2">{report.categoryName ?? '—'}</td>
-                        <td className="px-3 py-2">
-                          <select
+                        </TableCell>
+                        <TableCell>{report.categoryName ?? '—'}</TableCell>
+                        <TableCell>
+                          <Select
+                            fieldSize="sm"
                             value={report.status}
                             disabled={busy}
                             onChange={(e) =>
                               void changeStatus(report, e.target.value as ReportStatus)
                             }
-                            className="max-w-[9.5rem] rounded border border-stone-300 bg-card px-1.5 py-1 text-xs"
+                            className="max-w-[9.5rem]"
                             aria-label={t('colStatus')}
                           >
                             {STATUSES.map((s) => (
@@ -581,17 +587,18 @@ export default function AdminPage() {
                                 {getStatusLabel(s, locale)}
                               </option>
                             ))}
-                          </select>
-                        </td>
-                        <td className="px-3 py-2">
+                          </Select>
+                        </TableCell>
+                        <TableCell>
                           {canAssign ? (
-                            <select
+                            <Select
+                              fieldSize="sm"
                               value={report.departmentId ?? ''}
                               disabled={busy}
                               onChange={(e) =>
                                 void assignReport(report, { departmentId: e.target.value })
                               }
-                              className="max-w-[11rem] rounded border border-stone-300 bg-card px-1.5 py-1 text-xs"
+                              className="max-w-[11rem]"
                               aria-label={t('colDepartment')}
                             >
                               <option value="">{t('noDepartment')}</option>
@@ -600,20 +607,21 @@ export default function AdminPage() {
                                   {d.name}
                                 </option>
                               ))}
-                            </select>
+                            </Select>
                           ) : (
                             (report.departmentName ?? '—')
                           )}
-                        </td>
+                        </TableCell>
                         {canAssign ? (
-                          <td className="px-3 py-2">
-                            <select
+                          <TableCell>
+                            <Select
+                              fieldSize="sm"
                               value={report.assignedStaffId ?? ''}
                               disabled={busy}
                               onChange={(e) =>
                                 void assignReport(report, { assignedStaffId: e.target.value })
                               }
-                              className="max-w-[11rem] rounded border border-stone-300 bg-card px-1.5 py-1 text-xs"
+                              className="max-w-[11rem]"
                               aria-label={t('colStaff')}
                             >
                               <option value="">{t('noStaff')}</option>
@@ -622,42 +630,42 @@ export default function AdminPage() {
                                   {s.name}
                                 </option>
                               ))}
-                            </select>
-                          </td>
+                            </Select>
+                          </TableCell>
                         ) : null}
-                        <td className="px-3 py-2">
+                        <TableCell>
                           <span
-                            className={`inline-block rounded px-1.5 py-0.5 text-[10px] font-medium ${slaClass(bucket)}`}
+                            className={`inline-flex rounded-md px-2 py-0.5 text-caption font-semibold ${slaClass(bucket)}`}
                           >
                             {slaLabel(bucket, locale)}
                           </span>
                           {report.dueAt ? (
-                            <div className="mt-1 text-[10px] text-stone-600">
+                            <div className="mt-1 text-caption text-muted-foreground">
                               {new Date(report.dueAt).toLocaleString(
                                 locale === 'en' ? 'en-GB' : 'sq-AL',
                               )}
                             </div>
                           ) : null}
-                        </td>
-                        <td className="whitespace-nowrap px-3 py-2 text-xs text-stone-600">
+                        </TableCell>
+                        <TableCell className="whitespace-nowrap text-caption text-muted-foreground">
                           {new Date(report.createdAt).toLocaleDateString(
                             locale === 'en' ? 'en-GB' : 'sq-AL',
                           )}
-                        </td>
-                        <td className="px-3 py-2">
+                        </TableCell>
+                        <TableCell>
                           <Link
                             href={`/reports/${report.id}`}
-                            className="text-xs font-medium text-mosque-800 underline"
+                            className="text-caption font-medium text-primary underline"
                           >
                             {t('open')}
                           </Link>
-                        </td>
-                      </tr>
+                        </TableCell>
+                      </TableRow>
                     );
                   })
                 )}
-              </tbody>
-            </table>
+              </TableBody>
+            </Table>
           </div>
         </section>
       </PageContainer>

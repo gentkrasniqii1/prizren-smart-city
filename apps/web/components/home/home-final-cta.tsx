@@ -25,27 +25,24 @@ export async function HomeFinalCta() {
         />
         <PageContainer className="relative flex min-h-[22rem] flex-col items-start justify-end pb-14 pt-20 sm:min-h-[26rem] sm:pb-16">
           <Reveal>
-            <h2 className="max-w-2xl font-display text-3xl font-semibold tracking-tight text-overlay-foreground sm:text-4xl">
+            <h2 className="ds-display max-w-2xl text-overlay-foreground sm:text-display-lg">
               {t('final.title')}
             </h2>
-            <p className="mt-3 max-w-xl text-base text-overlay-muted sm:text-lg">
+            <p className="mt-cluster max-w-xl text-base text-overlay-muted sm:text-lg">
               {t('final.body')}
             </p>
-            <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-              <Link href="/report">
-                <Button size="lg" className="w-full sm:w-auto">
-                  {t('ctaReport')}
-                </Button>
-              </Link>
-              <Link href="/reports">
-                <Button
-                  size="lg"
-                  variant="secondary"
-                  className="w-full border-white/35 bg-white/95 text-chip-foreground sm:w-auto"
-                >
-                  {t('ctaBrowse')}
-                </Button>
-              </Link>
+            <div className="mt-8 flex flex-col gap-cluster sm:flex-row">
+              <Button asChild size="lg" className="w-full sm:w-auto">
+                <Link href="/report">{t('ctaReport')}</Link>
+              </Button>
+              <Button
+                asChild
+                size="lg"
+                variant="secondary"
+                className="w-full border-white/35 bg-white/95 text-chip-foreground sm:w-auto"
+              >
+                <Link href="/reports">{t('ctaBrowse')}</Link>
+              </Button>
             </div>
           </Reveal>
         </PageContainer>

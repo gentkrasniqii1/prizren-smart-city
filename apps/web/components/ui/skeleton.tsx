@@ -3,10 +3,6 @@ import { cn } from '@/lib/utils';
 
 export function Skeleton({ className, ...rest }: HTMLAttributes<HTMLDivElement>) {
   return (
-    <div
-      className={cn('animate-pulse rounded-md bg-muted dark:bg-stone-800', className)}
-      aria-hidden
-      {...rest}
-    />
+    <div className={cn('animate-pulse rounded-md bg-muted', className)} aria-hidden {...rest} />
   );
 }

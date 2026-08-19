@@ -1,0 +1,28 @@
+---
+description: Use the Prizren design system tokens and UI primitives — no ad-hoc sizes, radii, or buttons.
+globs: apps/web/**/*.{tsx,ts,css}
+alwaysApply: false
+---
+
+# Design system (web)
+
+Tokens live in `apps/web/lib/design-tokens.ts`, mirrored in `globals.css` and `tailwind.config.js`. Specimen: `/design`.
+
+## Use these, not one-off values
+
+- **Type:** Hierarchy is Display · H1 · H2 · H3 · Body · Small · Caption · Label. Application UI is Manrope (`font-sans`): `text-h1` / `text-h2` / `text-h3` / `text-body` / `text-small` / `text-caption` / `text-label`. Helpers: `ds-page-title`, `ds-section-title`, `ds-card-title`. Fraunces (`font-display` / `ds-display`) is Display only — hero, wordmark, rare civic/editorial moments. Do not put `font-display` on H1–H3.
+- **Color:** semantic (`foreground`, `muted-foreground`, `border`, `primary`, `destructive`) or `semantic-*` / `status-*`. Do not use raw `red-*` / `amber-*` / `text-stone-950` for UI chrome.
+- **Space:** `gap-cluster`, `px-gutter`, `p-inset`, `space-y-stack`, `mt-section`.
+- **Radius:** `rounded-md` controls (buttons, inputs, badges); `rounded-lg` nested surfaces (stat cards, popovers); `rounded-xl` cards, dialogs, tables, maps.
+- **Shadow:** `shadow-sm` rest, `shadow-soft` overlays, `shadow-lift` dialogs/toasts.
+
+## Components
+
+Import from `@/components/ui`. Do not copy button/input/card class strings onto `<Link>` or raw `<table>`.
+
+- Links that look like buttons: `<Button asChild><Link href="…">`.
+- Status/priority: `StatusBadge` / `PriorityBadge` / `Badge`.
+- Confirmations: `ConfirmDialog`, never `window.confirm`.
+- Loading: composed skeletons, not a full-page spinner.
+
+Gilt (`text-gilt`) is a stamp — never a button fill, chart series, or alert.
