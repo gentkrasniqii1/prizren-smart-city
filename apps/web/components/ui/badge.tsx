@@ -3,35 +3,20 @@
 import type { ReactNode } from 'react';
 import { useLocale } from 'next-intl';
 import { cn } from '@/lib/utils';
-import {
-  getPriorityLabel,
-  getStatusLabel,
-  type ReportPriorityKey,
-  type ReportStatusKey,
-} from '@/lib/labels';
+import { getPriorityLabel, type ReportPriorityKey } from '@/lib/labels';
 import type { AppLocale } from '@/i18n/request';
 
-const STATUS_CLASS: Record<ReportStatusKey, string> = {
-  PENDING: 'bg-status-pending text-status-pending-foreground',
-  IN_REVIEW: 'bg-status-review text-status-review-foreground',
-  ASSIGNED: 'bg-status-assigned text-status-assigned-foreground',
-  ACCEPTED: 'bg-status-accepted text-status-accepted-foreground',
-  IN_PROGRESS: 'bg-status-progress text-status-progress-foreground',
-  WAITING_FOR_INFORMATION: 'bg-status-waiting text-status-waiting-foreground',
-  RESOLVED: 'bg-status-resolved text-status-resolved-foreground',
-  REJECTED: 'bg-status-rejected text-status-rejected-foreground',
-  DUPLICATE: 'bg-status-duplicate text-status-duplicate-foreground',
-};
+export { StatusBadge } from './status-badge';
 
 const PRIORITY_CLASS: Record<ReportPriorityKey, string> = {
-  LOW: 'bg-status-pending text-status-pending-foreground',
+  LOW: 'bg-status-submitted text-status-submitted-foreground',
   MEDIUM: 'bg-semantic-warning text-semantic-warning-foreground',
   HIGH: 'bg-semantic-caution text-semantic-caution-foreground',
   CRITICAL: 'bg-semantic-danger text-semantic-danger-foreground',
 };
 
 const TONE_CLASS = {
-  neutral: 'bg-status-pending text-status-pending-foreground',
+  neutral: 'bg-status-submitted text-status-submitted-foreground',
   success: 'bg-semantic-success text-semantic-success-foreground',
   warning: 'bg-semantic-warning text-semantic-warning-foreground',
   danger: 'bg-semantic-danger text-semantic-danger-foreground',
@@ -52,16 +37,6 @@ export function Badge({
 }) {
   return (
     <span className={cn(badgeBase, 'uppercase', TONE_CLASS[tone], className)}>{children}</span>
-  );
-}
-
-export function StatusBadge({ status, className }: { status: string; className?: string }) {
-  const locale = useLocale() as AppLocale;
-  const key = status as ReportStatusKey;
-  const classes = STATUS_CLASS[key] ?? STATUS_CLASS.PENDING;
-
-  return (
-    <span className={cn(badgeBase, classes, className)}>{getStatusLabel(status, locale)}</span>
   );
 }
 

@@ -14,6 +14,7 @@ import type {
 } from '@prizren/shared-types';
 import { apiFetch } from '@/lib/api';
 import { useAuth } from '@/components/auth-provider';
+import { useRealtimeRefresh } from '@/components/realtime-provider';
 import { PageContainer } from '@/components/layout/page-container';
 import { Button, EmptyState, ErrorBanner, PriorityBadge, StatusBadge } from '@/components/ui';
 import { TableSkeleton } from '@/components/ui/skeletons';
@@ -50,26 +51,40 @@ export function InstitutionQueue() {
     }
   }, [authLoading, user, router]);
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const res = await apiFetch<PaginatedReports>(`/reports/queue?lane=${lane}&limit=50`, {
-        auth: true,
-      });
-      setReports(res.data);
-      setTotal(res.meta.total);
-    } catch (err) {
-      setError(errorMessage(err, t('loadError')));
-    } finally {
-      setLoading(false);
-    }
-  }, [lane, errorMessage, t]);
+  const load = useCallback(
+    async (opts?: { background?: boolean }) => {
+      if (!opts?.background) {
+        setLoading(true);
+        setError(null);
+      }
+      try {
+        const res = await apiFetch<PaginatedReports>(`/reports/queue?lane=${lane}&limit=50`, {
+          auth: true,
+        });
+        setReports(res.data);
+        setTotal(res.meta.total);
+      } catch (err) {
+        if (!opts?.background) {
+          setError(errorMessage(err, t('loadError')));
+        }
+      } finally {
+        if (!opts?.background) setLoading(false);
+      }
+    },
+    [lane, errorMessage, t],
+  );
 
   useEffect(() => {
     if (authLoading || !isStaff(user?.role)) return;
     void load();
   }, [authLoading, user?.role, load]);
+
+  useRealtimeRefresh(
+    () => {
+      if (!busyId) void load({ background: true });
+    },
+    !authLoading && isStaff(user?.role),
+  );
 
   async function runAction(report: ReportDto, action: WorkflowAction) {
     setBusyId(report.id);

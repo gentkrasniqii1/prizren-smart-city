@@ -24,6 +24,7 @@ import type {
 import { apiFetch } from '@/lib/api';
 import { usePolling } from '@/lib/use-polling';
 import { useAuth } from '@/components/auth-provider';
+import { useRealtimeRefresh } from '@/components/realtime-provider';
 import { useToast } from '@/components/toast-provider';
 import { PageContainer } from '@/components/layout/page-container';
 import { ReportCard } from '@/components/reports/report-card';
@@ -46,10 +47,10 @@ import { ChangePasswordForm } from '@/components/account/change-password-form';
 import type { AppLocale } from '@/i18n/request';
 
 const OPEN_STATUSES = new Set([
-  'PENDING',
-  'IN_REVIEW',
+  'SUBMITTED',
+  'UNDER_REVIEW',
   'ASSIGNED',
-  'ACCEPTED',
+  'RECEIVED',
   'IN_PROGRESS',
   'WAITING_FOR_INFORMATION',
 ]);
@@ -138,9 +139,9 @@ export function AccountDashboard() {
       .catch(() => undefined);
   }, []);
 
-  // New reports and status changes (e.g. staff resolving an issue) should
-  // appear here without a manual page refresh.
-  usePolling(refreshLive, 20_000, Boolean(user) && !authLoading);
+  // Live SSE for new reports and status changes; slow poll if the stream drops.
+  usePolling(refreshLive, 90_000, Boolean(user) && !authLoading);
+  useRealtimeRefresh(refreshLive, Boolean(user) && !authLoading);
 
   useEffect(() => {
     if (authLoading || !user) return;

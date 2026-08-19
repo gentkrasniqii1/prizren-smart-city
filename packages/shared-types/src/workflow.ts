@@ -14,23 +14,23 @@ export const WORKFLOW_ACTIONS = [
 
 /** Happy-path civic pipeline shown to citizens. Side-states are omitted. */
 export const CITIZEN_PIPELINE: ReportStatus[] = [
-  'PENDING',
+  'SUBMITTED',
   'ASSIGNED',
-  'ACCEPTED',
+  'RECEIVED',
   'IN_PROGRESS',
   'RESOLVED',
 ];
 
 /**
  * Legal next statuses for staff. SUPER_ADMIN may bypass this matrix.
- * Institution desk: ASSIGNED (queue) → ACCEPTED → IN_PROGRESS → RESOLVED.
+ * Institution desk: ASSIGNED (queue) → RECEIVED → IN_PROGRESS → RESOLVED.
  */
 export const ALLOWED_STATUS_TRANSITIONS: Record<ReportStatus, ReportStatus[]> = {
-  PENDING: ['IN_REVIEW', 'ASSIGNED', 'REJECTED', 'DUPLICATE'],
-  IN_REVIEW: ['ASSIGNED', 'PENDING', 'REJECTED', 'DUPLICATE'],
-  ASSIGNED: ['ACCEPTED', 'IN_REVIEW', 'REJECTED', 'DUPLICATE'],
-  ACCEPTED: ['IN_PROGRESS', 'WAITING_FOR_INFORMATION', 'ASSIGNED', 'REJECTED'],
-  IN_PROGRESS: ['WAITING_FOR_INFORMATION', 'RESOLVED', 'REJECTED', 'ACCEPTED'],
+  SUBMITTED: ['UNDER_REVIEW', 'ASSIGNED', 'REJECTED', 'DUPLICATE'],
+  UNDER_REVIEW: ['ASSIGNED', 'SUBMITTED', 'REJECTED', 'DUPLICATE'],
+  ASSIGNED: ['RECEIVED', 'UNDER_REVIEW', 'REJECTED', 'DUPLICATE'],
+  RECEIVED: ['IN_PROGRESS', 'WAITING_FOR_INFORMATION', 'ASSIGNED', 'REJECTED'],
+  IN_PROGRESS: ['WAITING_FOR_INFORMATION', 'RESOLVED', 'REJECTED', 'RECEIVED'],
   WAITING_FOR_INFORMATION: ['IN_PROGRESS', 'RESOLVED', 'REJECTED'],
   RESOLVED: [],
   REJECTED: [],
@@ -38,7 +38,7 @@ export const ALLOWED_STATUS_TRANSITIONS: Record<ReportStatus, ReportStatus[]> = 
 };
 
 export const WORKFLOW_ACTION_TARGET: Record<WorkflowAction, ReportStatus> = {
-  accept: 'ACCEPTED',
+  accept: 'RECEIVED',
   investigate: 'IN_PROGRESS',
   request_info: 'WAITING_FOR_INFORMATION',
   resolve: 'RESOLVED',
@@ -68,7 +68,7 @@ export type QueueLane = 'incoming' | 'active' | 'waiting' | 'done';
 
 export const QUEUE_LANE_STATUSES: Record<QueueLane, ReportStatus[]> = {
   incoming: ['ASSIGNED'],
-  active: ['ACCEPTED', 'IN_PROGRESS'],
+  active: ['RECEIVED', 'IN_PROGRESS'],
   waiting: ['WAITING_FOR_INFORMATION'],
   done: ['RESOLVED', 'REJECTED', 'DUPLICATE'],
 };
@@ -77,7 +77,7 @@ export function notificationTypeForStatus(status: ReportStatus): string {
   switch (status) {
     case 'ASSIGNED':
       return 'REPORT_ASSIGNED';
-    case 'ACCEPTED':
+    case 'RECEIVED':
       return 'REPORT_ACCEPTED';
     case 'IN_PROGRESS':
       return 'REPORT_IN_PROGRESS';
@@ -89,9 +89,9 @@ export function notificationTypeForStatus(status: ReportStatus): string {
       return 'REPORT_REJECTED';
     case 'DUPLICATE':
       return 'REPORT_DUPLICATE';
-    case 'IN_REVIEW':
+    case 'UNDER_REVIEW':
       return 'REPORT_IN_REVIEW';
-    case 'PENDING':
+    case 'SUBMITTED':
       return 'REPORT_RECEIVED';
     default:
       return 'STATUS_CHANGED';

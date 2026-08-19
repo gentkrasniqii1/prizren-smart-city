@@ -1,28 +1,18 @@
+import { REPORT_STATUSES, type ReportStatus } from '@prizren/shared-types';
 import type { AppLocale } from '@/i18n/request';
 
-export const REPORT_STATUSES = [
-  'PENDING',
-  'IN_REVIEW',
-  'ASSIGNED',
-  'ACCEPTED',
-  'IN_PROGRESS',
-  'WAITING_FOR_INFORMATION',
-  'RESOLVED',
-  'REJECTED',
-  'DUPLICATE',
-] as const;
-
-export type ReportStatusKey = (typeof REPORT_STATUSES)[number];
+export { REPORT_STATUSES };
+export type ReportStatusKey = ReportStatus;
 
 export const REPORT_PRIORITIES = ['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'] as const;
 export type ReportPriorityKey = (typeof REPORT_PRIORITIES)[number];
 
 const STATUS_LABELS: Record<AppLocale, Record<ReportStatusKey, string>> = {
   sq: {
-    PENDING: 'Në pritje',
-    IN_REVIEW: 'Në shqyrtim',
+    SUBMITTED: 'Dërguar',
+    RECEIVED: 'I pranuar',
+    UNDER_REVIEW: 'Në shqyrtim',
     ASSIGNED: 'Në radhë',
-    ACCEPTED: 'I pranuar',
     IN_PROGRESS: 'Në hetim',
     WAITING_FOR_INFORMATION: 'Në pritje të informacionit',
     RESOLVED: 'I zgjidhur',
@@ -30,11 +20,11 @@ const STATUS_LABELS: Record<AppLocale, Record<ReportStatusKey, string>> = {
     DUPLICATE: 'Duplikat',
   },
   en: {
-    PENDING: 'Pending',
-    IN_REVIEW: 'Under review',
-    ASSIGNED: 'In queue',
-    ACCEPTED: 'Accepted',
-    IN_PROGRESS: 'Investigating',
+    SUBMITTED: 'Submitted',
+    RECEIVED: 'Received',
+    UNDER_REVIEW: 'Under review',
+    ASSIGNED: 'Assigned',
+    IN_PROGRESS: 'In progress',
     WAITING_FOR_INFORMATION: 'Waiting for information',
     RESOLVED: 'Resolved',
     REJECTED: 'Rejected',

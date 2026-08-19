@@ -6,6 +6,7 @@ import { useTranslations } from 'next-intl';
 import type { NotificationDto, PaginatedNotifications } from '@prizren/shared-types';
 import { apiFetch } from '@/lib/api';
 import { useAuth } from '@/components/auth-provider';
+import { useRealtimeRefresh } from '@/components/realtime-provider';
 import { PageContainer } from '@/components/layout/page-container';
 import { NotificationItem } from '@/components/notifications/notification-item';
 import { Button, EmptyState, ErrorBanner } from '@/components/ui';
@@ -49,6 +50,13 @@ export default function NotificationsPage() {
       }
     })();
   }, [loading, user, load, t]);
+
+  useRealtimeRefresh(
+    () => {
+      if (user) void load().catch(() => undefined);
+    },
+    Boolean(user) && !loading,
+  );
 
   async function markOne(id: string) {
     setBusy(true);
