@@ -24,5 +24,5 @@ export function PageContainer({
   width?: Width;
   as?: 'div' | 'section' | 'main';
 }) {
-  return <Tag className={cn('mx-auto w-full px-4', widths[width], className)}>{children}</Tag>;
+  return <Tag className={cn('mx-auto w-full px-gutter', widths[width], className)}>{children}</Tag>;
 }

@@ -1,5 +1,6 @@
 'use client';
 
+import { Slot } from '@radix-ui/react-slot';
 import { Check, CircleAlert, Loader2 } from 'lucide-react';
 import { forwardRef, type ButtonHTMLAttributes, type ReactNode } from 'react';
 import { cn } from '@/lib/utils';
@@ -20,15 +21,15 @@ const variants: Record<Variant, string> = {
 };
 
 const sizes: Record<Size, string> = {
-  sm: 'min-h-10 px-3 py-2 text-sm rounded-md sm:min-h-0 sm:py-1.5',
+  sm: 'min-h-10 px-3 py-2 text-sm rounded-md',
   md: 'min-h-11 px-4 py-2.5 text-sm rounded-md',
-  lg: 'min-h-12 px-5 py-3 text-base rounded-lg',
+  lg: 'min-h-12 px-5 py-3 text-base rounded-md',
 };
 
 const iconSizes: Record<Size, string> = {
   sm: 'h-10 w-10 rounded-md',
   md: 'h-11 w-11 rounded-md',
-  lg: 'h-12 w-12 rounded-lg',
+  lg: 'h-12 w-12 rounded-md',
 };
 
 const statusClass: Record<ButtonStatus, string> = {
@@ -45,6 +46,7 @@ type Props = ButtonHTMLAttributes<HTMLButtonElement> & {
   /** Visual + interaction state. `loading` is an alias for status="loading". */
   status?: ButtonStatus;
   loading?: boolean;
+  asChild?: boolean;
   children: ReactNode;
 };
 
@@ -62,6 +64,7 @@ export const Button = forwardRef<HTMLButtonElement, Props>(function Button(
     size = 'md',
     status = 'idle',
     loading = false,
+    asChild = false,
     className,
     children,
     type = 'button',
@@ -73,12 +76,13 @@ export const Button = forwardRef<HTMLButtonElement, Props>(function Button(
 ) {
   const resolved = resolveButtonStatus(status, loading);
   const locked = Boolean(disabled) || resolved === 'loading' || resolved === 'success';
+  const Comp = asChild ? Slot : 'button';
 
   return (
-    <button
+    <Comp
       ref={ref}
-      type={type}
-      disabled={locked}
+      type={asChild ? undefined : type}
+      disabled={asChild ? undefined : locked}
       aria-busy={resolved === 'loading' || undefined}
       aria-disabled={locked || undefined}
       data-status={resolved}
@@ -87,6 +91,7 @@ export const Button = forwardRef<HTMLButtonElement, Props>(function Button(
         'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring',
         'active:scale-[0.99]',
         'disabled:pointer-events-none disabled:opacity-60 disabled:active:scale-100',
+        locked && asChild && 'pointer-events-none opacity-60',
         variants[variant],
         variant === 'icon' ? iconSizes[size] : sizes[size],
         statusClass[resolved],
@@ -102,12 +107,18 @@ export const Button = forwardRef<HTMLButtonElement, Props>(function Button(
       }}
       {...rest}
     >
-      {resolved === 'loading' ? (
-        <Loader2 className="h-4 w-4 shrink-0 animate-spin" aria-hidden />
-      ) : null}
-      {resolved === 'success' ? <Check className="h-4 w-4 shrink-0" aria-hidden /> : null}
-      {resolved === 'error' ? <CircleAlert className="h-4 w-4 shrink-0" aria-hidden /> : null}
-      {children}
-    </button>
+      {asChild ? (
+        children
+      ) : (
+        <>
+          {resolved === 'loading' ? (
+            <Loader2 className="h-4 w-4 shrink-0 animate-spin" aria-hidden />
+          ) : null}
+          {resolved === 'success' ? <Check className="h-4 w-4 shrink-0" aria-hidden /> : null}
+          {resolved === 'error' ? <CircleAlert className="h-4 w-4 shrink-0" aria-hidden /> : null}
+          {children}
+        </>
+      )}
+    </Comp>
   );
 });

@@ -18,6 +18,7 @@ export const viewport: Viewport = {
   themeColor: '#faf8f5',
 };
 
+/** Manrope runs the UI. Fraunces is Display only — hero, wordmark, rare civic moments. */
 const display = Fraunces({
   subsets: ['latin'],
   variable: '--font-display',
@@ -76,7 +77,7 @@ export default async function RootLayout({
   return (
     <html lang={locale} suppressHydrationWarning>
       <body
-        className={`${display.variable} ${sans.variable} min-h-screen bg-background font-sans text-foreground antialiased`}
+        className={`${display.variable} ${sans.variable} min-h-screen bg-background font-sans text-body text-foreground antialiased`}
         suppressHydrationWarning
       >
         <ThemeProvider>

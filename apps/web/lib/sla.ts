@@ -20,8 +20,8 @@ export function slaLabel(bucket: SlaBucket | null, locale: AppLocale = 'sq'): st
 }
 
 export function slaClass(bucket: SlaBucket | null): string {
-  if (bucket === 'overdue') return 'bg-red-200 text-red-950';
-  if (bucket === 'due_soon') return 'bg-amber-200 text-amber-950';
-  if (bucket === 'on_time') return 'bg-river-200 text-river-950';
-  return 'bg-stone-200 text-stone-800';
+  if (bucket === 'overdue') return 'bg-semantic-danger text-semantic-danger-foreground';
+  if (bucket === 'due_soon') return 'bg-semantic-warning text-semantic-warning-foreground';
+  if (bucket === 'on_time') return 'bg-semantic-success text-semantic-success-foreground';
+  return 'bg-status-pending text-status-pending-foreground';
 }
