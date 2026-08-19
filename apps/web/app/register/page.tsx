@@ -129,7 +129,10 @@ export default function RegisterPage() {
           <Input
             id="register-email"
             type="email"
+            inputMode="email"
             autoComplete="email"
+            autoCapitalize="none"
+            autoCorrect="off"
             value={email}
             invalid={Boolean(fieldErrors.email)}
             onChange={(e) => {
@@ -144,6 +147,7 @@ export default function RegisterPage() {
           <Input
             id="register-phone"
             type="tel"
+            inputMode="tel"
             autoComplete="tel"
             value={phone}
             onChange={(e) => setPhone(e.target.value)}

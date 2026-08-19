@@ -79,25 +79,26 @@ export function LoginForm() {
       headline={t('panelHeadline')}
       body={t('panelBody')}
     >
-      <Link href="/" className="inline-flex text-foreground">
+      <Link href="/" className="hidden text-foreground lg:inline-flex">
         <Logo variant="icon" size={36} />
       </Link>
 
-      <p className="mt-8 text-xs font-semibold uppercase tracking-[0.18em] text-gilt">
-        {t('welcomeBack')}
-      </p>
+      <p className="ds-kicker lg:mt-8">{t('welcomeBack')}</p>
       <h1 className="ds-page-title mt-2">{t('loginTitle')}</h1>
 
-      <form onSubmit={onSubmit} className="relative mt-8 space-y-4" noValidate>
+      <form onSubmit={onSubmit} className="relative mt-6 space-y-4 lg:mt-8" noValidate>
         <div>
           <Label htmlFor="login-email">{t('email')}</Label>
           <Input
             id="login-email"
             type="email"
+            inputMode="email"
             autoComplete="email"
+            autoCapitalize="none"
+            autoCorrect="off"
+            enterKeyHint="next"
             value={email}
             invalid={Boolean(fieldErrors.email)}
-            className="h-12"
             onChange={(e) => {
               setEmail(e.target.value);
               setFieldErrors((f) => ({ ...f, email: undefined }));
@@ -111,9 +112,9 @@ export function LoginForm() {
             id="login-password"
             type="password"
             autoComplete="current-password"
+            enterKeyHint="go"
             value={password}
             invalid={Boolean(fieldErrors.password)}
-            className="h-12"
             onChange={(e) => {
               setPassword(e.target.value);
               setFieldErrors((f) => ({ ...f, password: undefined }));
@@ -122,13 +123,13 @@ export function LoginForm() {
           <FieldError message={fieldErrors.password} />
         </div>
 
-        <div className="flex items-center justify-between gap-3">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <Checkbox id="remember" checked={rememberMe} onChange={setRememberMe}>
             {t('rememberMe')}
           </Checkbox>
           <Link
             href="/forgot-password"
-            className="text-sm font-medium text-primary hover:underline"
+            className="inline-flex min-h-11 items-center text-sm font-medium text-primary hover:underline"
           >
             {t('forgotPassword')}
           </Link>

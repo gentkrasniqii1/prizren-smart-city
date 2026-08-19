@@ -12,8 +12,9 @@ import type {
   PaginatedComments,
   ReportDto,
   UpdateAiClassificationRequest,
-  UpdateReportStatusRequest,
   VoteCountResponse,
+  WorkflowAction,
+  WorkflowActionRequest,
 } from '@prizren/shared-types';
 import { apiFetch } from '@/lib/api';
 import { useAuth } from '@/components/auth-provider';
@@ -59,6 +60,7 @@ export function ReportDetailView() {
   const [workflowBusy, setWorkflowBusy] = useState(false);
   const [comments, setComments] = useState<CommentDto[]>([]);
   const [commentText, setCommentText] = useState('');
+  const [workflowNote, setWorkflowNote] = useState('');
   const [commentError, setCommentError] = useState<string | null>(null);
   const [voteBusy, setVoteBusy] = useState(false);
   const [related, setRelated] = useState<ReportDto[]>([]);
@@ -248,18 +250,18 @@ export function ReportDetailView() {
     }
   }
 
-  async function markResolved() {
+  async function runWorkflow(action: WorkflowAction, note?: string) {
     if (!report) return;
     setWorkflowBusy(true);
     try {
-      const body: UpdateReportStatusRequest = { status: 'RESOLVED' };
-      const updated = await apiFetch<ReportDto>(`/reports/${report.id}/status`, {
-        method: 'PATCH',
+      const body: WorkflowActionRequest = { action, note };
+      const updated = await apiFetch<ReportDto>(`/reports/${report.id}/workflow`, {
+        method: 'POST',
         auth: true,
         body,
       });
       setReport(updated);
-      toast.push(t('markedResolved'), 'success');
+      toast.push(t(`workflowDone.${action}`), 'success');
     } catch (err) {
       toast.push(errorMessage(err, t('statusFailed')), 'error');
     } finally {
@@ -351,6 +353,7 @@ export function ReportDetailView() {
             {t('idLabel', { id: shortId })}
             {report.categoryName ? ` · ${report.categoryName}` : ''}
             {report.departmentName ? ` · ${report.departmentName}` : ''}
+            {report.institutionName ? ` · ${report.institutionName}` : ''}
           </p>
         </header>
 
@@ -472,6 +475,28 @@ export function ReportDetailView() {
               )}
             </section>
 
+            {report.status === 'RESOLVED' ? (
+              <section
+                aria-labelledby="report-resolution-heading"
+                className="rounded-xl border border-status-resolved bg-status-resolved/40 p-5"
+              >
+                <h2 id="report-resolution-heading" className="ds-card-title">
+                  {t('resolutionHeading')}
+                </h2>
+                <p className="mt-2 text-sm text-foreground">{t('resolutionBody')}</p>
+                {report.latestNote ? (
+                  <p className="mt-3 rounded-md bg-card px-3 py-2 text-sm text-foreground">
+                    {report.latestNote}
+                  </p>
+                ) : null}
+                {report.institutionName ? (
+                  <p className="mt-2 text-sm text-muted-foreground">
+                    {t('resolutionBy', { name: report.institutionName })}
+                  </p>
+                ) : null}
+              </section>
+            ) : null}
+
             {canStaff ? (
               <section
                 aria-labelledby="report-workflow-heading"
@@ -481,6 +506,32 @@ export function ReportDetailView() {
                   {t('workflowHeading')}
                 </h2>
                 <p className="mt-1 text-sm text-muted-foreground">{t('workflowIntro')}</p>
+                <div className="mt-4 flex flex-wrap gap-2">
+                  {(report.allowedActions ?? []).map((action) => (
+                    <Button
+                      key={action}
+                      type="button"
+                      size="sm"
+                      variant={
+                        action === 'reject' || action === 'mark_duplicate' ? 'secondary' : 'primary'
+                      }
+                      disabled={workflowBusy || (action === 'resolve' && !report.photoAfterUrl)}
+                      onClick={() => void runWorkflow(action, workflowNote.trim() || undefined)}
+                    >
+                      {t(`workflowActions.${action}`)}
+                    </Button>
+                  ))}
+                </div>
+                <Label htmlFor="workflow-note" className="mt-4">
+                  {t('workflowNote')}
+                </Label>
+                <Textarea
+                  id="workflow-note"
+                  rows={2}
+                  maxLength={500}
+                  value={workflowNote}
+                  onChange={(e) => setWorkflowNote(e.target.value)}
+                />
                 <Label htmlFor="photo-after" className="mt-4">
                   {t('afterUploadLabel')}
                 </Label>
@@ -491,15 +542,6 @@ export function ReportDetailView() {
                   disabled={workflowBusy}
                   onChange={(e) => void uploadAfterPhoto(e.target.files?.[0] ?? null)}
                 />
-                <Button
-                  type="button"
-                  size="sm"
-                  disabled={workflowBusy || report.status === 'RESOLVED'}
-                  onClick={() => void markResolved()}
-                  className="mt-4"
-                >
-                  {t('markResolved')}
-                </Button>
               </section>
             ) : null}
 
@@ -745,6 +787,7 @@ export function ReportDetailView() {
                 status={report.status}
                 createdAt={report.createdAt}
                 updatedAt={report.updatedAt}
+                history={report.history}
                 hasAi={Boolean(report.aiClassification)}
                 hasPhotoAfter={Boolean(report.photoAfterUrl)}
               />
@@ -775,6 +818,12 @@ export function ReportDetailView() {
                         ) : null}
                       </span>
                     </span>
+                  </dd>
+                </div>
+                <div>
+                  <dt className="text-muted-foreground">{t('institution')}</dt>
+                  <dd className="mt-0.5 text-foreground">
+                    {report.institutionName ?? report.departmentName ?? t('institutionUnknown')}
                   </dd>
                 </div>
                 <div>

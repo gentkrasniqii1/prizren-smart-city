@@ -23,7 +23,7 @@ export async function HomeFinalCta() {
           className="absolute inset-0 bg-gradient-to-t from-overlay-surface/90 via-overlay-surface/65 to-overlay-surface/35"
           aria-hidden
         />
-        <PageContainer className="relative flex min-h-[22rem] flex-col items-start justify-end pb-14 pt-20 sm:min-h-[26rem] sm:pb-16">
+        <PageContainer className="relative flex min-h-[22rem] flex-col items-start justify-end pb-[calc(3.5rem+var(--bottom-nav-h))] pt-20 sm:min-h-[26rem] sm:pb-16">
           <Reveal>
             <h2 className="ds-display max-w-2xl text-overlay-foreground sm:text-display-lg">
               {t('final.title')}

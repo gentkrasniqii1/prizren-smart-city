@@ -3,7 +3,13 @@ import { OnEvent } from '@nestjs/event-emitter';
 import { ConfigService } from '../auth/config.service';
 import { MailService } from '../mail/mail.service';
 import { PrismaService } from '../prisma/prisma.service';
-import { REPORT_STATUS_CHANGED_EVENT, StatusChangedEvent } from '../events/status-changed.event';
+import {
+  REPORT_CREATED_EVENT,
+  REPORT_STATUS_CHANGED_EVENT,
+  ReportCreatedEvent,
+  StatusChangedEvent,
+} from '../events/status-changed.event';
+import { notificationTypeForStatus } from '@prizren/shared-types';
 
 @Injectable()
 export class NotificationsService {
@@ -15,17 +21,26 @@ export class NotificationsService {
     private readonly config: ConfigService,
   ) {}
 
-  @OnEvent(REPORT_STATUS_CHANGED_EVENT)
-  async handleStatusChanged(event: StatusChangedEvent) {
-    if (event.ownerUserId === event.changedByUserId) {
-      return;
-    }
-
+  @OnEvent(REPORT_CREATED_EVENT)
+  async handleReportCreated(event: ReportCreatedEvent) {
     await this.prisma.notification.create({
       data: {
         userId: event.ownerUserId,
         reportId: event.reportId,
-        type: 'STATUS_CHANGED',
+        type: 'REPORT_RECEIVED',
+        channel: 'IN_APP',
+        read: false,
+      },
+    });
+  }
+
+  @OnEvent(REPORT_STATUS_CHANGED_EVENT)
+  async handleStatusChanged(event: StatusChangedEvent) {
+    await this.prisma.notification.create({
+      data: {
+        userId: event.ownerUserId,
+        reportId: event.reportId,
+        type: notificationTypeForStatus(event.newStatus),
         channel: 'IN_APP',
         read: false,
       },
@@ -89,14 +104,22 @@ export class NotificationsService {
             : n.type === 'REPORT_RECEIVED'
               ? 'Raporti juaj u pranua.'
               : n.type === 'REPORT_ASSIGNED'
-                ? 'Raporti juaj është caktuar për shqyrtim.'
-                : n.type === 'REPORT_IN_PROGRESS'
-                  ? 'Raporti juaj është në trajtim.'
-                  : n.type === 'REPORT_RESOLVED'
-                    ? 'Raporti juaj u zgjidh.'
-                    : n.type === 'INFO_REQUESTED'
-                      ? 'Administratori juaj ka kërkuar informacion shtesë.'
-                      : n.type,
+                ? 'Raporti juaj hyri në radhën e institucionit.'
+                : n.type === 'REPORT_ACCEPTED'
+                  ? 'Institucioni e pranoi raportin tuaj.'
+                  : n.type === 'REPORT_IN_PROGRESS'
+                    ? 'Raporti juaj është në hetim.'
+                    : n.type === 'REPORT_IN_REVIEW'
+                      ? 'Kategoria e raportit tuaj po rishikohet.'
+                      : n.type === 'REPORT_RESOLVED'
+                        ? 'Raporti juaj u zgjidh.'
+                        : n.type === 'REPORT_REJECTED'
+                          ? 'Raporti juaj u refuzua.'
+                          : n.type === 'REPORT_DUPLICATE'
+                            ? 'Raporti juaj u shënua si duplikat.'
+                            : n.type === 'INFO_REQUESTED'
+                              ? 'Institucioni kërkoi informacion shtesë.'
+                              : n.type,
       })),
       meta: {
         page,

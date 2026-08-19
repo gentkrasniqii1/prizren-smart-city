@@ -15,6 +15,7 @@ const STATUS_CLASS: Record<ReportStatusKey, string> = {
   PENDING: 'bg-status-pending text-status-pending-foreground',
   IN_REVIEW: 'bg-status-review text-status-review-foreground',
   ASSIGNED: 'bg-status-assigned text-status-assigned-foreground',
+  ACCEPTED: 'bg-status-accepted text-status-accepted-foreground',
   IN_PROGRESS: 'bg-status-progress text-status-progress-foreground',
   WAITING_FOR_INFORMATION: 'bg-status-waiting text-status-waiting-foreground',
   RESOLVED: 'bg-status-resolved text-status-resolved-foreground',

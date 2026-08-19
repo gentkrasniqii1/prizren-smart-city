@@ -21,7 +21,7 @@ export async function HomeHero() {
         className="absolute inset-0 bg-gradient-to-r from-overlay-surface/85 via-overlay-surface/60 to-overlay-surface/40"
         aria-hidden
       />
-      <PageContainer className="relative flex min-h-[min(92svh,52rem)] flex-col justify-end pb-20 pt-28 sm:justify-center sm:pb-24">
+      <PageContainer className="relative flex min-h-[min(92svh,52rem)] flex-col justify-end pb-[calc(5rem+var(--bottom-nav-h))] pt-24 sm:justify-center sm:pb-24">
         <p className="motion-fade-up ds-kicker sm:text-sm">{t('eyebrow')}</p>
         <h1 className="ds-display motion-fade-up motion-delay-1 mt-gutter max-w-3xl text-overlay-foreground sm:text-display-lg md:text-display-xl">
           {t('title')}

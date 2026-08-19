@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Bell, FilePlus2, FileText, LayoutDashboard, LogOut, Map } from 'lucide-react';
+import { Bell, FilePlus2, FileText, Inbox, LayoutDashboard, LogOut, Map } from 'lucide-react';
 import { useLocale, useTranslations } from 'next-intl';
 import type {
   MyReportStats,
@@ -40,6 +40,7 @@ const OPEN_STATUSES = new Set([
   'PENDING',
   'IN_REVIEW',
   'ASSIGNED',
+  'ACCEPTED',
   'IN_PROGRESS',
   'WAITING_FOR_INFORMATION',
 ]);
@@ -213,14 +214,14 @@ export function AccountDashboard() {
               </p>
             </div>
           </div>
-          <div className="flex flex-wrap gap-cluster">
-            <Button asChild size="sm">
+          <div className="flex w-full flex-col gap-cluster sm:w-auto sm:flex-row">
+            <Button asChild className="w-full sm:w-auto">
               <Link href="/report">
                 <FilePlus2 className="h-4 w-4" aria-hidden />
                 {t('ctaReport')}
               </Link>
             </Button>
-            <Button asChild size="sm" variant="secondary">
+            <Button asChild variant="secondary" className="w-full sm:w-auto">
               <Link href="/notifications">
                 <Bell className="h-4 w-4" aria-hidden />
                 {t('ctaNotifications')}
@@ -235,7 +236,10 @@ export function AccountDashboard() {
           <QuickLink href="/reports" icon={Map} label={t('quickMap')} />
           <QuickLink href="#reports" icon={FileText} label={t('quickMyReports')} />
           {staff ? (
-            <QuickLink href="/admin" icon={LayoutDashboard} label={t('quickAdmin')} />
+            <>
+              <QuickLink href="/queue" icon={Inbox} label={t('quickQueue')} />
+              <QuickLink href="/admin" icon={LayoutDashboard} label={t('quickAdmin')} />
+            </>
           ) : null}
         </nav>
 
@@ -275,7 +279,7 @@ export function AccountDashboard() {
                 <p className="mt-1 text-sm text-stone-600">{t('reportsSubtitle')}</p>
               </div>
               <div
-                className="inline-flex rounded-md border border-border bg-card p-0.5"
+                className="grid w-full grid-cols-3 rounded-md border border-border bg-card p-0.5 sm:inline-flex sm:w-auto"
                 role="group"
                 aria-label={t('filterLabel')}
               >
@@ -291,7 +295,7 @@ export function AccountDashboard() {
                     type="button"
                     onClick={() => setFilter(key)}
                     className={cn(
-                      'rounded-md px-2.5 py-1 text-caption font-medium transition duration-fast ease-product',
+                      'min-h-11 rounded-md px-2.5 text-caption font-medium transition duration-fast ease-product',
                       filter === key
                         ? 'bg-primary text-primary-foreground'
                         : 'text-muted-foreground hover:bg-muted',

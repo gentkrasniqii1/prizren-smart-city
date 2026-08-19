@@ -6,8 +6,8 @@ import { Bell } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import type { PaginatedNotifications } from '@prizren/shared-types';
 import { useAuth } from '@/components/auth-provider';
+import { Button } from '@/components/ui/button';
 import { apiFetch } from '@/lib/api';
-import { cn } from '@/lib/utils';
 
 export function NotificationBell() {
   const t = useTranslations('Nav');
@@ -38,23 +38,21 @@ export function NotificationBell() {
   if (loading || !user) return null;
 
   return (
-    <Link
-      href="/notifications"
-      className={cn(
-        'relative inline-flex h-10 w-10 items-center justify-center rounded-md text-stone-700',
-        'hover:bg-stone-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-mosque-700',
-      )}
-      aria-label={unread > 0 ? `${t('notifications')} (${unread})` : t('notifications')}
-    >
-      <Bell className="h-5 w-5" aria-hidden />
-      {unread > 0 ? (
-        <span
-          className="absolute right-1.5 top-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-600 px-1 text-[10px] font-semibold text-white"
-          aria-hidden
-        >
-          {unread > 9 ? '9+' : unread}
-        </span>
-      ) : null}
-    </Link>
+    <Button asChild variant="icon" size="sm" className="relative shrink-0">
+      <Link
+        href="/notifications"
+        aria-label={unread > 0 ? `${t('notifications')} (${unread})` : t('notifications')}
+      >
+        <Bell className="h-4 w-4" aria-hidden />
+        {unread > 0 ? (
+          <span
+            className="absolute right-1.5 top-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-destructive px-1 text-[10px] font-semibold text-destructive-foreground"
+            aria-hidden
+          >
+            {unread > 9 ? '9+' : unread}
+          </span>
+        ) : null}
+      </Link>
+    </Button>
   );
 }

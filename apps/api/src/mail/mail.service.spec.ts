@@ -48,7 +48,7 @@ describe('MailService — status-changed outcome templates', () => {
       newStatus: 'ASSIGNED',
       reportUrl: 'https://app.local/reports/2',
     });
-    expect(lastWarnText()).toContain('caktua te departamenti');
+    expect(lastWarnText()).toContain('hyri në radhën e institucionit');
   });
 
   it('sends a dedicated "rejected" outcome email', async () => {

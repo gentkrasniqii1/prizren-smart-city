@@ -12,4 +12,8 @@ export class AnalyticsQueryDto {
   @IsOptional()
   @IsUUID()
   departmentId?: string;
+
+  @IsOptional()
+  @IsUUID()
+  institutionId?: string;
 }

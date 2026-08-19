@@ -13,8 +13,17 @@ import type {
   MyReportStats,
   PaginatedComments,
   PaginatedReports,
+  QueueLane,
   ReportDto,
+  StatusHistoryDto,
   VoteCountResponse,
+} from '@prizren/shared-types';
+import {
+  allowedWorkflowActions,
+  canTransitionStatus,
+  QUEUE_LANE_STATUSES,
+  WORKFLOW_ACTION_TARGET,
+  WORKFLOW_ACTIONS_REQUIRING_NOTE,
 } from '@prizren/shared-types';
 import { AuthUser } from '../auth/decorators/current-user.decorator';
 import { ConfigService } from '../auth/config.service';
@@ -33,9 +42,20 @@ import { ListReportsQueryDto } from './dto/list-reports-query.dto';
 import { UpdateAiClassificationDto } from './dto/update-ai-classification.dto';
 import { AssignReportDto } from './dto/assign-report.dto';
 import { UpdateReportStatusDto } from './dto/update-report-status.dto';
+import {
+  AddReportNoteDto,
+  EscalateReportDto,
+  UpdateReportPriorityDto,
+} from './dto/update-report-priority.dto';
 import { computeDueAt } from './sla';
 import { nextReportPublicId } from './public-id';
-import { REPORT_STATUS_CHANGED_EVENT, StatusChangedEvent } from '../events/status-changed.event';
+import { WorkflowActionDto } from './dto/workflow-action.dto';
+import {
+  REPORT_CREATED_EVENT,
+  REPORT_STATUS_CHANGED_EVENT,
+  ReportCreatedEvent,
+  StatusChangedEvent,
+} from '../events/status-changed.event';
 import { assertValidImageUpload } from '../uploads/image-validation';
 import { RoutingService } from '../routing/routing.service';
 
@@ -45,9 +65,11 @@ const OPEN_STATUSES: ReportStatus[] = [
   ReportStatus.PENDING,
   ReportStatus.IN_REVIEW,
   ReportStatus.ASSIGNED,
+  ReportStatus.ACCEPTED,
   ReportStatus.IN_PROGRESS,
   ReportStatus.WAITING_FOR_INFORMATION,
 ];
+const SYSTEM_ACTOR = 'SYSTEM';
 
 /** Shared `include` shape so every Report query returns display names consistently. */
 const REPORT_INCLUDE = {
@@ -57,11 +79,23 @@ const REPORT_INCLUDE = {
   _count: { select: { votes: true } },
 } satisfies Prisma.ReportInclude;
 
+const REPORT_DETAIL_INCLUDE = {
+  ...REPORT_INCLUDE,
+  statusHistory: { orderBy: { changedAt: 'asc' as const } },
+} satisfies Prisma.ReportInclude;
+
 type ReportWithRelations = Report & {
   category?: { name: string } | null;
   department?: { name: string } | null;
   institution?: { name: string } | null;
   _count?: { votes: number };
+  statusHistory?: Array<{
+    id: string;
+    oldStatus: ReportStatus;
+    newStatus: ReportStatus;
+    changedAt: Date;
+    note: string | null;
+  }>;
 };
 
 @Injectable()
@@ -121,7 +155,17 @@ export class ReportsService {
       lat: fields.lat,
       lng: fields.lng,
       categoryId: fields.categoryId ?? null,
+      currentStatus: report.status,
+      departmentId: report.departmentId,
+      institutionId: report.institutionId,
     });
+
+    let result = classified ?? report;
+    if (result.status === ReportStatus.PENDING && (result.departmentId || result.institutionId)) {
+      result = await this.enterInstitutionQueue(result.id, SYSTEM_ACTOR);
+    }
+
+    this.events.emit(REPORT_CREATED_EVENT, new ReportCreatedEvent(result.id, user.id));
 
     try {
       await this.mail.sendReportReceivedEmail(user.email, {
@@ -137,7 +181,10 @@ export class ReportsService {
       );
     }
 
-    return this.toDto(classified ?? report, { includeUserId: true });
+    return this.toDto(result, {
+      includeUserId: true,
+      staff: STAFF_ROLES.includes(user.role as Role),
+    });
   }
 
   async findNearby(
@@ -275,7 +322,10 @@ export class ReportsService {
 
     return {
       data: rows.map((row) =>
-        this.toDto(row, { includeUserId: this.canSeeUserId(viewer, row.userId) }),
+        this.toDto(row, {
+          includeUserId: this.canSeeUserId(viewer, row.userId),
+          staff: Boolean(viewer && STAFF_ROLES.includes(viewer.role as Role)),
+        }),
       ),
       meta: {
         page,
@@ -289,7 +339,7 @@ export class ReportsService {
   async findOne(id: string, viewer: AuthUser | null): Promise<ReportDto> {
     const report = await this.prisma.report.findUnique({
       where: { id },
-      include: REPORT_INCLUDE,
+      include: REPORT_DETAIL_INCLUDE,
     });
     if (!report) {
       throw new NotFoundException('Report not found');
@@ -308,6 +358,7 @@ export class ReportsService {
     return this.toDto(report, {
       includeUserId: this.canSeeUserId(viewer, report.userId),
       votedByMe,
+      staff: Boolean(viewer && STAFF_ROLES.includes(viewer.role as Role)),
     });
   }
 
@@ -343,7 +394,10 @@ export class ReportsService {
       this.prisma.report.count({ where: { userId } }),
       this.prisma.report.count({ where: { userId, status: { in: OPEN_STATUSES } } }),
       this.prisma.report.count({
-        where: { userId, status: { in: [ReportStatus.ASSIGNED, ReportStatus.IN_PROGRESS] } },
+        where: {
+          userId,
+          status: { in: [ReportStatus.ASSIGNED, ReportStatus.ACCEPTED, ReportStatus.IN_PROGRESS] },
+        },
       }),
       this.prisma.report.count({ where: { userId, status: ReportStatus.RESOLVED } }),
     ]);
@@ -368,6 +422,8 @@ export class ReportsService {
       throw new BadRequestException('Status is already set to this value');
     }
 
+    this.assertStatusTransition(existing.status, dto.status, user.role as Role);
+
     if (dto.status === ReportStatus.RESOLVED && !existing.photoAfterUrl) {
       throw new BadRequestException(
         'photoAfterUrl is required before resolving. Upload via POST /reports/:id/photo-after',
@@ -375,7 +431,8 @@ export class ReportsService {
     }
 
     const nextDueAt =
-      dto.status === ReportStatus.ASSIGNED && !existing.dueAt
+      (dto.status === ReportStatus.ASSIGNED || dto.status === ReportStatus.ACCEPTED) &&
+      !existing.dueAt
         ? computeDueAt(existing.priority)
         : undefined;
 
@@ -386,7 +443,7 @@ export class ReportsService {
           status: dto.status,
           ...(nextDueAt ? { dueAt: nextDueAt } : {}),
         },
-        include: REPORT_INCLUDE,
+        include: REPORT_DETAIL_INCLUDE,
       });
 
       await tx.statusHistory.create({
@@ -395,6 +452,7 @@ export class ReportsService {
           oldStatus: existing.status,
           newStatus: dto.status,
           changedBy: user.id,
+          note: dto.note?.trim() || null,
         },
       });
 
@@ -429,7 +487,69 @@ export class ReportsService {
       ),
     );
 
-    return this.toDto(updated, { includeUserId: true });
+    return this.toDto(updated, { includeUserId: true, staff: true });
+  }
+
+  async applyWorkflowAction(
+    id: string,
+    user: AuthUser,
+    dto: WorkflowActionDto,
+    ipAddress?: string | null,
+  ): Promise<ReportDto> {
+    if (!STAFF_ROLES.includes(user.role as Role)) {
+      throw new ForbiddenException('Only staff/admin can run the institution workflow');
+    }
+
+    const note = dto.note?.trim();
+    if (WORKFLOW_ACTIONS_REQUIRING_NOTE.includes(dto.action) && !note) {
+      throw new BadRequestException('note is required for this action');
+    }
+
+    return this.updateStatus(
+      id,
+      user,
+      { status: WORKFLOW_ACTION_TARGET[dto.action] as ReportStatus, note },
+      ipAddress,
+    );
+  }
+
+  async listQueue(user: AuthUser, query: ListReportsQueryDto): Promise<PaginatedReports> {
+    if (!STAFF_ROLES.includes(user.role as Role)) {
+      throw new ForbiddenException('Only staff/admin can open the institution queue');
+    }
+
+    const scope = await this.staffQueueScope(user);
+    const lane: QueueLane = query.lane ?? 'incoming';
+    const laneStatuses = QUEUE_LANE_STATUSES[lane] as ReportStatus[];
+
+    const page = query.page ?? 1;
+    const limit = query.limit ?? 20;
+    const where: Prisma.ReportWhereInput = {
+      ...this.buildWhere(query),
+      ...scope,
+      status: query.status ?? { in: laneStatuses },
+    };
+
+    const [total, rows] = await this.prisma.$transaction([
+      this.prisma.report.count({ where }),
+      this.prisma.report.findMany({
+        where,
+        include: REPORT_INCLUDE,
+        orderBy: [{ priority: 'desc' }, { createdAt: 'asc' }],
+        skip: (page - 1) * limit,
+        take: limit,
+      }),
+    ]);
+
+    return {
+      data: rows.map((row) => this.toDto(row, { includeUserId: true, staff: true })),
+      meta: {
+        page,
+        limit,
+        total,
+        totalPages: Math.max(1, Math.ceil(total / limit)),
+      },
+    };
   }
 
   async assign(
@@ -455,6 +575,17 @@ export class ReportsService {
       }
     }
 
+    let institutionId =
+      dto.institutionId === undefined ? existing.institutionId : dto.institutionId;
+    if (dto.institutionId) {
+      const institution = await this.prisma.institution.findUnique({
+        where: { id: dto.institutionId },
+      });
+      if (!institution) {
+        throw new BadRequestException('Invalid institutionId');
+      }
+    }
+
     if (dto.assignedStaffId) {
       const staff = await this.prisma.user.findUnique({ where: { id: dto.assignedStaffId } });
       if (!staff || !STAFF_ROLES.includes(staff.role)) {
@@ -474,6 +605,7 @@ export class ReportsService {
         where: { id },
         data: {
           departmentId: departmentId ?? null,
+          institutionId: institutionId ?? null,
           assignedStaffId:
             dto.assignedStaffId === undefined ? existing.assignedStaffId : dto.assignedStaffId,
           status: nextStatus,
@@ -503,6 +635,7 @@ export class ReportsService {
           metadata: JSON.parse(
             JSON.stringify({
               departmentId: report.departmentId,
+              institutionId: report.institutionId,
               assignedStaffId: report.assignedStaffId,
               status: report.status,
               dueAt: report.dueAt?.toISOString() ?? null,
@@ -522,6 +655,170 @@ export class ReportsService {
     }
 
     return this.toDto(updated, { includeUserId: true });
+  }
+
+  async updatePriority(
+    id: string,
+    user: AuthUser,
+    dto: UpdateReportPriorityDto,
+    ipAddress?: string | null,
+  ): Promise<ReportDto> {
+    if (!STAFF_ROLES.includes(user.role as Role)) {
+      throw new ForbiddenException('Only staff/admin can set priority');
+    }
+
+    const existing = await this.prisma.report.findUnique({ where: { id } });
+    if (!existing) {
+      throw new NotFoundException('Report not found');
+    }
+
+    const dueAt = OPEN_STATUSES.includes(existing.status)
+      ? computeDueAt(dto.priority)
+      : existing.dueAt;
+
+    const updated = await this.prisma.$transaction(async (tx) => {
+      const report = await tx.report.update({
+        where: { id },
+        data: { priority: dto.priority, dueAt },
+        include: REPORT_INCLUDE,
+      });
+
+      await tx.auditLog.create({
+        data: {
+          userId: user.id,
+          action: 'report.priority_update',
+          entityType: 'Report',
+          entityId: id,
+          ipAddress: ipAddress ?? undefined,
+          metadata: {
+            oldPriority: existing.priority,
+            newPriority: dto.priority,
+            note: dto.note ?? null,
+            dueAt: report.dueAt?.toISOString() ?? null,
+          },
+        },
+      });
+
+      return report;
+    });
+
+    return this.toDto(updated, { includeUserId: true });
+  }
+
+  async escalate(
+    id: string,
+    user: AuthUser,
+    dto: EscalateReportDto,
+    ipAddress?: string | null,
+  ): Promise<ReportDto> {
+    if (!STAFF_ROLES.includes(user.role as Role)) {
+      throw new ForbiddenException('Only staff/admin can escalate reports');
+    }
+
+    const existing = await this.prisma.report.findUnique({ where: { id } });
+    if (!existing) {
+      throw new NotFoundException('Report not found');
+    }
+
+    const order: Priority[] = [Priority.LOW, Priority.MEDIUM, Priority.HIGH, Priority.CRITICAL];
+    const currentIndex = existing.priority ? order.indexOf(existing.priority) : -1;
+    const nextPriority =
+      currentIndex < 0 ? Priority.HIGH : order[Math.min(currentIndex + 1, order.length - 1)];
+
+    const nextStatus =
+      existing.status === ReportStatus.PENDING ? ReportStatus.IN_REVIEW : existing.status;
+    const dueAt = OPEN_STATUSES.includes(nextStatus) ? computeDueAt(nextPriority) : existing.dueAt;
+
+    const updated = await this.prisma.$transaction(async (tx) => {
+      const report = await tx.report.update({
+        where: { id },
+        data: { priority: nextPriority, status: nextStatus, dueAt },
+        include: REPORT_INCLUDE,
+      });
+
+      if (nextStatus !== existing.status) {
+        await tx.statusHistory.create({
+          data: {
+            reportId: id,
+            oldStatus: existing.status,
+            newStatus: nextStatus,
+            changedBy: user.id,
+          },
+        });
+      }
+
+      await tx.auditLog.create({
+        data: {
+          userId: user.id,
+          action: 'report.escalate',
+          entityType: 'Report',
+          entityId: id,
+          ipAddress: ipAddress ?? undefined,
+          metadata: {
+            oldPriority: existing.priority,
+            newPriority: nextPriority,
+            oldStatus: existing.status,
+            newStatus: nextStatus,
+            note: dto.note ?? null,
+          },
+        },
+      });
+
+      return report;
+    });
+
+    if (nextStatus !== existing.status) {
+      this.events.emit(
+        REPORT_STATUS_CHANGED_EVENT,
+        new StatusChangedEvent(
+          updated.id,
+          existing.userId,
+          existing.status,
+          nextStatus,
+          user.id,
+          dto.note,
+        ),
+      );
+    }
+
+    return this.toDto(updated, { includeUserId: true });
+  }
+
+  async addStaffNote(
+    id: string,
+    user: AuthUser,
+    dto: AddReportNoteDto,
+    ipAddress?: string | null,
+  ): Promise<ReportDto> {
+    if (!STAFF_ROLES.includes(user.role as Role)) {
+      throw new ForbiddenException('Only staff/admin can add notes');
+    }
+
+    const note = dto.note.trim();
+    if (!note) {
+      throw new BadRequestException('note is required');
+    }
+
+    const existing = await this.prisma.report.findUnique({
+      where: { id },
+      include: REPORT_INCLUDE,
+    });
+    if (!existing) {
+      throw new NotFoundException('Report not found');
+    }
+
+    await this.prisma.auditLog.create({
+      data: {
+        userId: user.id,
+        action: 'report.note',
+        entityType: 'Report',
+        entityId: id,
+        ipAddress: ipAddress ?? undefined,
+        metadata: { note },
+      },
+    });
+
+    return this.toDto(existing, { includeUserId: true });
   }
 
   async uploadPhotoAfter(
@@ -695,6 +992,17 @@ export class ReportsService {
     }
 
     const mapped = await this.resolveCategoryAndPriority(classification);
+    const nextStatus =
+      existing.status === ReportStatus.PENDING || existing.status === ReportStatus.IN_REVIEW
+        ? mapped.departmentId || mapped.institutionId
+          ? ReportStatus.ASSIGNED
+          : ReportStatus.IN_REVIEW
+        : existing.status;
+    const dueAt =
+      nextStatus === ReportStatus.ASSIGNED && !existing.dueAt
+        ? computeDueAt(mapped.priority ?? existing.priority)
+        : existing.dueAt;
+
     const updated = await this.prisma.$transaction(async (tx) => {
       const report = await tx.report.update({
         where: { id },
@@ -705,13 +1013,23 @@ export class ReportsService {
           departmentId: mapped.departmentId ?? existing.departmentId,
           institutionId: mapped.institutionId ?? existing.institutionId,
           priority: mapped.priority ?? existing.priority,
-          status:
-            existing.status === ReportStatus.PENDING || existing.status === ReportStatus.IN_REVIEW
-              ? ReportStatus.IN_REVIEW
-              : existing.status,
+          status: nextStatus,
+          dueAt,
         },
         include: REPORT_INCLUDE,
       });
+
+      if (nextStatus !== existing.status) {
+        await tx.statusHistory.create({
+          data: {
+            reportId: id,
+            oldStatus: existing.status,
+            newStatus: nextStatus,
+            changedBy: user.id,
+            note: 'Kategoria u konfirmua — raporti hyri në radhën e institucionit',
+          },
+        });
+      }
 
       await tx.auditLog.create({
         data: {
@@ -730,7 +1048,14 @@ export class ReportsService {
       return report;
     });
 
-    return this.toDto(updated, { includeUserId: true });
+    if (nextStatus !== existing.status) {
+      this.events.emit(
+        REPORT_STATUS_CHANGED_EVENT,
+        new StatusChangedEvent(updated.id, existing.userId, existing.status, nextStatus, user.id),
+      );
+    }
+
+    return this.toDto(updated, { includeUserId: true, staff: true });
   }
 
   private async applyAiClassificationAfterCreate(
@@ -741,6 +1066,9 @@ export class ReportsService {
       lat: number;
       lng: number;
       categoryId: string | null;
+      currentStatus: ReportStatus;
+      departmentId: string | null;
+      institutionId: string | null;
     },
   ): Promise<ReportWithRelations | null> {
     if (!input.photoUrl) {
@@ -771,18 +1099,52 @@ export class ReportsService {
     }
 
     const needsReview = classification.confidence < AI_CONFIDENCE_THRESHOLD;
-    // Store suggestion only; do not auto-apply category until Accept/Edit.
-    return this.prisma.report.update({
-      where: { id: reportId },
-      data: {
-        aiClassification: classification as unknown as Prisma.InputJsonValue,
-        aiConfidence: classification.confidence,
-        status: needsReview ? ReportStatus.IN_REVIEW : ReportStatus.PENDING,
-        duplicateOfId: duplicateOfId ?? undefined,
-        isDuplicate: duplicateOfId ? true : undefined,
-      },
-      include: REPORT_INCLUDE,
+    const nextStatus = needsReview ? ReportStatus.IN_REVIEW : input.currentStatus;
+
+    const updated = await this.prisma.$transaction(async (tx) => {
+      const report = await tx.report.update({
+        where: { id: reportId },
+        data: {
+          aiClassification: classification as unknown as Prisma.InputJsonValue,
+          aiConfidence: classification.confidence,
+          duplicateOfId: duplicateOfId ?? undefined,
+          isDuplicate: duplicateOfId ? true : undefined,
+          status: nextStatus,
+        },
+        include: REPORT_INCLUDE,
+      });
+
+      if (nextStatus !== input.currentStatus) {
+        await tx.statusHistory.create({
+          data: {
+            reportId,
+            oldStatus: input.currentStatus,
+            newStatus: nextStatus,
+            changedBy: SYSTEM_ACTOR,
+            note: needsReview
+              ? 'Besueshmëria e AI është e ulët — kategoria kërkon shqyrtim para radhës'
+              : 'Kategoria u konfirmua — raporti hyri në radhën e institucionit',
+          },
+        });
+      }
+
+      return report;
     });
+
+    if (nextStatus !== input.currentStatus) {
+      this.events.emit(
+        REPORT_STATUS_CHANGED_EVENT,
+        new StatusChangedEvent(
+          reportId,
+          updated.userId,
+          input.currentStatus,
+          nextStatus,
+          SYSTEM_ACTOR,
+        ),
+      );
+    }
+
+    return updated;
   }
 
   private async findPossibleDuplicate(params: {
@@ -848,12 +1210,104 @@ export class ReportsService {
     };
   }
 
+  private assertStatusTransition(from: ReportStatus, to: ReportStatus, role: Role) {
+    if (!canTransitionStatus(from, to, { bypass: role === Role.SUPER_ADMIN })) {
+      throw new BadRequestException(
+        `Cannot move a report from ${from} to ${to}. Follow the institution workflow.`,
+      );
+    }
+  }
+
+  private async enterInstitutionQueue(
+    reportId: string,
+    changedBy: string,
+  ): Promise<ReportWithRelations> {
+    const existing = await this.prisma.report.findUnique({
+      where: { id: reportId },
+      include: REPORT_INCLUDE,
+    });
+    if (!existing) {
+      throw new NotFoundException('Report not found');
+    }
+    if (existing.status !== ReportStatus.PENDING) {
+      return existing;
+    }
+    if (!existing.departmentId && !existing.institutionId) {
+      return existing;
+    }
+
+    const dueAt = existing.dueAt ?? computeDueAt(existing.priority);
+    const updated = await this.prisma.$transaction(async (tx) => {
+      const report = await tx.report.update({
+        where: { id: reportId },
+        data: { status: ReportStatus.ASSIGNED, dueAt },
+        include: REPORT_INCLUDE,
+      });
+      await tx.statusHistory.create({
+        data: {
+          reportId,
+          oldStatus: ReportStatus.PENDING,
+          newStatus: ReportStatus.ASSIGNED,
+          changedBy,
+          note: existing.institutionId
+            ? 'U rrugëzua te radha e institucionit përgjegjës'
+            : 'U rrugëzua te radha e departamentit përgjegjës',
+        },
+      });
+      return report;
+    });
+
+    this.events.emit(
+      REPORT_STATUS_CHANGED_EVENT,
+      new StatusChangedEvent(
+        updated.id,
+        existing.userId,
+        ReportStatus.PENDING,
+        ReportStatus.ASSIGNED,
+        changedBy,
+      ),
+    );
+
+    return updated;
+  }
+
+  private async staffQueueScope(user: AuthUser): Promise<Prisma.ReportWhereInput> {
+    if (user.role === Role.SUPER_ADMIN) {
+      return {};
+    }
+
+    const membership = await this.prisma.user.findUnique({
+      where: { id: user.id },
+      select: {
+        departments: { select: { id: true, institutionId: true } },
+      },
+    });
+    const departments = membership?.departments ?? [];
+    if (departments.length === 0) {
+      return { id: { in: [] } };
+    }
+
+    const departmentIds = departments.map((d) => d.id);
+    const institutionIds = departments
+      .map((d) => d.institutionId)
+      .filter((id): id is string => Boolean(id));
+
+    return {
+      OR: [
+        { departmentId: { in: departmentIds } },
+        ...(institutionIds.length ? [{ institutionId: { in: institutionIds } }] : []),
+      ],
+    };
+  }
+
   private buildWhere(query: ListReportsQueryDto): Prisma.ReportWhereInput {
     const where: Prisma.ReportWhereInput = {};
 
     if (query.status) where.status = query.status;
     if (query.categoryId) where.categoryId = query.categoryId;
     if (query.departmentId) where.departmentId = query.departmentId;
+    if (query.institutionId) where.institutionId = query.institutionId;
+    if (query.priority) where.priority = query.priority;
 
     if (query.from || query.to) {
       where.createdAt = {};
@@ -882,8 +1336,21 @@ export class ReportsService {
 
   private toDto(
     report: ReportWithRelations,
-    opts: { includeUserId: boolean; votedByMe?: boolean },
+    opts: { includeUserId: boolean; votedByMe?: boolean; staff?: boolean },
   ): ReportDto {
+    const history: StatusHistoryDto[] | undefined = report.statusHistory?.map((row) => ({
+      id: row.id,
+      oldStatus: row.oldStatus,
+      newStatus: row.newStatus,
+      changedAt: row.changedAt.toISOString(),
+      note: row.note,
+    }));
+    const latestNote =
+      history
+        ?.slice()
+        .reverse()
+        .find((row) => row.note)?.note ?? null;
+
     const dto: ReportDto = {
       id: report.id,
       publicId: report.publicId,
@@ -907,9 +1374,9 @@ export class ReportsService {
           : report.aiConfidence !== null
             ? false
             : null,
-      duplicateOfId: report.duplicateOfId,
-      isDuplicate: report.isDuplicate,
-      assignedStaffId: report.assignedStaffId,
+      duplicateOfId: report.duplicateOfId ?? null,
+      isDuplicate: report.isDuplicate ?? false,
+      assignedStaffId: report.assignedStaffId ?? null,
       dueAt: report.dueAt?.toISOString() ?? null,
       createdAt: report.createdAt.toISOString(),
       updatedAt: report.updatedAt.toISOString(),
@@ -917,7 +1384,15 @@ export class ReportsService {
       departmentName: report.department?.name ?? null,
       institutionName: report.institution?.name ?? null,
       voteCount: report._count?.votes ?? 0,
+      latestNote,
     };
+
+    if (history) {
+      dto.history = history;
+    }
+    if (opts.staff) {
+      dto.allowedActions = allowedWorkflowActions(report.status);
+    }
 
     if (opts.includeUserId) {
       dto.userId = report.userId;

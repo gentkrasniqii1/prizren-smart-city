@@ -110,6 +110,8 @@
   --status-review-foreground: #19253a;
   --status-assigned: #d4c5b0;
   --status-assigned-foreground: #27211c;
+  --status-accepted: #98bbe0;
+  --status-accepted-foreground: #19253a;
   --status-progress: #fde68a;
   --status-progress-foreground: #78350f;
   --status-waiting: #fed7aa;
@@ -249,11 +251,14 @@ html {
 html {
   max-width: 100%;
   overflow-x: clip;
+  overscroll-behavior-x: none;
+  scroll-padding-bottom: 8rem;
 }
 
 body {
   color: var(--foreground);
   background: var(--background);
+  min-height: 100dvh;
 }
 
 input,
@@ -268,14 +273,34 @@ select {
   outline-offset: 2px;
 }
 
-/* Clear fixed mobile bottom nav + iOS home indicator (+ base content padding) */
-.pb-bottom-nav {
-  padding-bottom: calc(2.5rem + 4.5rem + env(safe-area-inset-bottom, 0px));
+/*
+ * Bottom nav height. Zero on desktop, and when the viewport is short
+ * (keyboard open, landscape phones) so the form stays usable.
+ */
+:root {
+  --bottom-nav-h: calc(4.5rem + env(safe-area-inset-bottom, 0px));
 }
 
-@media (min-width: 768px) {
+@media (min-width: 1024px), (max-height: 32rem) {
+  :root {
+    --bottom-nav-h: 0px;
+  }
+}
+
+/* Clear fixed mobile bottom nav + iOS home indicator (+ base content padding) */
+.pb-bottom-nav {
+  padding-bottom: calc(2.5rem + var(--bottom-nav-h));
+}
+
+@media (min-width: 1024px) {
   .pb-bottom-nav {
     padding-bottom: 4rem;
+  }
+}
+
+@media (max-height: 32rem) {
+  .mobile-bottom-nav {
+    display: none;
   }
 }
 

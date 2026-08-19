@@ -1,14 +1,8 @@
 export type Role = 'CITIZEN' | 'DEPARTMENT_STAFF' | 'DEPARTMENT_ADMIN' | 'SUPER_ADMIN';
 
-export type ReportStatus =
-  | 'PENDING'
-  | 'IN_REVIEW'
-  | 'ASSIGNED'
-  | 'IN_PROGRESS'
-  | 'WAITING_FOR_INFORMATION'
-  | 'RESOLVED'
-  | 'REJECTED'
-  | 'DUPLICATE';
+export type { ReportStatus } from './report-status';
+import type { ReportStatus } from './report-status';
+import type { WorkflowAction } from './workflow';
 
 export type Priority = 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
 
@@ -184,6 +178,12 @@ export interface ReportDto {
   voteCount?: number;
   /** Present when authenticated viewer context is available */
   votedByMe?: boolean;
+  /** Status trail — present on GET /reports/:id */
+  history?: StatusHistoryDto[];
+  /** Next institution-desk actions for staff viewers */
+  allowedActions?: WorkflowAction[];
+  /** Last staff note recorded with a status change */
+  latestNote?: string | null;
 }
 
 export interface PaginatedReports {
@@ -203,9 +203,35 @@ export interface CategoryDto {
   departmentName: string;
 }
 
+export interface StatusHistoryDto {
+  id: string;
+  oldStatus: ReportStatus;
+  newStatus: ReportStatus;
+  changedAt: string;
+  note: string | null;
+}
+
 export interface UpdateReportStatusRequest {
   status: ReportStatus;
   note?: string;
+}
+
+export interface WorkflowActionRequest {
+  action: WorkflowAction;
+  note?: string;
+}
+
+export interface UpdateReportPriorityRequest {
+  priority: Priority;
+  note?: string;
+}
+
+export interface EscalateReportRequest {
+  note?: string;
+}
+
+export interface AddReportNoteRequest {
+  note: string;
 }
 
 export interface UpdateAiClassificationRequest {
@@ -226,6 +252,10 @@ export interface AnalyticsSummary {
   assigned: number;
   inProgress: number;
   avgResolutionHours: number | null;
+  /** Reports created since local midnight. */
+  newToday: number;
+  /** Open reports with CRITICAL priority. */
+  critical: number;
 }
 
 export interface AnalyticsByCategoryItem {
@@ -245,6 +275,12 @@ export interface AnalyticsByDepartmentItem {
   count: number;
 }
 
+export interface AnalyticsByInstitutionItem {
+  institutionId: string | null;
+  institution: string;
+  count: number;
+}
+
 export interface AnalyticsOverTimeItem {
   date: string;
   count: number;
@@ -260,6 +296,7 @@ export interface MyReportStats {
 export interface AssignReportRequest {
   departmentId?: string | null;
   assignedStaffId?: string | null;
+  institutionId?: string | null;
 }
 
 export interface AnalyticsSla {
@@ -328,3 +365,16 @@ export interface TransparencyStats {
   byCategory: AnalyticsByCategoryItem[];
   avgResolutionHours: number | null;
 }
+
+export type { QueueLane, WorkflowAction } from './workflow';
+export {
+  ALLOWED_STATUS_TRANSITIONS,
+  allowedWorkflowActions,
+  canTransitionStatus,
+  CITIZEN_PIPELINE,
+  notificationTypeForStatus,
+  QUEUE_LANE_STATUSES,
+  WORKFLOW_ACTION_TARGET,
+  WORKFLOW_ACTIONS,
+  WORKFLOW_ACTIONS_REQUIRING_NOTE,
+} from './workflow';

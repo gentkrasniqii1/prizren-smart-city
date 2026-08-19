@@ -43,3 +43,14 @@ export {
 } from './table';
 export { Tabs, TabsList, TabsTrigger, TabsContent } from './tabs';
 export { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from './tooltip';
+export {
+  Navbar,
+  NavbarBrand,
+  NavbarCTA,
+  NavbarDrawerLink,
+  NavbarLink,
+  NavbarLinks,
+  NavbarRow,
+  NavbarUser,
+  NavbarUtilities,
+} from './navbar';

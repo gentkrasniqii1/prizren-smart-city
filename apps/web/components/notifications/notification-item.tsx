@@ -54,7 +54,9 @@ export function NotificationItem({
             unread ? 'font-medium text-stone-950' : 'text-stone-700',
           )}
         >
-          {notification.message ?? notification.type}
+          {t.has(`types.${notification.type}`)
+            ? t(`types.${notification.type}`)
+            : (notification.message ?? notification.type)}
         </p>
         <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-xs text-stone-600">
           <time dateTime={notification.createdAt}>

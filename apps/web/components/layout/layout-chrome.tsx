@@ -34,7 +34,7 @@ export function LayoutChrome({
     return <>{children}</>;
   }
   return (
-    <div className="flex min-h-screen flex-col">
+    <div className="flex min-h-dvh flex-col overflow-x-clip">
       {header}
       {children}
       {footer}

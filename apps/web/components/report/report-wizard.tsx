@@ -304,7 +304,7 @@ export function ReportWizard() {
 
             {step === 2 ? (
               <div className="space-y-4">
-                <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
                   <div>
                     <p id="report-location-label" className="text-label text-foreground">
                       {t('locationLabel')}
@@ -314,7 +314,7 @@ export function ReportWizard() {
                   <Button
                     type="button"
                     variant="secondary"
-                    size="sm"
+                    className="w-full sm:w-auto"
                     onClick={requestGeolocation}
                     status={geoBusy ? 'loading' : 'idle'}
                   >
@@ -460,7 +460,7 @@ export function ReportWizard() {
 
           <FormError className="mt-4" message={formError} />
 
-          <div className="sticky bottom-0 z-10 -mx-4 mt-8 border-t border-border bg-card/95 px-4 py-4 backdrop-blur-sm sm:static sm:mx-0 sm:bg-transparent sm:px-0 sm:backdrop-blur-none">
+          <div className="sticky bottom-[var(--bottom-nav-h)] z-10 -mx-4 mt-8 border-t border-border bg-card/95 px-4 py-4 backdrop-blur-sm md:static md:bottom-auto md:mx-0 md:bg-transparent md:px-0 md:backdrop-blur-none">
             <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-between">
               <Button
                 type="button"

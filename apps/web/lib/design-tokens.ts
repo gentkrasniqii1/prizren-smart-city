@@ -59,6 +59,7 @@ export const colors = {
     pending: { bg: '#e6ddd0', fg: '#473e35' },
     inReview: { bg: '#c2d7ed', fg: '#19253a' },
     assigned: { bg: '#d4c5b0', fg: '#27211c' },
+    accepted: { bg: '#98bbe0', fg: '#19253a' },
     inProgress: { bg: '#fde68a', fg: '#78350f' },
     waiting: { bg: '#fed7aa', fg: '#7c2d12' },
     resolved: { bg: '#b8e6dc', fg: '#0f2725' },
@@ -214,6 +215,22 @@ export const control = {
   lg: '3rem',
 } as const;
 
+/**
+ * Viewport widths we actually test. Layout chrome switches at `lg` (1024).
+ * Phones (320–430) and tablet portrait (768) share stacked mobile chrome.
+ */
+export const breakpoints = {
+  phoneMin: 320,
+  phone: 375,
+  phoneMd: 390,
+  phoneLg: 430,
+  tablet: 768,
+  laptop: 1024,
+  desktop: 1280,
+  desktopWide: 1440,
+  fullHd: 1920,
+} as const;
+
 export const motion = {
   fast: '120ms',
   normal: '200ms',
@@ -265,6 +282,8 @@ export const visualLanguage = {
     staff: 'Same materials, denser information. Warm paper — not a cool gray cockpit.',
     admin: 'Audit-grade. Tables and logs first. Gilt is never used for alerts.',
     public: 'A civic ledger. Counts and maps, not marketing metrics.',
+    chrome:
+      'Navbar is application chrome, not a toolbar dump. Desktop: logo, three links, one CTA; utilities on the right. Below lg: logo + menu, links in a Sheet.',
   },
 } as const;
 
@@ -301,4 +320,11 @@ export const recipes = {
     modal: 'lift — dialogs, toasts',
   },
   overlay: 'bg-overlay-surface/70',
+  nav: {
+    height: 'h-14 lg:h-16',
+    link: 'text-label, min-h-11, muted until hover/active',
+    cta: 'One primary — Report a problem. Never a second filled button in the bar.',
+    utilities: 'Theme, notifications, language as compact 44px controls',
+    identity: 'Avatar + name → profile. Logout is its own control, not a stuffed dropdown.',
+  },
 } as const;

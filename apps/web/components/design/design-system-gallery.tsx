@@ -11,6 +11,7 @@ import {
   Input,
   Label,
   MapSkeleton,
+  NavbarLink,
   PriorityBadge,
   Select,
   Skeleton,
@@ -58,6 +59,7 @@ const COPY = {
     radius: 'Këndet',
     shadows: 'Hijet',
     buttons: 'Butonat',
+    navbar: 'Shiriti i navigimit',
     inputs: 'Fushat',
     cards: 'Kartat',
     badges: 'Etiketat',
@@ -101,6 +103,7 @@ const COPY = {
     radius: 'Radius',
     shadows: 'Shadows',
     buttons: 'Buttons',
+    navbar: 'Navbar',
     inputs: 'Inputs',
     cards: 'Cards',
     badges: 'Badges',
@@ -279,6 +282,20 @@ export function DesignSystemGallery({ locale }: { locale: 'sq' | 'en' }) {
             <Button size="lg">{t.primary} lg</Button>
             <Button loading>{t.loading}</Button>
           </div>
+        </Specimen>
+
+        <Specimen title={t.navbar}>
+          <div className="flex flex-wrap items-center gap-1 rounded-xl border border-border bg-card px-gutter py-2">
+            <NavbarLink href="#specimen" active>
+              Raportet
+            </NavbarLink>
+            <NavbarLink href="#specimen">Transparenca</NavbarLink>
+            <NavbarLink href="#specimen">Si funksionon</NavbarLink>
+            <Button size="sm" className="ml-2">
+              Raporto një problem
+            </Button>
+          </div>
+          <p className="text-caption text-muted-foreground">{recipes.nav.cta}</p>
         </Specimen>
 
         <Specimen title={t.inputs}>

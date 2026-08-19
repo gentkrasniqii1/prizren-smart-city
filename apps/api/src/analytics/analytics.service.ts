@@ -1,8 +1,9 @@
 import { Injectable } from '@nestjs/common';
-import { Prisma, ReportStatus } from '@prisma/client';
+import { Prisma, Priority, ReportStatus } from '@prisma/client';
 import type {
   AnalyticsByCategoryItem,
   AnalyticsByDepartmentItem,
+  AnalyticsByInstitutionItem,
   AnalyticsByStatusItem,
   AnalyticsOverTimeItem,
   AnalyticsSla,
@@ -19,15 +20,26 @@ export class AnalyticsService {
   async summary(query: AnalyticsQueryDto): Promise<AnalyticsSummary> {
     const where = this.buildWhere(query);
 
-    const [total, pending, resolved, rejected, inReview, assigned, inProgress] = await Promise.all([
-      this.prisma.report.count({ where }),
-      this.prisma.report.count({ where: { ...where, status: ReportStatus.PENDING } }),
-      this.prisma.report.count({ where: { ...where, status: ReportStatus.RESOLVED } }),
-      this.prisma.report.count({ where: { ...where, status: ReportStatus.REJECTED } }),
-      this.prisma.report.count({ where: { ...where, status: ReportStatus.IN_REVIEW } }),
-      this.prisma.report.count({ where: { ...where, status: ReportStatus.ASSIGNED } }),
-      this.prisma.report.count({ where: { ...where, status: ReportStatus.IN_PROGRESS } }),
-    ]);
+    const [total, pending, resolved, rejected, inReview, assigned, inProgress, newToday, critical] =
+      await Promise.all([
+        this.prisma.report.count({ where }),
+        this.prisma.report.count({ where: { ...where, status: ReportStatus.PENDING } }),
+        this.prisma.report.count({ where: { ...where, status: ReportStatus.RESOLVED } }),
+        this.prisma.report.count({ where: { ...where, status: ReportStatus.REJECTED } }),
+        this.prisma.report.count({ where: { ...where, status: ReportStatus.IN_REVIEW } }),
+        this.prisma.report.count({ where: { ...where, status: ReportStatus.ASSIGNED } }),
+        this.prisma.report.count({ where: { ...where, status: ReportStatus.IN_PROGRESS } }),
+        this.prisma.report.count({
+          where: withCreatedSince(where, startOfToday()),
+        }),
+        this.prisma.report.count({
+          where: {
+            ...where,
+            priority: Priority.CRITICAL,
+            status: { in: OPEN_REPORT_STATUSES },
+          },
+        }),
+      ]);
 
     const avgResolutionHours = await this.avgResolutionHours(where);
 
@@ -40,6 +52,8 @@ export class AnalyticsService {
       assigned,
       inProgress,
       avgResolutionHours,
+      newToday,
+      critical,
     };
   }
 
@@ -96,10 +110,41 @@ export class AnalyticsService {
       .sort((a, b) => b.count - a.count);
   }
 
+  async byInstitution(query: AnalyticsQueryDto): Promise<AnalyticsByInstitutionItem[]> {
+    const where = this.buildWhere(query);
+    const grouped = await this.prisma.report.groupBy({
+      by: ['institutionId'],
+      where,
+      _count: { _all: true },
+    });
+
+    const institutionIds = grouped
+      .map((g) => g.institutionId)
+      .filter((id): id is string => Boolean(id));
+    const institutions = institutionIds.length
+      ? await this.prisma.institution.findMany({
+          where: { id: { in: institutionIds } },
+          select: { id: true, name: true },
+        })
+      : [];
+    const nameById = new Map(institutions.map((i) => [i.id, i.name]));
+
+    return grouped
+      .map((g) => ({
+        institutionId: g.institutionId,
+        institution: g.institutionId ? (nameById.get(g.institutionId) ?? 'Unknown') : 'Unassigned',
+        count: g._count._all,
+      }))
+      .sort((a, b) => b.count - a.count);
+  }
+
   async overTime(query: AnalyticsQueryDto): Promise<AnalyticsOverTimeItem[]> {
     const conditions: Prisma.Sql[] = [];
     if (query.departmentId) {
       conditions.push(Prisma.sql`"departmentId" = ${query.departmentId}`);
+    }
+    if (query.institutionId) {
+      conditions.push(Prisma.sql`"institutionId" = ${query.institutionId}`);
     }
     if (query.from) {
       conditions.push(Prisma.sql`"createdAt" >= ${new Date(query.from)}`);
@@ -142,9 +187,12 @@ export class AnalyticsService {
       ReportStatus.PENDING,
       ReportStatus.IN_REVIEW,
       ReportStatus.ASSIGNED,
+      ReportStatus.ACCEPTED,
       ReportStatus.IN_PROGRESS,
+      ReportStatus.WAITING_FOR_INFORMATION,
       ReportStatus.RESOLVED,
       ReportStatus.REJECTED,
+      ReportStatus.DUPLICATE,
     ];
 
     return order.map((status) => {
@@ -188,6 +236,7 @@ export class AnalyticsService {
   private buildWhere(query: AnalyticsQueryDto): Prisma.ReportWhereInput {
     const where: Prisma.ReportWhereInput = {};
     if (query.departmentId) where.departmentId = query.departmentId;
+    if (query.institutionId) where.institutionId = query.institutionId;
     if (query.from || query.to) {
       where.createdAt = {};
       if (query.from) where.createdAt.gte = new Date(query.from);
@@ -234,4 +283,20 @@ export class AnalyticsService {
     if (counted === 0) return null;
     return Math.round((totalHours / counted) * 10) / 10;
   }
+}
+
+function startOfToday(): Date {
+  const start = new Date();
+  start.setHours(0, 0, 0, 0);
+  return start;
+}
+
+function withCreatedSince(where: Prisma.ReportWhereInput, since: Date): Prisma.ReportWhereInput {
+  const existing = where.createdAt;
+  if (!existing || typeof existing !== 'object' || Array.isArray(existing)) {
+    return { ...where, createdAt: { gte: since } };
+  }
+  const currentGte = 'gte' in existing && existing.gte instanceof Date ? existing.gte : undefined;
+  const gte = currentGte && currentGte > since ? currentGte : since;
+  return { ...where, createdAt: { ...existing, gte } };
 }

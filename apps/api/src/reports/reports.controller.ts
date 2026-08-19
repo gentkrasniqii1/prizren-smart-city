@@ -37,6 +37,12 @@ import { ListReportsQueryDto } from './dto/list-reports-query.dto';
 import { NearbyReportsQueryDto } from './dto/nearby-reports-query.dto';
 import { UpdateAiClassificationDto } from './dto/update-ai-classification.dto';
 import { UpdateReportStatusDto } from './dto/update-report-status.dto';
+import {
+  AddReportNoteDto,
+  EscalateReportDto,
+  UpdateReportPriorityDto,
+} from './dto/update-report-priority.dto';
+import { WorkflowActionDto } from './dto/workflow-action.dto';
 import { ReportsService } from './reports.service';
 
 @Controller('reports')
@@ -93,6 +99,16 @@ export class ReportsController {
   @UseGuards(JwtAuthGuard)
   myStats(@CurrentUser() user: AuthUser) {
     return this.reportsService.myStats(user.id);
+  }
+
+  @Get('queue')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.DEPARTMENT_STAFF, Role.DEPARTMENT_ADMIN, Role.SUPER_ADMIN)
+  listQueue(@Query() query: ListReportsQueryDto, @CurrentUser() user: AuthUser) {
+    if (!user) {
+      throw new BadRequestException('Unauthorized');
+    }
+    return this.reportsService.listQueue(user, query);
   }
 
   @Get(':id')
@@ -165,6 +181,24 @@ export class ReportsController {
     return this.reportsService.updateStatus(id, user, dto, getClientIp(req));
   }
 
+  @Post(':id/workflow')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.DEPARTMENT_STAFF, Role.DEPARTMENT_ADMIN, Role.SUPER_ADMIN)
+  applyWorkflow(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() user: AuthUser,
+    @Body() dto: WorkflowActionDto,
+    @Req() req: Request,
+  ) {
+    if (!user) {
+      throw new BadRequestException('Unauthorized');
+    }
+    if (!dto?.action) {
+      throw new BadRequestException('action is required');
+    }
+    return this.reportsService.applyWorkflowAction(id, user, dto, getClientIp(req));
+  }
+
   @Patch(':id/assign')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.DEPARTMENT_ADMIN, Role.SUPER_ADMIN)
@@ -178,6 +212,51 @@ export class ReportsController {
       throw new BadRequestException('Unauthorized');
     }
     return this.reportsService.assign(id, user, dto, getClientIp(req));
+  }
+
+  @Patch(':id/priority')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.DEPARTMENT_STAFF, Role.DEPARTMENT_ADMIN, Role.SUPER_ADMIN)
+  updatePriority(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() user: AuthUser,
+    @Body() dto: UpdateReportPriorityDto,
+    @Req() req: Request,
+  ) {
+    if (!user) {
+      throw new BadRequestException('Unauthorized');
+    }
+    return this.reportsService.updatePriority(id, user, dto, getClientIp(req));
+  }
+
+  @Patch(':id/escalate')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.DEPARTMENT_STAFF, Role.DEPARTMENT_ADMIN, Role.SUPER_ADMIN)
+  escalate(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() user: AuthUser,
+    @Body() dto: EscalateReportDto,
+    @Req() req: Request,
+  ) {
+    if (!user) {
+      throw new BadRequestException('Unauthorized');
+    }
+    return this.reportsService.escalate(id, user, dto, getClientIp(req));
+  }
+
+  @Post(':id/notes')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.DEPARTMENT_STAFF, Role.DEPARTMENT_ADMIN, Role.SUPER_ADMIN)
+  addNote(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() user: AuthUser,
+    @Body() dto: AddReportNoteDto,
+    @Req() req: Request,
+  ) {
+    if (!user) {
+      throw new BadRequestException('Unauthorized');
+    }
+    return this.reportsService.addStaffNote(id, user, dto, getClientIp(req));
   }
 
   @Post(':id/photo-after')
