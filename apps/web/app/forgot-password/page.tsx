@@ -69,7 +69,10 @@ export default function ForgotPasswordPage() {
             <Input
               id="forgot-email"
               type="email"
+              inputMode="email"
               autoComplete="email"
+              autoCapitalize="none"
+              autoCorrect="off"
               value={email}
               invalid={Boolean(error)}
               onChange={(e) => {

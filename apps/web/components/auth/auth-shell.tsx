@@ -9,8 +9,7 @@ import { LanguageSwitcher } from '@/components/language-switcher';
 
 /**
  * Split-screen civic auth layout.
- * Left: Prizren photograph with a left/bottom type well — copy never sits on the sky.
- * Right: quiet paper panel for the form.
+ * Desktop: photograph + form. Mobile: compact top visual, form immediately below.
  */
 export function AuthShell({
   imageSrc,
@@ -26,7 +25,7 @@ export function AuthShell({
   children: ReactNode;
 }) {
   return (
-    <div className="grid min-h-dvh bg-background lg:grid-cols-2">
+    <div className="flex min-h-dvh flex-col bg-background lg:grid lg:grid-cols-2">
       <aside className="relative hidden overflow-hidden lg:block">
         <Image
           src={imageSrc}
@@ -36,9 +35,7 @@ export function AuthShell({
           sizes="50vw"
           priority
         />
-        {/* Even dim so pale winter sky cannot punch through the type. */}
         <div className="absolute inset-0 bg-overlay-surface/50" aria-hidden />
-        {/* Type well: left and bottom. Architecture stays visible on the right. */}
         <div
           className="absolute inset-0 bg-gradient-to-r from-overlay-surface/92 via-overlay-surface/55 to-overlay-surface/15"
           aria-hidden
@@ -63,8 +60,8 @@ export function AuthShell({
         </div>
       </aside>
 
-      <section className="flex min-h-dvh flex-col bg-background">
-        <div className="relative h-44 overflow-hidden sm:h-52 lg:hidden">
+      <section className="flex min-h-0 flex-1 flex-col bg-background">
+        <div className="relative h-[8.5rem] shrink-0 overflow-hidden lg:hidden">
           <Image
             src={imageSrc}
             alt=""
@@ -75,26 +72,30 @@ export function AuthShell({
           />
           <div className="absolute inset-0 bg-overlay-surface/55" aria-hidden />
           <div
-            className="absolute inset-0 bg-gradient-to-t from-overlay-surface/90 via-overlay-surface/40 to-overlay-surface/20"
+            className="absolute inset-0 bg-gradient-to-t from-overlay-surface/90 via-overlay-surface/40 to-overlay-surface/15"
             aria-hidden
           />
-          <div className="absolute inset-x-0 bottom-0 max-w-md px-5 pb-5">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-gilt">
+          <div className="absolute inset-x-0 top-0 z-10 flex items-center justify-end gap-1 px-2 pt-[max(0.5rem,env(safe-area-inset-top))]">
+            <ThemeToggle />
+            <LanguageSwitcher />
+          </div>
+          <div className="absolute inset-x-0 bottom-0 px-gutter pb-3">
+            <p className="text-caption font-semibold uppercase tracking-[0.22em] text-gilt">
               Prizren Smart City
             </p>
-            <p className="mt-1 font-display text-h1 leading-tight text-overlay-foreground">
+            <p className="mt-1 truncate font-display text-h3 leading-tight text-overlay-foreground">
               {headline}
             </p>
           </div>
         </div>
 
-        <div className="flex items-center justify-end gap-1 px-5 pt-4 sm:px-8">
+        <div className="hidden items-center justify-end gap-1 px-8 pt-4 lg:flex">
           <ThemeToggle />
           <LanguageSwitcher />
         </div>
 
-        <div className="flex flex-1 items-center justify-center px-5 py-8 sm:px-8">
-          <div className="w-full max-w-[26rem] motion-fade-up lg:rounded-lg lg:border lg:border-border lg:bg-card lg:p-10 lg:shadow-sm">
+        <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-gutter pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-5 sm:px-8 lg:items-center lg:justify-center lg:py-8">
+          <div className="w-full min-w-0 lg:max-w-[26rem] lg:rounded-lg lg:border lg:border-border lg:bg-card lg:p-10 lg:shadow-sm">
             {children}
           </div>
         </div>
