@@ -25,6 +25,11 @@ export function computeDueAt(priority: Priority | null | undefined, from = new D
   return new Date(from.getTime() + ms);
 }
 
+export function computeDueAtFromHours(hours: number, from = new Date()): Date {
+  const safe = Number.isFinite(hours) && hours > 0 ? hours : 48;
+  return new Date(from.getTime() + safe * 60 * 60 * 1000);
+}
+
 export type SlaBucket = 'overdue' | 'due_soon' | 'on_time';
 
 export function slaBucket(

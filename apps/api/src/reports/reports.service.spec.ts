@@ -186,7 +186,13 @@ describe('ReportsService.create', () => {
       },
     };
 
-    const routing = { routeByCategory: vi.fn().mockResolvedValue(opts.routed) };
+    const routing = {
+      route: vi.fn().mockImplementation(async (facts: { categoryId?: string }) => {
+        if (!facts?.categoryId) return null;
+        return opts.routed;
+      }),
+      routeByCategory: vi.fn().mockResolvedValue(opts.routed),
+    };
     const mail = { sendReportReceivedEmail: vi.fn().mockResolvedValue(undefined) };
 
     const service = new ReportsService(
@@ -199,11 +205,11 @@ describe('ReportsService.create', () => {
       { webOrigin: 'http://localhost:3000' } as unknown as ConfigService,
     );
 
-    return { service, reportCreate, sequenceCounterUpsert };
+    return { service, reportCreate, sequenceCounterUpsert, routing };
   }
 
   it('generates a sequential publicId and persists the routed institutionId', async () => {
-    const { service, reportCreate } = buildService({
+    const { service, reportCreate, routing } = buildService({
       counterValue: 8,
       routed: {
         categoryId: 'cat-1',
@@ -220,6 +226,8 @@ describe('ReportsService.create', () => {
       lng: 20.7,
       categoryId: 'cat-1',
     });
+
+    expect(routing.route).toHaveBeenCalledWith({ categoryId: 'cat-1' });
 
     const expectedPublicId = `PRZ-${currentYear}-000008`;
     expect(reportCreate).toHaveBeenCalledWith(

@@ -1,6 +1,6 @@
 import { Priority } from '@prisma/client';
 import { describe, expect, it } from 'vitest';
-import { computeDueAt, DUE_SOON_MS, slaBucket } from './sla';
+import { computeDueAt, computeDueAtFromHours, DUE_SOON_MS, slaBucket } from './sla';
 
 describe('computeDueAt', () => {
   const from = new Date('2026-01-01T00:00:00.000Z');
@@ -13,6 +13,11 @@ describe('computeDueAt', () => {
   it('applies CRITICAL and HIGH windows', () => {
     expect(computeDueAt(Priority.CRITICAL, from).toISOString()).toBe('2026-01-01T04:00:00.000Z');
     expect(computeDueAt(Priority.HIGH, from).toISOString()).toBe('2026-01-02T00:00:00.000Z');
+  });
+
+  it('applies a configured SLA window in hours', () => {
+    const due = computeDueAtFromHours(48, from);
+    expect(due.toISOString()).toBe('2026-01-03T00:00:00.000Z');
   });
 });
 

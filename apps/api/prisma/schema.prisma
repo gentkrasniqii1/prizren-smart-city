@@ -179,6 +179,9 @@ model RoutingRule {
   institution   Institution? @relation(fields: [institutionId], references: [id])
   /// Lower value = higher precedence when multiple rules match.
   priority      Int          @default(100)
+  /// Optional overrides — when null, routing falls back to category then department.
+  slaHours      Int?
+  defaultPriority Priority?
   active        Boolean      @default(true)
   createdAt     DateTime     @default(now())
   updatedAt     DateTime     @updatedAt

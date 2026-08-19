@@ -1,31 +1,61 @@
-import { Controller, Get } from '@nestjs/common';
-import type { DepartmentDto } from '@prizren/shared-types';
-import { PrismaService } from '../prisma/prisma.service';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  ParseUUIDPipe,
+  Patch,
+  Post,
+  Req,
+  UseGuards,
+} from '@nestjs/common';
+import { Role } from '@prisma/client';
+import { Request } from 'express';
+import { CurrentUser, AuthUser } from '../auth/decorators/current-user.decorator';
+import { Roles } from '../auth/decorators/roles.decorator';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { RolesGuard } from '../auth/guards/roles.guard';
+import { getClientIp } from '../common/client-ip';
+import { DepartmentsService } from './departments.service';
+import { UpsertDepartmentDto } from './dto/upsert-department.dto';
 
 @Controller('departments')
 export class DepartmentsController {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly departments: DepartmentsService) {}
 
   @Get()
-  async list(): Promise<DepartmentDto[]> {
-    const rows = await this.prisma.department.findMany({
-      orderBy: { name: 'asc' },
-      select: {
-        id: true,
-        name: true,
-        contact: true,
-        slaHours: true,
-        institutionId: true,
-        institution: { select: { name: true } },
-      },
-    });
-    return rows.map((row) => ({
-      id: row.id,
-      name: row.name,
-      contact: row.contact,
-      slaHours: row.slaHours,
-      institutionId: row.institutionId,
-      institutionName: row.institution?.name ?? null,
-    }));
+  list() {
+    return this.departments.list();
+  }
+
+  @Post()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.DEPARTMENT_ADMIN, Role.SUPER_ADMIN)
+  create(@CurrentUser() user: AuthUser, @Body() dto: UpsertDepartmentDto, @Req() req: Request) {
+    return this.departments.create(user, dto, getClientIp(req));
+  }
+
+  @Patch(':id')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.DEPARTMENT_ADMIN, Role.SUPER_ADMIN)
+  update(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() user: AuthUser,
+    @Body() dto: UpsertDepartmentDto,
+    @Req() req: Request,
+  ) {
+    return this.departments.update(id, user, dto, getClientIp(req));
+  }
+
+  @Delete(':id')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.SUPER_ADMIN)
+  remove(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() user: AuthUser,
+    @Req() req: Request,
+  ) {
+    return this.departments.remove(id, user, getClientIp(req));
   }
 }

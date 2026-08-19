@@ -16,6 +16,7 @@ import { InstitutionsModule } from './institutions/institutions.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { TransparencyModule } from './transparency/transparency.module';
 import { AuditModule } from './audit/audit.module';
+import { RoutingModule } from './routing/routing.module';
 
 @Module({
   imports: [
@@ -42,6 +43,7 @@ import { AuditModule } from './audit/audit.module';
     NotificationsModule,
     TransparencyModule,
     AuditModule,
+    RoutingModule,
   ],
   controllers: [HealthController],
   providers: [

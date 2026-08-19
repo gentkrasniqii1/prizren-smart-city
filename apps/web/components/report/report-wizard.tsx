@@ -220,6 +220,22 @@ export function ReportWizard() {
                   <StatusBadge status={created.status} />
                 </dd>
               </div>
+              {created.institutionName ? (
+                <div className="flex items-center justify-between gap-3">
+                  <dt className="text-muted-foreground">{t('successInstitution')}</dt>
+                  <dd className="text-right font-medium text-foreground">
+                    {created.institutionName}
+                  </dd>
+                </div>
+              ) : null}
+              {created.departmentName ? (
+                <div className="flex items-center justify-between gap-3">
+                  <dt className="text-muted-foreground">{t('successDepartment')}</dt>
+                  <dd className="text-right font-medium text-foreground">
+                    {created.departmentName}
+                  </dd>
+                </div>
+              ) : null}
             </dl>
 
             <p className="mt-4 text-sm text-muted-foreground">{t('successAiNote')}</p>

@@ -388,6 +388,9 @@ export function AdminDashboard() {
           </div>
           <div className="flex flex-wrap items-center gap-cluster">
             <p className="text-caption text-muted-foreground">{t('liveHint')}</p>
+            <Button asChild variant="secondary" size="sm">
+              <Link href="/admin/routing">{t('routingLink')}</Link>
+            </Button>
             <Button
               type="button"
               variant="secondary"

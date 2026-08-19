@@ -201,6 +201,10 @@ export interface CategoryDto {
   name: string;
   departmentId: string;
   departmentName: string;
+  slaHours: number;
+  defaultPriority: Priority;
+  institutionId?: string | null;
+  institutionName?: string | null;
 }
 
 export interface StatusHistoryDto {
@@ -378,3 +382,12 @@ export {
   WORKFLOW_ACTIONS,
   WORKFLOW_ACTIONS_REQUIRING_NOTE,
 } from './workflow';
+export type {
+  RouteInput,
+  RoutePreview,
+  RoutingRuleDto,
+  UpsertCategoryRequest,
+  UpsertDepartmentRequest,
+  UpsertInstitutionRequest,
+  UpsertRoutingRuleRequest,
+} from './routing';

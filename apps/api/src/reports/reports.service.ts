@@ -47,7 +47,7 @@ import {
   EscalateReportDto,
   UpdateReportPriorityDto,
 } from './dto/update-report-priority.dto';
-import { computeDueAt } from './sla';
+import { computeDueAt, computeDueAtFromHours } from './sla';
 import { nextReportPublicId } from './public-id';
 import { WorkflowActionDto } from './dto/workflow-action.dto';
 import {
@@ -124,7 +124,9 @@ export class ReportsService {
       photoUrl = await this.cloudinary.uploadImage(file.buffer, publicId);
     }
 
-    const routed = await this.routing.routeByCategory(fields.categoryId);
+    const routed = fields.categoryId
+      ? await this.routing.route({ categoryId: fields.categoryId })
+      : null;
 
     const report = await this.prisma.$transaction(async (tx) => {
       const publicId = await nextReportPublicId(tx);
@@ -156,13 +158,12 @@ export class ReportsService {
       lng: fields.lng,
       categoryId: fields.categoryId ?? null,
       currentStatus: report.status,
-      departmentId: report.departmentId,
-      institutionId: report.institutionId,
     });
 
     let result = classified ?? report;
+    const slaHours = routed?.slaHours;
     if (result.status === ReportStatus.PENDING && (result.departmentId || result.institutionId)) {
-      result = await this.enterInstitutionQueue(result.id, SYSTEM_ACTOR);
+      result = await this.enterInstitutionQueue(result.id, SYSTEM_ACTOR, slaHours);
     }
 
     this.events.emit(REPORT_CREATED_EVENT, new ReportCreatedEvent(result.id, user.id));
@@ -991,16 +992,18 @@ export class ReportsService {
       throw new BadRequestException('No AI classification to accept');
     }
 
-    const mapped = await this.resolveCategoryAndPriority(classification);
+    const routed = await this.routeFromClassification(classification);
     const nextStatus =
       existing.status === ReportStatus.PENDING || existing.status === ReportStatus.IN_REVIEW
-        ? mapped.departmentId || mapped.institutionId
+        ? routed?.departmentId || routed?.institutionId
           ? ReportStatus.ASSIGNED
           : ReportStatus.IN_REVIEW
         : existing.status;
     const dueAt =
       nextStatus === ReportStatus.ASSIGNED && !existing.dueAt
-        ? computeDueAt(mapped.priority ?? existing.priority)
+        ? routed
+          ? computeDueAtFromHours(routed.slaHours)
+          : computeDueAt(existing.priority)
         : existing.dueAt;
 
     const updated = await this.prisma.$transaction(async (tx) => {
@@ -1009,10 +1012,10 @@ export class ReportsService {
         data: {
           aiClassification: classification as unknown as Prisma.InputJsonValue,
           aiConfidence: classification.confidence,
-          categoryId: mapped.categoryId ?? existing.categoryId,
-          departmentId: mapped.departmentId ?? existing.departmentId,
-          institutionId: mapped.institutionId ?? existing.institutionId,
-          priority: mapped.priority ?? existing.priority,
+          categoryId: routed?.categoryId ?? existing.categoryId,
+          departmentId: routed?.departmentId ?? existing.departmentId,
+          institutionId: routed?.institutionId ?? existing.institutionId,
+          priority: routed?.defaultPriority ?? existing.priority,
           status: nextStatus,
           dueAt,
         },
@@ -1067,8 +1070,6 @@ export class ReportsService {
       lng: number;
       categoryId: string | null;
       currentStatus: ReportStatus;
-      departmentId: string | null;
-      institutionId: string | null;
     },
   ): Promise<ReportWithRelations | null> {
     if (!input.photoUrl) {
@@ -1100,6 +1101,8 @@ export class ReportsService {
 
     const needsReview = classification.confidence < AI_CONFIDENCE_THRESHOLD;
     const nextStatus = needsReview ? ReportStatus.IN_REVIEW : input.currentStatus;
+    const routed =
+      !needsReview && !input.categoryId ? await this.routeFromClassification(classification) : null;
 
     const updated = await this.prisma.$transaction(async (tx) => {
       const report = await tx.report.update({
@@ -1110,6 +1113,14 @@ export class ReportsService {
           duplicateOfId: duplicateOfId ?? undefined,
           isDuplicate: duplicateOfId ? true : undefined,
           status: nextStatus,
+          ...(routed
+            ? {
+                categoryId: routed.categoryId,
+                departmentId: routed.departmentId,
+                institutionId: routed.institutionId,
+                priority: routed.defaultPriority,
+              }
+            : {}),
         },
         include: REPORT_INCLUDE,
       });
@@ -1191,23 +1202,19 @@ export class ReportsService {
     return rows[0]?.id ?? null;
   }
 
-  private async resolveCategoryAndPriority(classification: AIClassification): Promise<{
-    categoryId?: string;
-    departmentId?: string;
-    institutionId?: string | null;
-    priority: Priority;
-  }> {
+  /** Map an AI category label onto a DB category, then let RoutingService assign. */
+  private async routeFromClassification(classification: AIClassification) {
     const categoryName = AI_CATEGORY_TO_DB_NAME[classification.category];
     const category = await this.prisma.category.findFirst({
       where: { name: categoryName },
-      include: { department: { select: { institutionId: true } } },
+      select: { id: true },
     });
-    return {
-      categoryId: category?.id,
-      departmentId: category?.departmentId,
-      institutionId: category?.department.institutionId ?? null,
-      priority: AI_SEVERITY_TO_PRIORITY[classification.severity] as Priority,
-    };
+    if (!category) return null;
+    return this.routing.route({
+      categoryId: category.id,
+      severity: AI_SEVERITY_TO_PRIORITY[classification.severity] as Priority,
+      isEmergency: classification.severity === 'critical',
+    });
   }
 
   private assertStatusTransition(from: ReportStatus, to: ReportStatus, role: Role) {
@@ -1221,6 +1228,7 @@ export class ReportsService {
   private async enterInstitutionQueue(
     reportId: string,
     changedBy: string,
+    slaHours?: number,
   ): Promise<ReportWithRelations> {
     const existing = await this.prisma.report.findUnique({
       where: { id: reportId },
@@ -1236,7 +1244,9 @@ export class ReportsService {
       return existing;
     }
 
-    const dueAt = existing.dueAt ?? computeDueAt(existing.priority);
+    const dueAt =
+      existing.dueAt ??
+      (slaHours ? computeDueAtFromHours(slaHours) : computeDueAt(existing.priority));
     const updated = await this.prisma.$transaction(async (tx) => {
       const report = await tx.report.update({
         where: { id: reportId },
