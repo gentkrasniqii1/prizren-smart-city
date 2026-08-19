@@ -12,10 +12,10 @@ type MailPayload = {
 };
 
 const STATUS_LABELS_SQ: Record<string, string> = {
-  PENDING: 'Në pritje',
-  IN_REVIEW: 'Në shqyrtim',
+  SUBMITTED: 'Dërguar',
+  RECEIVED: 'I pranuar nga institucioni',
+  UNDER_REVIEW: 'Në shqyrtim',
   ASSIGNED: 'Në radhën e institucionit',
-  ACCEPTED: 'I pranuar nga institucioni',
   IN_PROGRESS: 'Në hetim',
   WAITING_FOR_INFORMATION: 'Në pritje të informacionit',
   RESOLVED: 'I zgjidhur',
@@ -192,7 +192,7 @@ export class MailService {
       return;
     }
 
-    if (params.newStatus === 'ACCEPTED') {
+    if (params.newStatus === 'RECEIVED') {
       await this.send({
         to,
         subject: 'Institucioni e pranoi raportin tënd — Prizren Smart City',

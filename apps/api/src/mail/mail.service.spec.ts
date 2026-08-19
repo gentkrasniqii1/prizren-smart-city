@@ -44,7 +44,7 @@ describe('MailService — status-changed outcome templates', () => {
 
   it('sends a dedicated "assigned" outcome email', async () => {
     await mail.sendReportStatusChangedEmail('citizen@test.local', {
-      oldStatus: 'IN_REVIEW',
+      oldStatus: 'UNDER_REVIEW',
       newStatus: 'ASSIGNED',
       reportUrl: 'https://app.local/reports/2',
     });
@@ -53,7 +53,7 @@ describe('MailService — status-changed outcome templates', () => {
 
   it('sends a dedicated "rejected" outcome email', async () => {
     await mail.sendReportStatusChangedEmail('citizen@test.local', {
-      oldStatus: 'IN_REVIEW',
+      oldStatus: 'UNDER_REVIEW',
       newStatus: 'REJECTED',
       reportUrl: 'https://app.local/reports/3',
       note: 'Out of scope.',
@@ -65,13 +65,13 @@ describe('MailService — status-changed outcome templates', () => {
 
   it('falls back to the generic transition email for non-outcome statuses', async () => {
     await mail.sendReportStatusChangedEmail('citizen@test.local', {
-      oldStatus: 'PENDING',
-      newStatus: 'IN_REVIEW',
+      oldStatus: 'SUBMITTED',
+      newStatus: 'UNDER_REVIEW',
       reportUrl: 'https://app.local/reports/4',
     });
     const logged = lastWarnText();
     expect(logged).toContain('Statusi i raportit u ndryshua');
-    expect(logged).toContain('Në pritje');
+    expect(logged).toContain('Dërguar');
     expect(logged).toContain('Në shqyrtim');
   });
 

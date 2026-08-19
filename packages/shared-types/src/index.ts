@@ -1,6 +1,7 @@
 export type Role = 'CITIZEN' | 'DEPARTMENT_STAFF' | 'DEPARTMENT_ADMIN' | 'SUPER_ADMIN';
 
 export type { ReportStatus } from './report-status';
+export { REPORT_STATUSES } from './report-status';
 import type { ReportStatus } from './report-status';
 import type { WorkflowAction } from './workflow';
 
@@ -370,6 +371,8 @@ export interface TransparencyStats {
   avgResolutionHours: number | null;
 }
 
+export type { RealtimeEvent, RealtimeEventType } from './realtime';
+export { REALTIME_EVENT_TYPES } from './realtime';
 export type { QueueLane, WorkflowAction } from './workflow';
 export {
   ALLOWED_STATUS_TRANSITIONS,

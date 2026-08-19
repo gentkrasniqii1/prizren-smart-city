@@ -159,9 +159,17 @@ const config = {
           },
         },
         status: {
+          submitted: {
+            DEFAULT: withOpacity('--status-submitted'),
+            foreground: withOpacity('--status-submitted-foreground'),
+          },
+          received: {
+            DEFAULT: withOpacity('--status-received'),
+            foreground: withOpacity('--status-received-foreground'),
+          },
           pending: {
-            DEFAULT: withOpacity('--status-pending'),
-            foreground: withOpacity('--status-pending-foreground'),
+            DEFAULT: withOpacity('--status-submitted'),
+            foreground: withOpacity('--status-submitted-foreground'),
           },
           review: {
             DEFAULT: withOpacity('--status-review'),
@@ -172,8 +180,8 @@ const config = {
             foreground: withOpacity('--status-assigned-foreground'),
           },
           accepted: {
-            DEFAULT: withOpacity('--status-accepted'),
-            foreground: withOpacity('--status-accepted-foreground'),
+            DEFAULT: withOpacity('--status-received'),
+            foreground: withOpacity('--status-received-foreground'),
           },
           progress: {
             DEFAULT: withOpacity('--status-progress'),

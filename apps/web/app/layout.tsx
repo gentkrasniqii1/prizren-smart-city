@@ -3,6 +3,7 @@ import { Fraunces, Manrope } from 'next/font/google';
 import { NextIntlClientProvider } from 'next-intl';
 import { getLocale, getMessages } from 'next-intl/server';
 import { AuthProvider } from '@/components/auth-provider';
+import { RealtimeProvider } from '@/components/realtime-provider';
 import { SiteShell } from '@/components/layout/site-shell';
 import { SentryInit } from '@/components/sentry-init';
 import { ServiceWorkerRegister } from '@/components/service-worker-register';
@@ -83,12 +84,14 @@ export default async function RootLayout({
         <ThemeProvider>
           <NextIntlClientProvider locale={locale} messages={messages}>
             <AuthProvider>
-              <ToastProvider>
-                <SentryInit />
-                <ServiceWorkerRegister />
-                <SiteShell>{children}</SiteShell>
-                <Toaster richColors closeButton position="bottom-right" />
-              </ToastProvider>
+              <RealtimeProvider>
+                <ToastProvider>
+                  <SentryInit />
+                  <ServiceWorkerRegister />
+                  <SiteShell>{children}</SiteShell>
+                  <Toaster richColors closeButton position="bottom-right" />
+                </ToastProvider>
+              </RealtimeProvider>
             </AuthProvider>
           </NextIntlClientProvider>
         </ThemeProvider>

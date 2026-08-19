@@ -342,10 +342,15 @@ export function DesignSystemGallery({ locale }: { locale: 'sq' | 'en' }) {
 
         <Specimen title={t.badges}>
           <div className="flex flex-wrap items-center gap-cluster">
-            <StatusBadge status="PENDING" />
+            <StatusBadge status="SUBMITTED" />
+            <StatusBadge status="RECEIVED" />
+            <StatusBadge status="UNDER_REVIEW" />
+            <StatusBadge status="ASSIGNED" />
             <StatusBadge status="IN_PROGRESS" />
+            <StatusBadge status="WAITING_FOR_INFORMATION" />
             <StatusBadge status="RESOLVED" />
             <StatusBadge status="REJECTED" />
+            <StatusBadge status="DUPLICATE" />
             <PriorityBadge priority="CRITICAL" />
             <Badge tone="info">Komuna</Badge>
           </div>

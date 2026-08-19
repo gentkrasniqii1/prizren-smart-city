@@ -265,12 +265,15 @@
     "mapLoading": "Loading map…"
   },
   "Status": {
-    "PENDING": "Pending",
-    "IN_REVIEW": "Under review",
+    "SUBMITTED": "Submitted",
+    "RECEIVED": "Received",
+    "UNDER_REVIEW": "Under review",
     "ASSIGNED": "Assigned",
     "IN_PROGRESS": "In progress",
+    "WAITING_FOR_INFORMATION": "Waiting for information",
     "RESOLVED": "Resolved",
-    "REJECTED": "Rejected"
+    "REJECTED": "Rejected",
+    "DUPLICATE": "Duplicate"
   },
   "Priority": {
     "LOW": "Low",
@@ -388,10 +391,10 @@
     "timelineAi": "AI classification available",
     "timelinePhotoAfter": "After photo uploaded",
     "timeline": {
-      "PENDING": "Submitted",
-      "IN_REVIEW": "Category under review",
+      "SUBMITTED": "Submitted",
+      "RECEIVED": "Institution received",
+      "UNDER_REVIEW": "Under review",
       "ASSIGNED": "In the institution queue",
-      "ACCEPTED": "Institution accepted",
       "IN_PROGRESS": "Investigating",
       "WAITING_FOR_INFORMATION": "Waiting for information",
       "RESOLVED": "Resolved",
@@ -657,13 +660,14 @@
     "types": {
       "REPORT_RECEIVED": "Your report was received.",
       "REPORT_ASSIGNED": "Your report entered the institution queue.",
-      "REPORT_ACCEPTED": "The institution accepted your report.",
+      "REPORT_ACCEPTED": "The institution received your report.",
       "REPORT_IN_PROGRESS": "The institution is investigating your report.",
       "REPORT_IN_REVIEW": "The category of your report is under review.",
       "REPORT_RESOLVED": "Your report was resolved.",
       "REPORT_REJECTED": "Your report was rejected.",
       "REPORT_DUPLICATE": "Your report was marked as a duplicate.",
       "INFO_REQUESTED": "The institution asked for more information.",
+      "INSTITUTION_NEW_REPORT": "A new report entered your institution queue.",
       "STATUS_CHANGED": "The status of your report was updated."
     }
   },

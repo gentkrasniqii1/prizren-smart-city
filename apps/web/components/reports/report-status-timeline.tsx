@@ -36,8 +36,8 @@ export function ReportStatusTimeline({
   const currentIndex = Math.max(
     0,
     CITIZEN_PIPELINE.indexOf(
-      (status === 'IN_REVIEW'
-        ? 'PENDING'
+      (status === 'UNDER_REVIEW'
+        ? 'SUBMITTED'
         : status === 'WAITING_FOR_INFORMATION'
           ? 'IN_PROGRESS'
           : status) as ReportStatus,

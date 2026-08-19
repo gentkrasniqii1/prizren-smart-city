@@ -23,5 +23,5 @@ export function slaClass(bucket: SlaBucket | null): string {
   if (bucket === 'overdue') return 'bg-semantic-danger text-semantic-danger-foreground';
   if (bucket === 'due_soon') return 'bg-semantic-warning text-semantic-warning-foreground';
   if (bucket === 'on_time') return 'bg-semantic-success text-semantic-success-foreground';
-  return 'bg-status-pending text-status-pending-foreground';
+  return 'bg-status-submitted text-status-submitted-foreground';
 }

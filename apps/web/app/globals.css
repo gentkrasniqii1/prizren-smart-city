@@ -104,14 +104,14 @@
   --semantic-caution: #fed7aa;
   --semantic-caution-foreground: #7c2d12;
 
-  --status-pending: #e6ddd0;
-  --status-pending-foreground: #473e35;
-  --status-review: #c2d7ed;
-  --status-review-foreground: #19253a;
+  --status-submitted: #e6ddd0;
+  --status-submitted-foreground: #473e35;
+  --status-received: #98bbe0;
+  --status-received-foreground: #19253a;
+  --status-review: #2b4d7d;
+  --status-review-foreground: #f0f5fb;
   --status-assigned: #d4c5b0;
   --status-assigned-foreground: #27211c;
-  --status-accepted: #98bbe0;
-  --status-accepted-foreground: #19253a;
   --status-progress: #fde68a;
   --status-progress-foreground: #78350f;
   --status-waiting: #fed7aa;
@@ -120,8 +120,8 @@
   --status-resolved-foreground: #0f2725;
   --status-rejected: #fecaca;
   --status-rejected-foreground: #7f1d1d;
-  --status-duplicate: #e6ddd0;
-  --status-duplicate-foreground: #54483c;
+  --status-duplicate: #cbd5e1;
+  --status-duplicate-foreground: #1e293b;
 
   /*
    * Theme-invariant tokens for content pinned to a fixed surface regardless of

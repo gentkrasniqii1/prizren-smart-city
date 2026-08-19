@@ -265,12 +265,15 @@
     "mapLoading": "Duke ngarkuar hartën…"
   },
   "Status": {
-    "PENDING": "Në pritje",
-    "IN_REVIEW": "Në shqyrtim",
+    "SUBMITTED": "Dërguar",
+    "RECEIVED": "I pranuar",
+    "UNDER_REVIEW": "Në shqyrtim",
     "ASSIGNED": "I caktuar",
     "IN_PROGRESS": "Në progres",
+    "WAITING_FOR_INFORMATION": "Në pritje të informacionit",
     "RESOLVED": "I zgjidhur",
-    "REJECTED": "I refuzuar"
+    "REJECTED": "I refuzuar",
+    "DUPLICATE": "Duplikat"
   },
   "Priority": {
     "LOW": "E ulët",
@@ -388,10 +391,10 @@
     "timelineAi": "Klasifikimi AI është i disponueshëm",
     "timelinePhotoAfter": "Fotoja pas zgjidhjes u ngarkua",
     "timeline": {
-      "PENDING": "U dërgua",
-      "IN_REVIEW": "Kategoria në shqyrtim",
+      "SUBMITTED": "U dërgua",
+      "RECEIVED": "Institucioni e pranoi",
+      "UNDER_REVIEW": "Në shqyrtim",
       "ASSIGNED": "Në radhën e institucionit",
-      "ACCEPTED": "Institucioni e pranoi",
       "IN_PROGRESS": "Në hetim",
       "WAITING_FOR_INFORMATION": "Në pritje të informacionit",
       "RESOLVED": "I zgjidhur",
@@ -664,6 +667,7 @@
       "REPORT_REJECTED": "Raporti juaj u refuzua.",
       "REPORT_DUPLICATE": "Raporti juaj u shënua si duplikat.",
       "INFO_REQUESTED": "Institucioni kërkoi informacion shtesë.",
+      "INSTITUTION_NEW_REPORT": "Një raport i ri hyri në radhën e institucionit tuaj.",
       "STATUS_CHANGED": "Statusi i raportit tuaj u përditësua."
     }
   },

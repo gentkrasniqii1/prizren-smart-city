@@ -9,10 +9,10 @@ const SLA_MS: Record<Priority, number> = {
 };
 
 export const OPEN_REPORT_STATUSES: ReportStatus[] = [
-  ReportStatus.PENDING,
-  ReportStatus.IN_REVIEW,
+  ReportStatus.SUBMITTED,
+  ReportStatus.UNDER_REVIEW,
   ReportStatus.ASSIGNED,
-  ReportStatus.ACCEPTED,
+  ReportStatus.RECEIVED,
   ReportStatus.IN_PROGRESS,
   ReportStatus.WAITING_FOR_INFORMATION,
 ];

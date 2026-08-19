@@ -8,32 +8,37 @@ import type { PaginatedNotifications } from '@prizren/shared-types';
 import { useAuth } from '@/components/auth-provider';
 import { Button } from '@/components/ui/button';
 import { apiFetch } from '@/lib/api';
+import { useRealtimeRefresh } from '@/components/realtime-provider';
 
 export function NotificationBell() {
   const t = useTranslations('Nav');
   const { user, loading } = useAuth();
   const [unread, setUnread] = useState(0);
 
-  useEffect(() => {
-    if (loading || !user) {
-      setUnread(0);
-      return;
-    }
-    let cancelled = false;
+  const refreshUnread = () => {
+    if (loading || !user) return;
     void (async () => {
       try {
         const res = await apiFetch<PaginatedNotifications>('/notifications?limit=1', {
           auth: true,
         });
-        if (!cancelled) setUnread(res.meta.unreadCount ?? 0);
+        setUnread(res.meta.unreadCount ?? 0);
       } catch {
-        if (!cancelled) setUnread(0);
+        setUnread(0);
       }
     })();
-    return () => {
-      cancelled = true;
-    };
+  };
+
+  useEffect(() => {
+    if (loading || !user) {
+      setUnread(0);
+      return;
+    }
+    refreshUnread();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- mount/session only
   }, [loading, user]);
+
+  useRealtimeRefresh(refreshUnread, Boolean(user) && !loading);
 
   if (loading || !user) return null;
 

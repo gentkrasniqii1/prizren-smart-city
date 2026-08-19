@@ -24,6 +24,7 @@ import type {
 import { apiFetch } from '@/lib/api';
 import { usePolling } from '@/lib/use-polling';
 import { useAuth } from '@/components/auth-provider';
+import { useRealtimeRefresh } from '@/components/realtime-provider';
 import { useToast } from '@/components/toast-provider';
 import { Breadcrumbs } from '@/components/breadcrumbs';
 import { PageContainer } from '@/components/layout/page-container';
@@ -216,7 +217,14 @@ export function AdminDashboard() {
     () => {
       if (!rowBusy) void loadDashboard({ background: true });
     },
-    25_000,
+    90_000,
+    !authLoading && isStaff(user?.role),
+  );
+
+  useRealtimeRefresh(
+    () => {
+      if (!rowBusy) void loadDashboard({ background: true });
+    },
     !authLoading && isStaff(user?.role),
   );
 

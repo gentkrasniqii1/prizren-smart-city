@@ -60,7 +60,7 @@ const COPY = {
       'Fotografi të vërteta të Prizrenit, jo stock “smart city”.',
       'Një veprim kryesor për qytetarin (Raporto).',
       'Harta si qytet, jo si widget i errët.',
-      'Etiketa njerëzore: Në pritje, jo PENDING.',
+      'Etiketa njerëzore: Dërguar, jo SUBMITTED.',
       'Kontrast WCAG, synim prekjeje 44px, fokus i dukshëm.',
     ],
     dont: [
@@ -122,7 +122,7 @@ const COPY = {
       'Real photographs of Prizren, not stock “smart city”.',
       'One primary action for the citizen (Report).',
       'The map as the city, not a dark widget.',
-      'Human labels: Pending, not PENDING.',
+      'Human labels: Submitted, not SUBMITTED.',
       'WCAG contrast, 44px touch, a visible focus ring.',
     ],
     dont: [

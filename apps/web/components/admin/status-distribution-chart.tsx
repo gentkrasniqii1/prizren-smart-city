@@ -7,15 +7,15 @@ import { getStatusLabel } from '@/lib/labels';
 import type { AppLocale } from '@/i18n/request';
 
 const FILL: Record<string, string> = {
-  PENDING: colors.status.pending.fg,
-  IN_REVIEW: colors.mosque[600],
-  ASSIGNED: colors.status.assigned.fg,
-  ACCEPTED: colors.mosque[500],
-  IN_PROGRESS: colors.semantic.warning.fg,
-  WAITING_FOR_INFORMATION: colors.priority.high.fg,
-  RESOLVED: colors.river[600],
-  REJECTED: colors.semantic.danger.fg,
-  DUPLICATE: colors.stone[500],
+  SUBMITTED: colors.status.submitted.bg,
+  RECEIVED: colors.status.received.bg,
+  UNDER_REVIEW: colors.status.underReview.bg,
+  ASSIGNED: colors.status.assigned.bg,
+  IN_PROGRESS: colors.status.inProgress.bg,
+  WAITING_FOR_INFORMATION: colors.status.waiting.bg,
+  RESOLVED: colors.status.resolved.bg,
+  REJECTED: colors.status.rejected.bg,
+  DUPLICATE: colors.status.duplicate.bg,
 };
 
 export function StatusDistributionChart({

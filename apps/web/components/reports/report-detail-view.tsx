@@ -18,6 +18,7 @@ import type {
 } from '@prizren/shared-types';
 import { apiFetch } from '@/lib/api';
 import { useAuth } from '@/components/auth-provider';
+import { useRealtimeRefresh } from '@/components/realtime-provider';
 import { Breadcrumbs } from '@/components/breadcrumbs';
 import { PageContainer } from '@/components/layout/page-container';
 import { RemoteImage } from '@/components/remote-image';
@@ -87,6 +88,14 @@ export function ReportDetailView() {
   useEffect(() => {
     void loadReport();
   }, [loadReport]);
+
+  useRealtimeRefresh(
+    () => {
+      if (!editing && !workflowBusy && !aiBusy) void loadReport();
+    },
+    Boolean(user && params.id),
+    (event) => event.reportId === params.id,
+  );
 
   useEffect(() => {
     if (!params.id) return;

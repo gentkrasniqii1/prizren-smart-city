@@ -242,7 +242,7 @@ model Report {
   institutionId    String?
   institution      Institution?    @relation(fields: [institutionId], references: [id])
   description      String
-  status           ReportStatus    @default(PENDING)
+  status           ReportStatus    @default(SUBMITTED)
   priority         Priority?
   lat              Float
   lng              Float
@@ -282,10 +282,10 @@ model Report {
 }
 
 enum ReportStatus {
-  PENDING
-  IN_REVIEW
+  SUBMITTED
+  RECEIVED
+  UNDER_REVIEW
   ASSIGNED
-  ACCEPTED
   IN_PROGRESS
   WAITING_FOR_INFORMATION
   RESOLVED

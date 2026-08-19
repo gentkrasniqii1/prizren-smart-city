@@ -89,7 +89,7 @@ test.describe('Phase 10 citizen → admin flow', () => {
     test.skip(!adminLogin.ok(), 'Demo admin@prizren.local not seeded');
     const adminBody = (await adminLogin.json()) as { accessToken: string };
 
-    const nextStatus = report.status === 'IN_PROGRESS' ? 'IN_REVIEW' : 'IN_PROGRESS';
+    const nextStatus = report.status === 'IN_PROGRESS' ? 'UNDER_REVIEW' : 'IN_PROGRESS';
     const statusRes = await request.patch(`${API_URL}/reports/${report.id}/status`, {
       headers: {
         Authorization: `Bearer ${adminBody.accessToken}`,
