@@ -37,6 +37,21 @@ const config = {
     './app/**/*.{js,ts,jsx,tsx,mdx}',
   ],
   theme: {
+    /**
+     * QA matrix (must actually be tested, not assumed from a desktop monitor):
+     *   320  375  390  430  — phone. Stacked chrome, bottom nav, full-width forms.
+     *   768                 — tablet portrait. Same chrome as phone (not a shrunk desktop).
+     *   1024                — `lg`. Desktop header, split auth, reports GIS.
+     *   1280  1440  1920    — `xl` / `2xl` / wide.
+     * `sm` (640) is density only — do not switch navigation there.
+     */
+    screens: {
+      sm: '640px',
+      md: '768px',
+      lg: '1024px',
+      xl: '1280px',
+      '2xl': '1440px',
+    },
     extend: {
       colors: {
         background: withOpacity('--background'),

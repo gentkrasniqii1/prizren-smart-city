@@ -21,13 +21,13 @@ const variants: Record<Variant, string> = {
 };
 
 const sizes: Record<Size, string> = {
-  sm: 'min-h-10 px-3 py-2 text-sm rounded-md',
+  sm: 'min-h-11 px-3 py-2 text-sm rounded-md',
   md: 'min-h-11 px-4 py-2.5 text-sm rounded-md',
   lg: 'min-h-12 px-5 py-3 text-base rounded-md',
 };
 
 const iconSizes: Record<Size, string> = {
-  sm: 'h-10 w-10 rounded-md',
+  sm: 'h-11 w-11 rounded-md',
   md: 'h-11 w-11 rounded-md',
   lg: 'h-12 w-12 rounded-md',
 };

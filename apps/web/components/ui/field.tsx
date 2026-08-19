@@ -7,7 +7,7 @@ import type {
 import { cn } from '@/lib/utils';
 
 const fieldMd =
-  'mt-1 w-full min-h-11 rounded-md border bg-card px-3 py-2.5 text-body text-foreground outline-none transition duration-fast ease-product placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:bg-muted disabled:text-muted-foreground sm:min-h-10 sm:py-2 sm:text-small';
+  'mt-1 w-full min-h-11 rounded-md border bg-card px-3 py-2.5 text-body text-foreground outline-none transition duration-fast ease-product placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:bg-muted disabled:text-muted-foreground md:py-2';
 
 const fieldSm =
   'mt-0 w-full min-h-9 rounded-md border bg-card px-2.5 py-1.5 text-small text-foreground outline-none transition duration-fast ease-product placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:bg-muted disabled:text-muted-foreground';
@@ -89,14 +89,14 @@ export function Checkbox({
   return (
     <label
       htmlFor={id}
-      className={cn('flex cursor-pointer items-start gap-2.5 text-sm', className)}
+      className={cn('flex min-h-11 cursor-pointer items-center gap-2.5 text-sm', className)}
     >
       <input
         id={id}
         type="checkbox"
         checked={checked}
         onChange={(e) => onChange(e.target.checked)}
-        className="mt-0.5 h-4 w-4 shrink-0 rounded border-input text-primary accent-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+        className="h-5 w-5 shrink-0 rounded border-input text-primary accent-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
       />
       <span className="text-foreground">{children}</span>
     </label>
