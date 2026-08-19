@@ -162,7 +162,7 @@ export default function ReportsPage() {
         </span>
         <button
           type="button"
-          className="inline-flex min-h-10 shrink-0 items-center rounded-md px-3 text-xs font-semibold text-mosque-800 ring-1 ring-mosque-200 md:hidden"
+          className="inline-flex min-h-11 shrink-0 items-center rounded-md px-3 text-sm font-semibold text-primary ring-1 ring-border lg:hidden"
           onClick={() => setMobileSheet((s) => (s === 'list' ? 'peek' : 'list'))}
         >
           {mobileSheet === 'list' ? t('showMap') : t('expandList')}

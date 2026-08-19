@@ -94,8 +94,7 @@ export function ReportFilters({
         <Button
           type="button"
           variant="secondary"
-          size="sm"
-          className="min-h-10 flex-1 sm:flex-none"
+          className="min-h-11 w-full sm:w-auto"
           aria-expanded={open}
           aria-controls={panelId}
           onClick={() => setOpen((v) => !v)}
@@ -110,7 +109,12 @@ export function ReportFilters({
           <ChevronDown className={cn('h-4 w-4 transition', open && 'rotate-180')} aria-hidden />
         </Button>
         {activeAdvanced > 0 ? (
-          <Button type="button" variant="ghost" size="sm" onClick={clearAdvanced}>
+          <Button
+            type="button"
+            variant="ghost"
+            className="w-full sm:w-auto"
+            onClick={clearAdvanced}
+          >
             {t('clearFilters')}
           </Button>
         ) : null}
@@ -126,7 +130,7 @@ export function ReportFilters({
           ) : null}
         </div>
 
-        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-6 lg:gap-2">
           <div>
             <Label htmlFor="reports-status">{t('status')}</Label>
             <Select
@@ -195,7 +199,7 @@ export function ReportFilters({
             />
           </div>
 
-          <div className="col-span-2 sm:col-span-1">
+          <div>
             <Label htmlFor="reports-nearby">{t('nearby')}</Label>
             <div className="mt-1 flex flex-col gap-2 sm:flex-row">
               <Input
@@ -211,7 +215,6 @@ export function ReportFilters({
               <Button
                 type="button"
                 variant="secondary"
-                size="sm"
                 className="w-full shrink-0 sm:w-auto"
                 onClick={onNearby}
                 loading={nearbyBusy}
