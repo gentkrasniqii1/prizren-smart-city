@@ -60,7 +60,7 @@
   --accent: var(--color-river-500);
   --accent-foreground: var(--color-stone-50);
   --muted: var(--color-stone-100);
-  --muted-foreground: var(--color-stone-600);
+  --muted-foreground: var(--color-stone-700);
   --destructive: #b91c1c;
   --destructive-foreground: #fef2f2;
   --border: var(--color-stone-200);
@@ -89,7 +89,7 @@
 
   --motion-fast: 120ms;
   --motion-normal: 200ms;
-  --motion-slow: 320ms;
+  --motion-slow: 240ms;
   --motion-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
 
   /* Semantic / status / priority — theme-invariant stamps */
@@ -228,6 +228,18 @@
     @apply rounded-xl border border-border bg-card text-card-foreground shadow-sm;
   }
 
+  .surface-card-interactive {
+    transition:
+      border-color var(--motion-fast) var(--motion-ease),
+      box-shadow var(--motion-fast) var(--motion-ease),
+      background-color var(--motion-fast) var(--motion-ease);
+  }
+
+  .surface-card-interactive:hover {
+    border-color: color-mix(in srgb, var(--foreground) 16%, var(--border));
+    box-shadow: var(--shadow-sm);
+  }
+
   .surface-popover {
     @apply rounded-lg border border-border bg-popover text-popover-foreground shadow-soft;
   }
@@ -312,18 +324,7 @@ select {
   }
 }
 
-/* Product motion — presence & hierarchy (tokens: --motion-*) */
-@keyframes motion-fade-up {
-  from {
-    opacity: 0;
-    transform: translateY(0.75rem);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
+/* Product motion — presence only. Short fades, 4–8px travel. Not a marketing site. */
 @keyframes motion-fade-in {
   from {
     opacity: 0;
@@ -333,21 +334,10 @@ select {
   }
 }
 
-@keyframes motion-slide-up {
-  from {
-    opacity: 0;
-    transform: translateY(1.25rem);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
 @keyframes motion-slide-in-right {
   from {
     opacity: 0;
-    transform: translateX(0.85rem);
+    transform: translateX(0.5rem);
   }
   to {
     opacity: 1;
@@ -355,43 +345,39 @@ select {
   }
 }
 
-.motion-fade-up {
-  animation: motion-fade-up var(--motion-slow) var(--motion-ease) both;
+@keyframes motion-shimmer {
+  100% {
+    transform: translateX(100%);
+  }
 }
 
+.motion-page,
 .motion-fade-in {
   animation: motion-fade-in var(--motion-normal) var(--motion-ease) both;
 }
 
-.motion-slide-up {
-  animation: motion-slide-up var(--motion-slow) var(--motion-ease) both;
-}
-
 .motion-slide-in-right {
-  animation: motion-slide-in-right var(--motion-slow) var(--motion-ease) both;
+  animation: motion-slide-in-right var(--motion-normal) var(--motion-ease) both;
 }
 
-.motion-delay-1 {
-  animation-delay: 70ms;
-}
-.motion-delay-2 {
-  animation-delay: 140ms;
-}
-.motion-delay-3 {
-  animation-delay: 210ms;
-}
-.motion-delay-4 {
-  animation-delay: 280ms;
+.skeleton-shimmer {
+  position: relative;
+  overflow: hidden;
+  background-color: var(--muted);
 }
 
-/* Scroll reveal: hidden until .is-visible (Reveal component) */
-.motion-reveal {
-  opacity: 0;
-  transform: translateY(0.75rem);
-}
-
-.motion-reveal.is-visible {
-  animation: motion-fade-up var(--motion-slow) var(--motion-ease) both;
+.skeleton-shimmer::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in srgb, var(--foreground) 8%, transparent),
+    transparent
+  );
+  animation: motion-shimmer 1.35s ease-in-out infinite;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -404,9 +390,14 @@ select {
     scroll-behavior: auto !important;
   }
 
-  .motion-reveal {
-    opacity: 1 !important;
-    transform: none !important;
+  .motion-page,
+  .motion-fade-in,
+  .motion-slide-in-right {
+    animation: none !important;
+  }
+
+  .skeleton-shimmer::after {
+    display: none !important;
     animation: none !important;
   }
 }

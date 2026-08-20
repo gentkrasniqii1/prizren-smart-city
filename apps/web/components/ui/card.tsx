@@ -4,10 +4,14 @@ import { cn } from '@/lib/utils';
 export function Card({
   children,
   className,
+  interactive = false,
   ...rest
-}: HTMLAttributes<HTMLDivElement> & { children: ReactNode }) {
+}: HTMLAttributes<HTMLDivElement> & { children: ReactNode; interactive?: boolean }) {
   return (
-    <div className={cn('surface-card', className)} {...rest}>
+    <div
+      className={cn('surface-card', interactive && 'surface-card-interactive', className)}
+      {...rest}
+    >
       {children}
     </div>
   );

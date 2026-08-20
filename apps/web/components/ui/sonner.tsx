@@ -19,6 +19,7 @@ const Toaster = ({ ...props }: ToasterProps) => {
       theme={(mounted ? resolvedTheme : 'system') as ToasterProps['theme']}
       className="toaster group"
       toastOptions={{
+        duration: 4000,
         classNames: {
           toast:
             'group toast group-[.toaster]:rounded-lg group-[.toaster]:border-border group-[.toaster]:bg-card group-[.toaster]:text-foreground group-[.toaster]:shadow-lift',

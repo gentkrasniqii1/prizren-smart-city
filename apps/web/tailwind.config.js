@@ -254,28 +254,18 @@ const config = {
         product: 'var(--motion-ease)',
       },
       keyframes: {
-        'motion-fade-up': {
-          from: { opacity: '0', transform: 'translateY(0.75rem)' },
-          to: { opacity: '1', transform: 'translateY(0)' },
-        },
         'motion-fade-in': {
           from: { opacity: '0' },
           to: { opacity: '1' },
         },
-        'motion-slide-up': {
-          from: { opacity: '0', transform: 'translateY(1.25rem)' },
-          to: { opacity: '1', transform: 'translateY(0)' },
-        },
         'motion-slide-in-right': {
-          from: { opacity: '0', transform: 'translateX(0.85rem)' },
+          from: { opacity: '0', transform: 'translateX(0.5rem)' },
           to: { opacity: '1', transform: 'translateX(0)' },
         },
       },
       animation: {
-        'fade-up': 'motion-fade-up var(--motion-slow) var(--motion-ease) both',
         'fade-in': 'motion-fade-in var(--motion-normal) var(--motion-ease) both',
-        'slide-up': 'motion-slide-up var(--motion-slow) var(--motion-ease) both',
-        'slide-in-right': 'motion-slide-in-right var(--motion-slow) var(--motion-ease) both',
+        'slide-in-right': 'motion-slide-in-right var(--motion-normal) var(--motion-ease) both',
       },
     },
   },

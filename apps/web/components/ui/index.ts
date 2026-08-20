@@ -42,6 +42,7 @@ export {
   TableCaption,
 } from './table';
 export { Tabs, TabsList, TabsTrigger, TabsContent } from './tabs';
+export { FilterTabs } from './filter-tabs';
 export { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from './tooltip';
 export {
   Navbar,
