@@ -1,8 +1,9 @@
 'use client';
 
-import { useEffect, useId, useRef, useState } from 'react';
+import { useEffect, useId, useRef, useState, type KeyboardEvent } from 'react';
 import { Loader2, MapPinned, Search } from 'lucide-react';
 import { useTranslations } from 'next-intl';
+import { FieldError } from '@/components/ui/field-error';
 import { Input, Label } from '@/components/ui/field';
 import { cn } from '@/lib/utils';
 
@@ -23,17 +24,23 @@ export function AddressSearch({
   onPick: (lat: number, lng: number, label: string) => void;
 }) {
   const t = useTranslations('ReportFlow');
+  const tCommon = useTranslations('Common');
   const listId = useId();
   const [query, setQuery] = useState(value);
   const [results, setResults] = useState<NominatimResult[]>([]);
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [activeIndex, setActiveIndex] = useState(-1);
   const abortRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
     setQuery(value);
   }, [value]);
+
+  useEffect(() => {
+    setActiveIndex(results.length > 0 ? 0 : -1);
+  }, [results]);
 
   useEffect(() => {
     const q = query.trim();
@@ -92,12 +99,58 @@ export function AddressSearch({
     setResults([]);
   }
 
+  const listOpen = open && results.length > 0;
+  const activeId = listOpen && activeIndex >= 0 ? `${listId}-opt-${activeIndex}` : undefined;
+
+  function onKeyDown(e: KeyboardEvent<HTMLInputElement>) {
+    if (e.key === 'Escape') {
+      if (open) {
+        e.preventDefault();
+        setOpen(false);
+      }
+      return;
+    }
+
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      if (!listOpen) {
+        if (results.length > 0) setOpen(true);
+        return;
+      }
+      setActiveIndex((i) => (i + 1) % results.length);
+      return;
+    }
+
+    if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      if (!listOpen) {
+        if (results.length > 0) setOpen(true);
+        return;
+      }
+      setActiveIndex((i) => (i <= 0 ? results.length - 1 : i - 1));
+      return;
+    }
+
+    if (!listOpen) return;
+
+    if (e.key === 'Home') {
+      e.preventDefault();
+      setActiveIndex(0);
+    } else if (e.key === 'End') {
+      e.preventDefault();
+      setActiveIndex(results.length - 1);
+    } else if (e.key === 'Enter' && activeIndex >= 0) {
+      e.preventDefault();
+      pick(results[activeIndex]);
+    }
+  }
+
   return (
     <div className="relative">
       <Label htmlFor="report-address-search">{t('addressLabel')}</Label>
       <div className="relative mt-1">
         <Search
-          className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-stone-400"
+          className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
           aria-hidden
         />
         <Input
@@ -105,9 +158,14 @@ export function AddressSearch({
           value={query}
           autoComplete="off"
           role="combobox"
-          aria-expanded={open && results.length > 0}
+          aria-expanded={listOpen}
           aria-controls={listId}
           aria-autocomplete="list"
+          aria-activedescendant={activeId}
+          aria-busy={busy || undefined}
+          aria-describedby={
+            error ? 'report-address-error report-address-hint' : 'report-address-hint'
+          }
           placeholder={t('addressPlaceholder')}
           className="mt-0 pl-9 pr-9"
           onChange={(e) => {
@@ -116,46 +174,52 @@ export function AddressSearch({
             onChange(next);
             setOpen(true);
           }}
+          onKeyDown={onKeyDown}
           onFocus={() => {
             if (results.length > 0) setOpen(true);
           }}
           onBlur={() => {
-            // Delay so option click registers
             window.setTimeout(() => setOpen(false), 150);
           }}
         />
         {busy ? (
-          <Loader2
-            className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-stone-400"
-            aria-hidden
-          />
+          <>
+            <Loader2
+              className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-muted-foreground"
+              aria-hidden
+            />
+            <span className="sr-only">{tCommon('loading')}</span>
+          </>
         ) : null}
       </div>
-      <p className="mt-1.5 text-xs text-stone-600">{t('addressHint')}</p>
-      {error ? (
-        <p className="mt-1.5 text-xs text-red-700 dark:text-red-400" role="status">
-          {error}
-        </p>
-      ) : null}
+      <p id="report-address-hint" className="mt-1.5 text-xs text-muted-foreground">
+        {t('addressHint')}
+      </p>
+      <FieldError id="report-address-error" message={error ?? undefined} />
 
-      {open && results.length > 0 ? (
+      {listOpen ? (
         <ul
           id={listId}
           role="listbox"
-          className="absolute z-20 mt-1 max-h-56 w-full overflow-auto rounded-md border border-stone-200 bg-card py-1 shadow-lift"
+          className="absolute z-20 mt-1 max-h-56 w-full overflow-auto rounded-md border border-border bg-card py-1 shadow-lift"
         >
-          {results.map((item) => (
-            <li key={item.place_id} role="option" aria-selected={false}>
+          {results.map((item, index) => (
+            <li key={item.place_id} role="presentation">
               <button
                 type="button"
+                id={`${listId}-opt-${index}`}
+                role="option"
+                aria-selected={index === activeIndex}
                 className={cn(
-                  'flex w-full items-start gap-2 px-3 py-2.5 text-left text-sm text-stone-800',
-                  'hover:bg-mosque-50 focus-visible:bg-mosque-50 focus-visible:outline-none',
+                  'flex min-h-11 w-full items-start gap-2 px-3 py-2.5 text-left text-sm text-foreground',
+                  'hover:bg-muted',
+                  index === activeIndex && 'bg-muted',
                 )}
                 onMouseDown={(e) => e.preventDefault()}
+                onMouseEnter={() => setActiveIndex(index)}
                 onClick={() => pick(item)}
               >
-                <MapPinned className="mt-0.5 h-4 w-4 shrink-0 text-mosque-700" aria-hidden />
+                <MapPinned className="mt-0.5 h-4 w-4 shrink-0 text-primary" aria-hidden />
                 <span className="line-clamp-2">{item.display_name}</span>
               </button>
             </li>
@@ -164,7 +228,7 @@ export function AddressSearch({
       ) : null}
 
       {open && !busy && query.trim().length >= 3 && results.length === 0 && !error ? (
-        <p className="mt-1.5 text-xs text-stone-600" role="status">
+        <p className="mt-1.5 text-xs text-muted-foreground" role="status">
           {t('addressSearchEmpty')}
         </p>
       ) : null}

@@ -44,7 +44,7 @@ function DistributionList({
           </div>
           <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-stone-100">
             <div
-              className="h-full rounded-full bg-mosque-600 transition-[width] duration-500"
+              className="h-full rounded-full bg-mosque-600 transition-[width] duration-slow ease-product"
               style={{ width: `${Math.max(4, (row.count / max) * 100)}%` }}
             />
           </div>

@@ -3,6 +3,7 @@
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { useCallback, useEffect, useState } from 'react';
+import { useForm } from 'react-hook-form';
 import { useParams } from 'next/navigation';
 import { ArrowLeft, Bot, ExternalLink, MapPin, ThumbsUp } from 'lucide-react';
 import { useLocale, useTranslations } from 'next-intl';
@@ -16,7 +17,9 @@ import type {
   WorkflowAction,
   WorkflowActionRequest,
 } from '@prizren/shared-types';
+import { createCommentRequestSchema } from '@prizren/shared-types';
 import { apiFetch } from '@/lib/api';
+import { issueMessage, zodResolver } from '@/lib/form-validation';
 import { useAuth } from '@/components/auth-provider';
 import { useRealtimeRefresh } from '@/components/realtime-provider';
 import { Breadcrumbs } from '@/components/breadcrumbs';
@@ -60,9 +63,7 @@ export function ReportDetailView() {
   const [aiBusy, setAiBusy] = useState(false);
   const [workflowBusy, setWorkflowBusy] = useState(false);
   const [comments, setComments] = useState<CommentDto[]>([]);
-  const [commentText, setCommentText] = useState('');
   const [workflowNote, setWorkflowNote] = useState('');
-  const [commentError, setCommentError] = useState<string | null>(null);
   const [voteBusy, setVoteBusy] = useState(false);
   const [related, setRelated] = useState<ReportDto[]>([]);
   const [aiPolling, setAiPolling] = useState(false);
@@ -181,30 +182,6 @@ export function ReportDetailView() {
       toast.push(errorMessage(err, t('voteFailed')), 'error');
     } finally {
       setVoteBusy(false);
-    }
-  }
-
-  async function submitComment() {
-    if (!report || !user) {
-      toast.push(t('loginToComment'), 'info');
-      return;
-    }
-    const text = commentText.trim();
-    if (!text) {
-      setCommentError(t('commentRequired'));
-      return;
-    }
-    setCommentError(null);
-    try {
-      const created = await apiFetch<CommentDto>(`/reports/${report.id}/comments`, {
-        method: 'POST',
-        auth: true,
-        body: { text },
-      });
-      setComments((prev) => [...prev, created]);
-      setCommentText('');
-    } catch (err) {
-      toast.push(errorMessage(err, t('commentFailed')), 'error');
     }
   }
 
@@ -454,26 +431,11 @@ export function ReportDetailView() {
                 )}
               </ul>
 
-              {user ? (
-                <div className="mt-5 space-y-2">
-                  <Label htmlFor="report-comment">{t('commentLabel')}</Label>
-                  <Textarea
-                    id="report-comment"
-                    rows={3}
-                    maxLength={2000}
-                    placeholder={t('commentPlaceholder')}
-                    value={commentText}
-                    invalid={Boolean(commentError)}
-                    onChange={(e) => {
-                      setCommentText(e.target.value);
-                      setCommentError(null);
-                    }}
-                  />
-                  <FieldError message={commentError ?? undefined} />
-                  <Button type="button" size="sm" onClick={() => void submitComment()}>
-                    {t('commentSubmit')}
-                  </Button>
-                </div>
+              {user && report ? (
+                <CommentComposer
+                  reportId={report.id}
+                  onCreated={(created) => setComments((prev) => [...prev, created])}
+                />
               ) : (
                 <p className="mt-4 text-sm text-muted-foreground">
                   <Link href="/login" className="font-medium text-mosque-800 underline">
@@ -873,5 +835,59 @@ export function ReportDetailView() {
         </div>
       </PageContainer>
     </main>
+  );
+}
+
+function CommentComposer({
+  reportId,
+  onCreated,
+}: {
+  reportId: string;
+  onCreated: (comment: CommentDto) => void;
+}) {
+  const t = useTranslations('ReportDetail');
+  const toast = useToast();
+  const errorMessage = useErrorMessage();
+  const {
+    register,
+    handleSubmit,
+    reset,
+    formState: { errors, isSubmitting },
+  } = useForm<{ text: string }>({
+    resolver: zodResolver(createCommentRequestSchema),
+    defaultValues: { text: '' },
+  });
+
+  async function onValid(values: { text: string }) {
+    try {
+      const created = await apiFetch<CommentDto>(`/reports/${reportId}/comments`, {
+        method: 'POST',
+        auth: true,
+        body: { text: values.text },
+      });
+      onCreated(created);
+      reset({ text: '' });
+    } catch (err) {
+      toast.push(errorMessage(err, t('commentFailed')), 'error');
+    }
+  }
+
+  return (
+    <form onSubmit={handleSubmit(onValid)} className="mt-5 space-y-2" noValidate>
+      <Label htmlFor="report-comment">{t('commentLabel')}</Label>
+      <Textarea
+        id="report-comment"
+        rows={3}
+        maxLength={2000}
+        placeholder={t('commentPlaceholder')}
+        invalid={Boolean(errors.text)}
+        aria-describedby={errors.text ? 'report-comment-error' : undefined}
+        {...register('text')}
+      />
+      <FieldError id="report-comment-error" message={issueMessage(errors.text, t)} />
+      <Button type="submit" size="sm" loading={isSubmitting}>
+        {t('commentSubmit')}
+      </Button>
+    </form>
   );
 }

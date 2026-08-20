@@ -3,11 +3,18 @@
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
+import { useForm } from 'react-hook-form';
 import { useRouter } from 'next/navigation';
 import { Bot, CheckCircle2, MapPin } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import type { CategoryDto, ReportDto } from '@prizren/shared-types';
 import { apiFetch } from '@/lib/api';
+import {
+  createReportFormSchema,
+  issueMessage,
+  zodResolver,
+  type CreateReportFormValues,
+} from '@/lib/form-validation';
 import { useAuth } from '@/components/auth-provider';
 import { PageContainer } from '@/components/layout/page-container';
 import { PhotoUploader } from '@/components/report/photo-uploader';
@@ -33,12 +40,6 @@ const LocationPickerMap = dynamic(
   },
 );
 
-type FieldErrors = {
-  description?: string;
-  photo?: string;
-  location?: string;
-};
-
 const STEP_IDS = ['describe', 'photo', 'location', 'category', 'review'] as const;
 
 export function ReportWizard() {
@@ -50,19 +51,38 @@ export function ReportWizard() {
 
   const [step, setStep] = useState(0);
   const [categories, setCategories] = useState<CategoryDto[]>([]);
-  const [description, setDescription] = useState('');
-  const [categoryId, setCategoryId] = useState('');
-  const [address, setAddress] = useState('');
-  const [lat, setLat] = useState<number | null>(null);
-  const [lng, setLng] = useState<number | null>(null);
-  const [photo, setPhoto] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
-  const [website, setWebsite] = useState('');
-  const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [formError, setFormError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [geoBusy, setGeoBusy] = useState(false);
   const [created, setCreated] = useState<ReportDto | null>(null);
+
+  const {
+    register,
+    trigger,
+    setValue,
+    setError,
+    clearErrors,
+    watch,
+    getValues,
+    formState: { errors },
+  } = useForm<CreateReportFormValues>({
+    resolver: zodResolver(createReportFormSchema),
+    defaultValues: {
+      description: '',
+      photo: null,
+      address: '',
+      categoryId: '',
+      website: '',
+    },
+  });
+
+  const description = watch('description');
+  const categoryId = watch('categoryId');
+  const address = watch('address') ?? '';
+  const lat = watch('lat');
+  const lng = watch('lng');
+  const photo = watch('photo');
 
   const steps = useMemo(() => STEP_IDS.map((id) => ({ id, label: t(`steps.${id}`) })), [t]);
 
@@ -81,7 +101,7 @@ export function ReportWizard() {
   }, []);
 
   useEffect(() => {
-    if (!photo) {
+    if (!(photo instanceof File)) {
       setPreview(null);
       return;
     }
@@ -92,45 +112,31 @@ export function ReportWizard() {
 
   function requestGeolocation() {
     if (!navigator.geolocation) {
-      setFieldErrors((f) => ({ ...f, location: t('geoUnsupported') }));
+      setError('lat', { type: 'manual', message: t('geoUnsupported') });
       return;
     }
     setGeoBusy(true);
     setFormError(null);
     navigator.geolocation.getCurrentPosition(
       (pos) => {
-        setLat(pos.coords.latitude);
-        setLng(pos.coords.longitude);
-        setFieldErrors((f) => ({ ...f, location: undefined }));
+        setValue('lat', pos.coords.latitude, { shouldValidate: true });
+        setValue('lng', pos.coords.longitude, { shouldValidate: true });
+        clearErrors(['lat', 'lng']);
         setGeoBusy(false);
       },
       () => {
-        setFieldErrors((f) => ({ ...f, location: t('geoDenied') }));
+        setError('lat', { type: 'manual', message: t('geoDenied') });
         setGeoBusy(false);
       },
       { enableHighAccuracy: true, timeout: 10000 },
     );
   }
 
-  function validateStep(index: number): FieldErrors {
-    const next: FieldErrors = {};
-    if (index === 0 && description.trim().length < 10) {
-      next.description = t('descriptionError');
-    }
-    if (index === 1 && !photo) {
-      next.photo = t('photoRequired');
-    }
-    if (index === 2 && (lat === null || lng === null)) {
-      next.location = t('locationRequired');
-    }
-    return next;
-  }
-
-  function goNext() {
+  async function goNext() {
     setFormError(null);
-    const errors = validateStep(step);
-    setFieldErrors(errors);
-    if (Object.keys(errors).length > 0) return;
+    if (step === 0 && !(await trigger('description'))) return;
+    if (step === 1 && !(await trigger('photo'))) return;
+    if (step === 2 && !(await trigger(['lat', 'lng']))) return;
     setStep((s) => Math.min(s + 1, STEP_IDS.length - 1));
   }
 
@@ -141,27 +147,26 @@ export function ReportWizard() {
 
   async function submit() {
     setFormError(null);
-    const all: FieldErrors = {
-      ...validateStep(0),
-      ...validateStep(1),
-      ...validateStep(2),
-    };
-    setFieldErrors(all);
-    if (Object.keys(all).length > 0) {
-      if (all.description) setStep(0);
-      else if (all.photo) setStep(1);
-      else if (all.location) setStep(2);
+    const ok = await trigger(['description', 'photo', 'lat', 'lng']);
+    if (!ok) {
+      const current = getValues();
+      if (!current.description || current.description.trim().length < 10) setStep(0);
+      else if (!(current.photo instanceof File)) setStep(1);
+      else setStep(2);
       return;
     }
 
+    const values = getValues();
+    if (!(values.photo instanceof File) || values.lat == null || values.lng == null) return;
+
     const form = new FormData();
-    form.append('photo', photo!);
-    form.append('description', description.trim());
-    form.append('lat', String(lat));
-    form.append('lng', String(lng));
-    if (address.trim()) form.append('address', address.trim());
-    if (categoryId) form.append('categoryId', categoryId);
-    form.append('website', website);
+    form.append('photo', values.photo);
+    form.append('description', values.description.trim());
+    form.append('lat', String(values.lat));
+    form.append('lng', String(values.lng));
+    if (values.address?.trim()) form.append('address', values.address.trim());
+    if (values.categoryId) form.append('categoryId', values.categoryId);
+    form.append('website', values.website ?? '');
 
     setSubmitting(true);
     try {
@@ -273,23 +278,20 @@ export function ReportWizard() {
                   <Textarea
                     id="report-description"
                     rows={6}
-                    value={description}
-                    invalid={Boolean(fieldErrors.description)}
-                    onChange={(e) => {
-                      setDescription(e.target.value);
-                      setFieldErrors((f) => ({ ...f, description: undefined }));
-                    }}
+                    invalid={Boolean(errors.description)}
                     aria-describedby={
-                      fieldErrors.description
-                        ? 'report-description-error'
-                        : 'report-description-hint'
+                      errors.description ? 'report-description-error' : 'report-description-hint'
                     }
                     placeholder={t('descriptionPlaceholder')}
+                    {...register('description')}
                   />
                   <p id="report-description-hint" className="mt-1.5 text-xs text-muted-foreground">
                     {t('descriptionHint')}
                   </p>
-                  <FieldError id="report-description-error" message={fieldErrors.description} />
+                  <FieldError
+                    id="report-description-error"
+                    message={issueMessage(errors.description, t)}
+                  />
                 </div>
               </div>
             ) : null}
@@ -302,17 +304,15 @@ export function ReportWizard() {
                 </div>
                 <PhotoUploader
                   preview={preview}
-                  error={fieldErrors.photo}
+                  error={issueMessage(errors.photo, t)}
                   onFile={(file, err) => {
-                    setPhoto(file);
-                    setFieldErrors((f) => ({
-                      ...f,
-                      photo: err,
-                    }));
+                    setValue('photo', file, { shouldValidate: !err });
+                    if (err) setError('photo', { type: 'manual', message: err });
+                    else clearErrors('photo');
                   }}
                   onClear={() => {
-                    setPhoto(null);
-                    setFieldErrors((f) => ({ ...f, photo: undefined }));
+                    setValue('photo', null, { shouldValidate: true });
+                    clearErrors('photo');
                   }}
                 />
               </div>
@@ -339,32 +339,38 @@ export function ReportWizard() {
                   </Button>
                 </div>
 
-                <div aria-labelledby="report-location-label">
+                <div
+                  aria-labelledby="report-location-label"
+                  aria-describedby={errors.lat || errors.lng ? 'report-location-error' : undefined}
+                >
                   <LocationPickerMap
-                    lat={lat}
-                    lng={lng}
+                    lat={lat ?? null}
+                    lng={lng ?? null}
                     onPick={(nextLat, nextLng) => {
-                      setLat(nextLat);
-                      setLng(nextLng);
-                      setFieldErrors((f) => ({ ...f, location: undefined }));
+                      setValue('lat', nextLat, { shouldValidate: true });
+                      setValue('lng', nextLng, { shouldValidate: true });
+                      clearErrors(['lat', 'lng']);
                     }}
                   />
                 </div>
-                <FieldError id="report-location-error" message={fieldErrors.location} />
+                <FieldError
+                  id="report-location-error"
+                  message={issueMessage(errors.lat, t) ?? issueMessage(errors.lng, t)}
+                />
                 <p className="text-xs text-muted-foreground">
-                  {lat !== null && lng !== null
+                  {lat != null && lng != null
                     ? t('coords', { lat: lat.toFixed(5), lng: lng.toFixed(5) })
                     : t('locationHint')}
                 </p>
 
                 <AddressSearch
                   value={address}
-                  onChange={setAddress}
+                  onChange={(next) => setValue('address', next)}
                   onPick={(nextLat, nextLng, label) => {
-                    setLat(nextLat);
-                    setLng(nextLng);
-                    setAddress(label);
-                    setFieldErrors((f) => ({ ...f, location: undefined }));
+                    setValue('lat', nextLat, { shouldValidate: true });
+                    setValue('lng', nextLng, { shouldValidate: true });
+                    setValue('address', label);
+                    clearErrors(['lat', 'lng']);
                   }}
                 />
               </div>
@@ -374,11 +380,7 @@ export function ReportWizard() {
               <div className="space-y-5">
                 <div>
                   <Label htmlFor="report-category">{t('categoryLabel')}</Label>
-                  <Select
-                    id="report-category"
-                    value={categoryId}
-                    onChange={(e) => setCategoryId(e.target.value)}
-                  >
+                  <Select id="report-category" {...register('categoryId')}>
                     <option value="">{t('categoryNone')}</option>
                     {categories.map((c) => (
                       <option key={c.id} value={c.id}>
@@ -437,7 +439,7 @@ export function ReportWizard() {
                       {t('steps.location')}
                     </dt>
                     <dd className="mt-1 text-foreground">
-                      {lat !== null && lng !== null
+                      {lat != null && lng != null
                         ? t('coords', { lat: lat.toFixed(5), lng: lng.toFixed(5) })
                         : '—'}
                       {address.trim() ? ` · ${address.trim()}` : ''}
@@ -463,14 +465,7 @@ export function ReportWizard() {
           <div aria-hidden="true" className="absolute -left-[9999px] h-0 w-0 overflow-hidden">
             <label>
               Website
-              <input
-                type="text"
-                name="website"
-                tabIndex={-1}
-                autoComplete="off"
-                value={website}
-                onChange={(e) => setWebsite(e.target.value)}
-              />
+              <input type="text" tabIndex={-1} autoComplete="off" {...register('website')} />
             </label>
           </div>
 
@@ -488,7 +483,7 @@ export function ReportWizard() {
                 {t('back')}
               </Button>
               {step < STEP_IDS.length - 1 ? (
-                <Button type="button" onClick={goNext} className="w-full sm:w-auto">
+                <Button type="button" onClick={() => void goNext()} className="w-full sm:w-auto">
                   {t('next')}
                 </Button>
               ) : (
