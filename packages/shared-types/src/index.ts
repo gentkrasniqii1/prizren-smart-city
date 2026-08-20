@@ -134,6 +134,7 @@ export interface InstitutionDto {
   integrationType: IntegrationType;
   /** Integration lifecycle — NOT_CONFIGURED until Phase 7/8 wiring. */
   integrationStatus: IntegrationStatus;
+  createdAt?: string;
 }
 
 export interface DepartmentDto {
@@ -170,6 +171,10 @@ export interface ReportDto {
   duplicateOfId: string | null;
   isDuplicate: boolean;
   assignedStaffId: string | null;
+  /** Submission channel — WEB today. */
+  source?: string;
+  anonymous?: boolean;
+  language?: string;
   dueAt: string | null;
   createdAt: string;
   updatedAt: string;
@@ -210,8 +215,10 @@ export interface CategoryDto {
 
 export interface StatusHistoryDto {
   id: string;
+  reportId?: string;
   oldStatus: ReportStatus;
   newStatus: ReportStatus;
+  changedBy?: string;
   changedAt: string;
   note: string | null;
 }
@@ -437,3 +444,11 @@ export {
   updateProfileRequestSchema,
   verifyEmailRequestSchema,
 } from './validation';
+export type {
+  AdminDataPage,
+  AdminDataResource,
+  AdminDataRow,
+  SlaPolicyDto,
+  UpsertSlaPolicyRequest,
+} from './admin-data';
+export { ADMIN_DATA_BLOCKED_RESOURCES, ADMIN_DATA_RESOURCES } from './admin-data';

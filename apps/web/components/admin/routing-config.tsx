@@ -216,12 +216,19 @@ export function RoutingConfig() {
             <h1 className="ds-page-title mt-2">{t('title')}</h1>
             <p className="mt-1 text-small text-muted-foreground">{t('subtitle')}</p>
           </div>
-          {canEdit ? (
-            <Button type="button" onClick={openCreate}>
-              <Plus className="h-4 w-4" aria-hidden />
-              {t('add')}
-            </Button>
-          ) : null}
+          <div className="flex flex-wrap items-center gap-cluster">
+            {user.role === 'SUPER_ADMIN' ? (
+              <Button asChild variant="secondary">
+                <Link href="/admin/data">{tAdmin('dataLink')}</Link>
+              </Button>
+            ) : null}
+            {canEdit ? (
+              <Button type="button" onClick={openCreate}>
+                <Plus className="h-4 w-4" aria-hidden />
+                {t('add')}
+              </Button>
+            ) : null}
+          </div>
         </header>
 
         {error ? (

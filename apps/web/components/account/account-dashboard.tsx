@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   Bell,
+  Database,
   FilePlus2,
   FileText,
   GitBranch,
@@ -251,6 +252,9 @@ export function AccountDashboard() {
               <QuickLink href="/queue" icon={Inbox} label={t('quickQueue')} />
               <QuickLink href="/admin" icon={LayoutDashboard} label={t('quickAdmin')} />
               <QuickLink href="/admin/routing" icon={GitBranch} label={t('quickRouting')} />
+              {user.role === 'SUPER_ADMIN' ? (
+                <QuickLink href="/admin/data" icon={Database} label={t('quickData')} />
+              ) : null}
             </>
           ) : null}
         </nav>

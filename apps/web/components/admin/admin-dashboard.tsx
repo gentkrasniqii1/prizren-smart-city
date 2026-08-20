@@ -396,6 +396,11 @@ export function AdminDashboard() {
           </div>
           <div className="flex flex-wrap items-center gap-cluster">
             <p className="text-caption text-muted-foreground">{t('liveHint')}</p>
+            {user.role === 'SUPER_ADMIN' ? (
+              <Button asChild variant="secondary" size="sm">
+                <Link href="/admin/data">{t('dataLink')}</Link>
+              </Button>
+            ) : null}
             <Button asChild variant="secondary" size="sm">
               <Link href="/admin/routing">{t('routingLink')}</Link>
             </Button>

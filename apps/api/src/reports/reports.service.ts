@@ -91,8 +91,10 @@ type ReportWithRelations = Report & {
   _count?: { votes: number };
   statusHistory?: Array<{
     id: string;
+    reportId: string;
     oldStatus: ReportStatus;
     newStatus: ReportStatus;
+    changedBy: string;
     changedAt: Date;
     note: string | null;
   }>;
@@ -1350,8 +1352,10 @@ export class ReportsService {
   ): ReportDto {
     const history: StatusHistoryDto[] | undefined = report.statusHistory?.map((row) => ({
       id: row.id,
+      reportId: row.reportId,
       oldStatus: row.oldStatus,
       newStatus: row.newStatus,
+      changedBy: row.changedBy,
       changedAt: row.changedAt.toISOString(),
       note: row.note,
     }));
@@ -1387,6 +1391,9 @@ export class ReportsService {
       duplicateOfId: report.duplicateOfId ?? null,
       isDuplicate: report.isDuplicate ?? false,
       assignedStaffId: report.assignedStaffId ?? null,
+      source: report.source,
+      anonymous: report.anonymous,
+      language: report.language,
       dueAt: report.dueAt?.toISOString() ?? null,
       createdAt: report.createdAt.toISOString(),
       updatedAt: report.updatedAt.toISOString(),
