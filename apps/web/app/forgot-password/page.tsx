@@ -2,43 +2,49 @@
 
 import Link from 'next/link';
 import { useState } from 'react';
+import { useForm } from 'react-hook-form';
 import { useTranslations } from 'next-intl';
+import { forgotPasswordRequestSchema } from '@prizren/shared-types';
 import { apiFetch } from '@/lib/api';
+import { issueMessage, zodResolver } from '@/lib/form-validation';
 import { AuthShell } from '@/components/auth/auth-shell';
 import { FieldError } from '@/components/ui';
 import { Button, type ButtonStatus } from '@/components/ui/button';
 import { Input, Label } from '@/components/ui/field';
 
+type ForgotFormValues = {
+  email: string;
+  website?: string;
+};
+
 export default function ForgotPasswordPage() {
   const t = useTranslations('Auth');
-  const [email, setEmail] = useState('');
-  const [website, setWebsite] = useState('');
-  const [error, setError] = useState<string | null>(null);
   const [sent, setSent] = useState(false);
   const [submitStatus, setSubmitStatus] = useState<ButtonStatus>('idle');
 
-  async function onSubmit(e: React.FormEvent) {
-    e.preventDefault();
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<ForgotFormValues>({
+    resolver: zodResolver(forgotPasswordRequestSchema),
+    defaultValues: { email: '', website: '' },
+  });
+
+  async function onValid(values: ForgotFormValues) {
     if (submitStatus === 'loading' || submitStatus === 'success') return;
-    setError(null);
-    if (!email.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
-      setError(t('emailInvalid'));
-      setSubmitStatus('error');
-      return;
-    }
     setSubmitStatus('loading');
     try {
       await apiFetch('/auth/forgot-password', {
         method: 'POST',
-        body: { email: email.trim(), website },
+        body: { email: values.email.trim(), website: values.website },
         skipRefresh: true,
       });
-      setSubmitStatus('success');
-      setSent(true);
     } catch {
-      setSubmitStatus('success');
-      setSent(true);
+      // Always show the same success screen so emails cannot be enumerated.
     }
+    setSubmitStatus('success');
+    setSent(true);
   }
 
   return (
@@ -63,7 +69,7 @@ export default function ForgotPasswordPage() {
           </Link>
         </div>
       ) : (
-        <form onSubmit={onSubmit} className="mt-8 space-y-4" noValidate>
+        <form onSubmit={handleSubmit(onValid)} className="mt-8 space-y-4" noValidate>
           <div>
             <Label htmlFor="forgot-email">{t('email')}</Label>
             <Input
@@ -73,24 +79,14 @@ export default function ForgotPasswordPage() {
               autoComplete="email"
               autoCapitalize="none"
               autoCorrect="off"
-              value={email}
-              invalid={Boolean(error)}
-              onChange={(e) => {
-                setEmail(e.target.value);
-                setError(null);
-              }}
+              invalid={Boolean(errors.email)}
+              aria-describedby={errors.email ? 'forgot-email-error' : undefined}
+              {...register('email')}
             />
-            <FieldError message={error ?? undefined} />
+            <FieldError id="forgot-email-error" message={issueMessage(errors.email, t)} />
           </div>
           <div aria-hidden className="absolute -left-[9999px] h-0 w-0 overflow-hidden">
-            <input
-              type="text"
-              name="website"
-              tabIndex={-1}
-              autoComplete="off"
-              value={website}
-              onChange={(e) => setWebsite(e.target.value)}
-            />
+            <input type="text" tabIndex={-1} autoComplete="off" {...register('website')} />
           </div>
           <Button type="submit" className="w-full" size="lg" status={submitStatus}>
             {t('sendResetLink')}

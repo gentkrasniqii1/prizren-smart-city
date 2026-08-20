@@ -2,9 +2,10 @@
 
 import Link from 'next/link';
 import { useState } from 'react';
+import { useForm } from 'react-hook-form';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import { ApiError } from '@/lib/api';
+import { loginRequestSchema } from '@prizren/shared-types';
 import { useAuth } from '@/components/auth-provider';
 import { AuthShell } from '@/components/auth/auth-shell';
 import { OAuthButtons } from '@/components/auth/oauth-buttons';
@@ -12,47 +13,48 @@ import { Logo } from '@/components/brand/Logo';
 import { FieldError, Checkbox, FormError } from '@/components/ui';
 import { Button, type ButtonStatus } from '@/components/ui/button';
 import { Input, Label } from '@/components/ui/field';
+import { ApiError } from '@/lib/api';
+import { issueMessage, zodResolver } from '@/lib/form-validation';
 import { useErrorMessage } from '@/lib/use-error-message';
-
-type FieldErrors = { email?: string; password?: string };
 
 export function LoginForm() {
   const t = useTranslations('Auth');
+  const tNav = useTranslations('Nav');
   const router = useRouter();
   const { login } = useAuth();
   const errorMessage = useErrorMessage();
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [rememberMe, setRememberMe] = useState(false);
-  const [website, setWebsite] = useState('');
-  const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [formError, setFormError] = useState<string | null>(null);
   const [submitStatus, setSubmitStatus] = useState<ButtonStatus>('idle');
   const [oauthBusy, setOauthBusy] = useState(false);
 
-  function validate(): FieldErrors {
-    const next: FieldErrors = {};
-    if (!email.trim()) next.email = t('emailRequired');
-    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) next.email = t('emailInvalid');
-    if (!password) next.password = t('passwordRequired');
-    else if (password.length < 8) next.password = t('passwordMin');
-    return next;
-  }
+  const {
+    register,
+    handleSubmit,
+    setValue,
+    watch,
+    formState: { errors },
+  } = useForm({
+    resolver: zodResolver(loginRequestSchema),
+    defaultValues: { email: '', password: '', rememberMe: false, website: '' },
+  });
 
-  async function onSubmit(e: React.FormEvent) {
-    e.preventDefault();
+  const rememberMe = watch('rememberMe') ?? false;
+
+  async function onValid(values: {
+    email: string;
+    password: string;
+    rememberMe?: boolean;
+    website?: string;
+  }) {
     if (submitStatus === 'loading' || submitStatus === 'success' || oauthBusy) return;
     setFormError(null);
-    const next = validate();
-    setFieldErrors(next);
-    if (Object.keys(next).length > 0) return;
     setSubmitStatus('loading');
     try {
       const result = await login({
-        email: email.trim(),
-        password,
-        rememberMe,
-        website,
+        email: values.email.trim(),
+        password: values.password,
+        rememberMe: values.rememberMe,
+        website: values.website,
       });
       setSubmitStatus('success');
       if (result?.requiresTwoFactor) {
@@ -64,7 +66,7 @@ export function LoginForm() {
     } catch (err) {
       if (err instanceof ApiError && err.message === 'EMAIL_NOT_VERIFIED') {
         setSubmitStatus('success');
-        router.push(`/verify-email?email=${encodeURIComponent(email.trim())}`);
+        router.push(`/verify-email?email=${encodeURIComponent(values.email.trim())}`);
         return;
       }
       setFormError(errorMessage(err, t('loginFailed')));
@@ -79,14 +81,18 @@ export function LoginForm() {
       headline={t('panelHeadline')}
       body={t('panelBody')}
     >
-      <Link href="/" className="hidden text-foreground lg:inline-flex">
+      <Link
+        href="/"
+        className="hidden min-h-11 items-center text-foreground lg:inline-flex"
+        aria-label={tNav('home')}
+      >
         <Logo variant="icon" size={36} />
       </Link>
 
       <p className="ds-kicker lg:mt-8">{t('welcomeBack')}</p>
       <h1 className="ds-page-title mt-2">{t('loginTitle')}</h1>
 
-      <form onSubmit={onSubmit} className="relative mt-6 space-y-4 lg:mt-8" noValidate>
+      <form onSubmit={handleSubmit(onValid)} className="relative mt-6 space-y-4 lg:mt-8" noValidate>
         <div>
           <Label htmlFor="login-email">{t('email')}</Label>
           <Input
@@ -97,14 +103,11 @@ export function LoginForm() {
             autoCapitalize="none"
             autoCorrect="off"
             enterKeyHint="next"
-            value={email}
-            invalid={Boolean(fieldErrors.email)}
-            onChange={(e) => {
-              setEmail(e.target.value);
-              setFieldErrors((f) => ({ ...f, email: undefined }));
-            }}
+            invalid={Boolean(errors.email)}
+            aria-describedby={errors.email ? 'login-email-error' : undefined}
+            {...register('email')}
           />
-          <FieldError message={fieldErrors.email} />
+          <FieldError id="login-email-error" message={issueMessage(errors.email, t)} />
         </div>
         <div>
           <Label htmlFor="login-password">{t('password')}</Label>
@@ -113,18 +116,19 @@ export function LoginForm() {
             type="password"
             autoComplete="current-password"
             enterKeyHint="go"
-            value={password}
-            invalid={Boolean(fieldErrors.password)}
-            onChange={(e) => {
-              setPassword(e.target.value);
-              setFieldErrors((f) => ({ ...f, password: undefined }));
-            }}
+            invalid={Boolean(errors.password)}
+            aria-describedby={errors.password ? 'login-password-error' : undefined}
+            {...register('password')}
           />
-          <FieldError message={fieldErrors.password} />
+          <FieldError id="login-password-error" message={issueMessage(errors.password, t)} />
         </div>
 
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-          <Checkbox id="remember" checked={rememberMe} onChange={setRememberMe}>
+          <Checkbox
+            id="remember"
+            checked={rememberMe}
+            onChange={(checked) => setValue('rememberMe', checked)}
+          >
             {t('rememberMe')}
           </Checkbox>
           <Link
@@ -138,14 +142,7 @@ export function LoginForm() {
         <div aria-hidden className="absolute -left-[9999px] h-0 w-0 overflow-hidden">
           <label>
             Website
-            <input
-              type="text"
-              name="website"
-              tabIndex={-1}
-              autoComplete="off"
-              value={website}
-              onChange={(e) => setWebsite(e.target.value)}
-            />
+            <input type="text" tabIndex={-1} autoComplete="off" {...register('website')} />
           </label>
         </div>
 

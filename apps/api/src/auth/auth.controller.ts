@@ -12,6 +12,17 @@ import {
 } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
 import { CookieOptions, Request, Response } from 'express';
+import {
+  changePasswordRequestSchema,
+  forgotPasswordRequestSchema,
+  loginRequestSchema,
+  registerRequestSchema,
+  resendVerificationRequestSchema,
+  resetPasswordRequestSchema,
+  totpCodeRequestSchema,
+  twoFactorVerifyRequestSchema,
+  verifyEmailRequestSchema,
+} from '@prizren/shared-types';
 import { AuthService } from './auth.service';
 import { ConfigService } from './config.service';
 import { OauthService, type OAuthProvider } from './oauth.service';
@@ -28,6 +39,7 @@ import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { CurrentUser, AuthUser } from './decorators/current-user.decorator';
 import { rejectIfHoneypotFilled } from '../common/honeypot';
 import { getClientIp } from '../common/client-ip';
+import { zodBody } from '../common/zod-validation.pipe';
 import { CsrfOriginGuard } from './guards/csrf-origin.guard';
 import { timingSafeEqualString } from './crypto';
 
@@ -46,7 +58,7 @@ export class AuthController {
 
   @Post('register')
   @Throttle({ default: { limit: 5, ttl: 60_000 } })
-  async register(@Body() dto: RegisterDto) {
+  async register(@Body(zodBody(registerRequestSchema)) dto: RegisterDto) {
     rejectIfHoneypotFilled(dto.website);
     return this.authService.register(dto);
   }
@@ -55,7 +67,7 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   @Throttle({ default: { limit: 5, ttl: 60_000 } })
   async login(
-    @Body() dto: LoginDto,
+    @Body(zodBody(loginRequestSchema)) dto: LoginDto,
     @Req() req: Request,
     @Res({ passthrough: true }) res: Response,
   ) {
@@ -78,7 +90,7 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   @Throttle({ default: { limit: 10, ttl: 60_000 } })
   async verifyTwoFactor(
-    @Body() dto: TwoFactorLoginDto,
+    @Body(zodBody(twoFactorVerifyRequestSchema)) dto: TwoFactorLoginDto,
     @Req() req: Request,
     @Res({ passthrough: true }) res: Response,
   ) {
@@ -107,7 +119,10 @@ export class AuthController {
   @Post('2fa/confirm')
   @HttpCode(HttpStatus.OK)
   @UseGuards(JwtAuthGuard)
-  confirmTotp(@CurrentUser() user: AuthUser, @Body() dto: TotpCodeDto) {
+  confirmTotp(
+    @CurrentUser() user: AuthUser,
+    @Body(zodBody(totpCodeRequestSchema)) dto: TotpCodeDto,
+  ) {
     return this.authService.confirmTotpSetup(user.id, dto.code);
   }
 
@@ -116,7 +131,7 @@ export class AuthController {
   @UseGuards(JwtAuthGuard)
   async disableTotp(
     @CurrentUser() user: AuthUser,
-    @Body() dto: TotpCodeDto,
+    @Body(zodBody(totpCodeRequestSchema)) dto: TotpCodeDto,
     @Res({ passthrough: true }) res: Response,
   ) {
     const result = await this.authService.disableTotp(user.id, dto.code);
@@ -129,7 +144,7 @@ export class AuthController {
   @Post('forgot-password')
   @HttpCode(HttpStatus.OK)
   @Throttle({ default: { limit: 5, ttl: 60_000 } })
-  async forgotPassword(@Body() dto: ForgotPasswordDto) {
+  async forgotPassword(@Body(zodBody(forgotPasswordRequestSchema)) dto: ForgotPasswordDto) {
     rejectIfHoneypotFilled(dto.website);
     return this.authService.forgotPassword(dto.email);
   }
@@ -137,7 +152,7 @@ export class AuthController {
   @Post('reset-password')
   @HttpCode(HttpStatus.OK)
   @Throttle({ default: { limit: 5, ttl: 60_000 } })
-  resetPassword(@Body() dto: ResetPasswordDto) {
+  resetPassword(@Body(zodBody(resetPasswordRequestSchema)) dto: ResetPasswordDto) {
     return this.authService.resetPassword(dto.token, dto.password);
   }
 
@@ -147,7 +162,7 @@ export class AuthController {
   @Throttle({ default: { limit: 5, ttl: 60_000 } })
   async changePassword(
     @CurrentUser() user: AuthUser,
-    @Body() dto: ChangePasswordDto,
+    @Body(zodBody(changePasswordRequestSchema)) dto: ChangePasswordDto,
     @Res({ passthrough: true }) res: Response,
   ) {
     const result = await this.authService.changePassword(
@@ -165,7 +180,10 @@ export class AuthController {
   @Post('verify-email')
   @HttpCode(HttpStatus.OK)
   @Throttle({ default: { limit: 10, ttl: 60_000 } })
-  async verifyEmail(@Body() dto: VerifyEmailDto, @Res({ passthrough: true }) res: Response) {
+  async verifyEmail(
+    @Body(zodBody(verifyEmailRequestSchema)) dto: VerifyEmailDto,
+    @Res({ passthrough: true }) res: Response,
+  ) {
     const result = await this.authService.verifyEmail(dto.token);
     this.setRefreshCookie(res, result.refreshToken, result.refreshDays);
     return result.auth;
@@ -174,7 +192,9 @@ export class AuthController {
   @Post('resend-verification')
   @HttpCode(HttpStatus.OK)
   @Throttle({ default: { limit: 3, ttl: 60_000 } })
-  async resendVerification(@Body() dto: ResendVerificationDto) {
+  async resendVerification(
+    @Body(zodBody(resendVerificationRequestSchema)) dto: ResendVerificationDto,
+  ) {
     rejectIfHoneypotFilled(dto.website);
     return this.authService.requestEmailVerification(dto.email);
   }

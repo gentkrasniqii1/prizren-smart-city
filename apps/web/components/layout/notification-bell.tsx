@@ -1,63 +1,130 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
-import { Bell } from 'lucide-react';
+import { useCallback, useState } from 'react';
+import { Bell, CheckCheck } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import type { PaginatedNotifications } from '@prizren/shared-types';
+import type { NotificationDto, PaginatedNotifications } from '@prizren/shared-types';
 import { useAuth } from '@/components/auth-provider';
+import { useNotificationInbox } from '@/components/notifications/notification-inbox';
+import { NotificationItem } from '@/components/notifications/notification-item';
 import { Button } from '@/components/ui/button';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { apiFetch } from '@/lib/api';
-import { useRealtimeRefresh } from '@/components/realtime-provider';
 
 export function NotificationBell() {
   const t = useTranslations('Nav');
+  const tN = useTranslations('Notifications');
   const { user, loading } = useAuth();
-  const [unread, setUnread] = useState(0);
+  const { unreadCount, refreshUnread, setUnreadCount } = useNotificationInbox();
+  const [open, setOpen] = useState(false);
+  const [items, setItems] = useState<NotificationDto[]>([]);
+  const [busy, setBusy] = useState(false);
 
-  const refreshUnread = () => {
-    if (loading || !user) return;
-    void (async () => {
+  const loadPreview = useCallback(async () => {
+    const res = await apiFetch<PaginatedNotifications>('/notifications?limit=8', { auth: true });
+    setItems(res.data);
+    setUnreadCount(res.meta.unreadCount ?? 0);
+  }, [setUnreadCount]);
+
+  async function handleOpenChange(next: boolean) {
+    setOpen(next);
+    if (next) {
       try {
-        const res = await apiFetch<PaginatedNotifications>('/notifications?limit=1', {
-          auth: true,
-        });
-        setUnread(res.meta.unreadCount ?? 0);
+        await loadPreview();
       } catch {
-        setUnread(0);
+        setItems([]);
       }
-    })();
-  };
-
-  useEffect(() => {
-    if (loading || !user) {
-      setUnread(0);
-      return;
     }
-    refreshUnread();
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- mount/session only
-  }, [loading, user]);
+  }
 
-  useRealtimeRefresh(refreshUnread, Boolean(user) && !loading);
+  async function markOne(id: string) {
+    setBusy(true);
+    try {
+      await apiFetch(`/notifications/${id}/read`, { method: 'PATCH', auth: true });
+      await loadPreview();
+    } catch {
+      await refreshUnread();
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function markAll() {
+    setBusy(true);
+    try {
+      await apiFetch('/notifications/read-all', { method: 'POST', auth: true });
+      setUnreadCount(0);
+      setItems((prev) => prev.map((n) => ({ ...n, read: true })));
+    } catch {
+      await refreshUnread();
+    } finally {
+      setBusy(false);
+    }
+  }
 
   if (loading || !user) return null;
 
+  const label = unreadCount > 0 ? `${t('notifications')} (${unreadCount})` : t('notifications');
+
   return (
-    <Button asChild variant="icon" size="sm" className="relative shrink-0">
-      <Link
-        href="/notifications"
-        aria-label={unread > 0 ? `${t('notifications')} (${unread})` : t('notifications')}
-      >
-        <Bell className="h-4 w-4" aria-hidden />
-        {unread > 0 ? (
-          <span
-            className="absolute right-1.5 top-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-destructive px-1 text-[10px] font-semibold text-destructive-foreground"
-            aria-hidden
+    <DropdownMenu open={open} onOpenChange={(next) => void handleOpenChange(next)}>
+      <DropdownMenuTrigger asChild>
+        <Button variant="icon" size="sm" className="relative shrink-0" aria-label={label}>
+          <Bell className="h-4 w-4" aria-hidden />
+          {unreadCount > 0 ? (
+            <span className="absolute right-1 top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-destructive px-1 text-[10px] font-semibold text-destructive-foreground">
+              {unreadCount > 9 ? '9+' : unreadCount}
+            </span>
+          ) : null}
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-[min(24rem,calc(100vw-1.5rem))] p-0">
+        <div className="flex items-center justify-between gap-2 px-3 py-2.5">
+          <p className="text-sm font-semibold text-foreground">{tN('title')}</p>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            disabled={busy || unreadCount === 0}
+            onClick={() => void markAll()}
+            className="min-h-11 gap-1 px-2"
           >
-            {unread > 9 ? '9+' : unread}
-          </span>
-        ) : null}
-      </Link>
-    </Button>
+            <CheckCheck className="h-3.5 w-3.5" aria-hidden />
+            {tN('markAll')}
+          </Button>
+        </div>
+        <DropdownMenuSeparator className="my-0" />
+        {items.length === 0 ? (
+          <p className="px-3 py-6 text-center text-sm text-muted-foreground">{tN('emptyBody')}</p>
+        ) : (
+          <ul className="max-h-80 overflow-y-auto">
+            {items.map((n) => (
+              <NotificationItem
+                key={n.id}
+                notification={n}
+                compact
+                busy={busy}
+                onMarkRead={(id) => void markOne(id)}
+                onOpen={() => setOpen(false)}
+              />
+            ))}
+          </ul>
+        )}
+        <DropdownMenuSeparator className="my-0" />
+        <div className="p-2">
+          <Button asChild variant="secondary" size="sm" className="w-full">
+            <Link href="/notifications" onClick={() => setOpen(false)}>
+              {tN('viewAll')}
+            </Link>
+          </Button>
+        </div>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }

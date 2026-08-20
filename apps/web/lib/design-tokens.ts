@@ -234,7 +234,7 @@ export const breakpoints = {
 export const motion = {
   fast: '120ms',
   normal: '200ms',
-  slow: '320ms',
+  slow: '240ms',
   ease: 'cubic-bezier(0.2, 0.8, 0.2, 1)',
 } as const;
 
@@ -318,6 +318,15 @@ export const recipes = {
     rest: 'sm — cards, buttons, table chrome',
     overlay: 'soft — dropdowns, popovers, tooltips',
     modal: 'lift — dialogs, toasts',
+  },
+  motion: {
+    rule: 'Presence only: fade or 4–8px travel, 120–240ms. No scroll-stagger, hover-zoom, or bounce.',
+    page: 'template fade-in on route change',
+    hover: 'color / border / shadow — duration-fast',
+    modal: 'overlay fade + content fade',
+    dropdown: 'fade + 8px slide',
+    toast: '4s, no richColors',
+    skeleton: 'shimmer, not pulse',
   },
   overlay: 'bg-overlay-surface/70',
   nav: {

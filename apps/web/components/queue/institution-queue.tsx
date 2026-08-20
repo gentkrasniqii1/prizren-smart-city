@@ -16,7 +16,14 @@ import { apiFetch } from '@/lib/api';
 import { useAuth } from '@/components/auth-provider';
 import { useRealtimeRefresh } from '@/components/realtime-provider';
 import { PageContainer } from '@/components/layout/page-container';
-import { Button, EmptyState, ErrorBanner, PriorityBadge, StatusBadge } from '@/components/ui';
+import {
+  Button,
+  EmptyState,
+  ErrorBanner,
+  FilterTabs,
+  PriorityBadge,
+  StatusBadge,
+} from '@/components/ui';
 import { TableSkeleton } from '@/components/ui/skeletons';
 import { useToast } from '@/components/toast-provider';
 import { useErrorMessage } from '@/lib/use-error-message';
@@ -123,106 +130,93 @@ export function InstitutionQueue() {
           <p className="mt-2 text-body text-muted-foreground">{t('intro')}</p>
         </header>
 
-        <div
-          className="mt-6 flex flex-wrap gap-1 rounded-lg border border-border bg-card p-1"
-          role="tablist"
-          aria-label={t('lanesLabel')}
+        <FilterTabs
+          className="mt-6"
+          value={lane}
+          onChange={setLane}
+          label={t('lanesLabel')}
+          options={LANES.map((item) => ({ id: item, label: t(`lanes.${item}`) }))}
         >
-          {LANES.map((item) => (
-            <Button
-              key={item}
-              type="button"
-              size="sm"
-              variant={lane === item ? 'secondary' : 'ghost'}
-              aria-selected={lane === item}
-              onClick={() => setLane(item)}
-            >
-              {t(`lanes.${item}`)}
-            </Button>
-          ))}
-        </div>
+          {error ? (
+            <div className="mb-6">
+              <ErrorBanner title={t('loadError')} message={error} onRetry={() => void load()} />
+            </div>
+          ) : null}
 
-        {error ? (
-          <div className="mt-6">
-            <ErrorBanner title={t('loadError')} message={error} onRetry={() => void load()} />
-          </div>
-        ) : null}
-
-        {loading ? (
-          <div className="mt-6">
+          {loading ? (
             <TableSkeleton />
-          </div>
-        ) : reports.length === 0 ? (
-          <div className="mt-8">
+          ) : reports.length === 0 ? (
             <EmptyState
+              className="mt-2"
               icon={<Inbox className="h-5 w-5" aria-hidden />}
               title={t('emptyTitle')}
               description={t('emptyBody')}
             />
-          </div>
-        ) : (
-          <ul className="mt-6 divide-y divide-border overflow-hidden rounded-xl border border-border bg-card">
-            {reports.map((report) => {
-              const bucket = slaBucket(report.dueAt);
-              const primary = report.allowedActions?.find(
-                (action) => action === 'accept' || action === 'investigate' || action === 'resolve',
-              );
-              return (
-                <li
-                  key={report.id}
-                  className="flex flex-col gap-3 px-4 py-4 sm:flex-row sm:items-center"
-                >
-                  <div className="min-w-0 flex-1">
-                    <div className="flex flex-wrap items-center gap-1.5">
-                      <span className="text-caption font-semibold text-muted-foreground">
-                        {report.publicId}
-                      </span>
-                      <StatusBadge status={report.status} />
-                      {report.priority ? <PriorityBadge priority={report.priority} /> : null}
-                      {bucket ? (
-                        <span
-                          className={cn(
-                            'inline-flex items-center rounded-md px-2 py-0.5 text-[11px] font-semibold',
-                            slaClass(bucket),
-                          )}
-                        >
-                          {slaLabel(bucket, locale)}
+          ) : (
+            <ul className="divide-y divide-border overflow-hidden rounded-xl border border-border bg-card">
+              {reports.map((report) => {
+                const bucket = slaBucket(report.dueAt);
+                const primary = report.allowedActions?.find(
+                  (action) =>
+                    action === 'accept' || action === 'investigate' || action === 'resolve',
+                );
+                return (
+                  <li
+                    key={report.id}
+                    className="flex flex-col gap-3 px-4 py-4 sm:flex-row sm:items-center"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <span className="text-caption font-semibold text-muted-foreground">
+                          {report.publicId}
                         </span>
-                      ) : null}
+                        <StatusBadge status={report.status} />
+                        {report.priority ? <PriorityBadge priority={report.priority} /> : null}
+                        {bucket ? (
+                          <span
+                            className={cn(
+                              'inline-flex items-center rounded-md px-2 py-0.5 text-[11px] font-semibold',
+                              slaClass(bucket),
+                            )}
+                          >
+                            {slaLabel(bucket, locale)}
+                          </span>
+                        ) : null}
+                      </div>
+                      <p className="mt-1.5 line-clamp-2 text-sm text-foreground">
+                        {report.description}
+                      </p>
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        {[report.categoryName, report.institutionName ?? report.departmentName]
+                          .filter(Boolean)
+                          .join(' · ')}
+                      </p>
                     </div>
-                    <p className="mt-1.5 line-clamp-2 text-sm text-foreground">
-                      {report.description}
-                    </p>
-                    <p className="mt-1 text-xs text-muted-foreground">
-                      {[report.categoryName, report.institutionName ?? report.departmentName]
-                        .filter(Boolean)
-                        .join(' · ')}
-                    </p>
-                  </div>
-                  <div className="flex shrink-0 flex-wrap gap-2">
-                    {primary ? (
-                      <Button
-                        type="button"
-                        size="sm"
-                        loading={busyId === report.id}
-                        onClick={() => void runAction(report, primary)}
-                      >
-                        {t(`actions.${primary}`)}
+                    <div className="flex shrink-0 flex-wrap gap-2">
+                      {primary ? (
+                        <Button
+                          type="button"
+                          size="sm"
+                          loading={busyId === report.id}
+                          onClick={() => void runAction(report, primary)}
+                        >
+                          {t(`actions.${primary}`)}
+                        </Button>
+                      ) : null}
+                      <Button asChild variant="secondary" size="sm">
+                        <Link href={`/reports/${report.id}`}>{t('open')}</Link>
                       </Button>
-                    ) : null}
-                    <Button asChild variant="secondary" size="sm">
-                      <Link href={`/reports/${report.id}`}>{t('open')}</Link>
-                    </Button>
-                  </div>
-                </li>
-              );
-            })}
-          </ul>
-        )}
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
 
-        <p className="mt-4 text-caption text-muted-foreground">
-          {t('showing', { count: reports.length, total })}
-        </p>
+          <p className="mt-4 text-caption text-muted-foreground">
+            {t('showing', { count: reports.length, total })}
+          </p>
+        </FilterTabs>
       </PageContainer>
     </main>
   );

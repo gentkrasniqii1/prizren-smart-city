@@ -33,7 +33,7 @@ type AuthContextValue = {
     payload: LoginRequest,
   ) => Promise<{ requiresTwoFactor: true; challengeToken: string } | void>;
   register: (payload: RegisterRequest) => Promise<RegisterResponse>;
-  completeTwoFactor: (challengeToken: string, code: string) => Promise<void>;
+  completeTwoFactor: (challengeToken: string, code: string, trustDevice?: boolean) => Promise<void>;
   logout: () => Promise<void>;
   /** Patch the cached user locally after a profile mutation (avoids a refetch). */
   updateUser: (user: PublicUser) => void;
@@ -180,10 +180,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   );
 
   const completeTwoFactor = useCallback(
-    async (challengeToken: string, code: string) => {
+    async (challengeToken: string, code: string, trustDevice?: boolean) => {
       const data = await apiFetch<AuthResponse>('/auth/2fa/verify', {
         method: 'POST',
-        body: { challengeToken, code },
+        body: { challengeToken, code, trustDevice },
         skipRefresh: true,
       });
       setAccessToken(data.accessToken);

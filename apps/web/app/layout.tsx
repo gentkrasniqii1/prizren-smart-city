@@ -4,6 +4,7 @@ import { NextIntlClientProvider } from 'next-intl';
 import { getLocale, getMessages } from 'next-intl/server';
 import { AuthProvider } from '@/components/auth-provider';
 import { RealtimeProvider } from '@/components/realtime-provider';
+import { NotificationInboxProvider } from '@/components/notifications/notification-inbox';
 import { SiteShell } from '@/components/layout/site-shell';
 import { SentryInit } from '@/components/sentry-init';
 import { ServiceWorkerRegister } from '@/components/service-worker-register';
@@ -85,12 +86,19 @@ export default async function RootLayout({
           <NextIntlClientProvider locale={locale} messages={messages}>
             <AuthProvider>
               <RealtimeProvider>
-                <ToastProvider>
-                  <SentryInit />
-                  <ServiceWorkerRegister />
-                  <SiteShell>{children}</SiteShell>
-                  <Toaster richColors closeButton position="bottom-right" />
-                </ToastProvider>
+                <NotificationInboxProvider>
+                  <ToastProvider>
+                    <SentryInit />
+                    <ServiceWorkerRegister />
+                    <SiteShell>{children}</SiteShell>
+                    <Toaster
+                      closeButton
+                      position="bottom-right"
+                      duration={4000}
+                      visibleToasts={3}
+                    />
+                  </ToastProvider>
+                </NotificationInboxProvider>
               </RealtimeProvider>
             </AuthProvider>
           </NextIntlClientProvider>

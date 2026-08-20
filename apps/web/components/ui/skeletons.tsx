@@ -87,9 +87,9 @@ export function MapSkeleton({ className }: { className?: string }) {
       <div className="absolute inset-x-[8%] top-[38%] h-1.5 rounded-full bg-foreground/10" />
       <div className="absolute inset-y-[16%] left-[34%] w-1.5 rounded-full bg-foreground/10" />
       <div className="absolute inset-x-[22%] bottom-[28%] h-1 rounded-full bg-foreground/[0.07]" />
-      <span className="absolute left-[26%] top-[34%] h-2.5 w-2.5 animate-pulse rounded-full bg-mosque-600/60" />
-      <span className="absolute left-[58%] top-[48%] h-2.5 w-2.5 animate-pulse rounded-full bg-river-600/50 [animation-delay:200ms]" />
-      <span className="absolute left-[44%] top-[62%] h-2.5 w-2.5 animate-pulse rounded-full bg-mosque-500/40 [animation-delay:400ms]" />
+      <span className="absolute left-[26%] top-[34%] h-2.5 w-2.5 rounded-full bg-primary/50" />
+      <span className="absolute left-[58%] top-[48%] h-2.5 w-2.5 rounded-full bg-accent/40" />
+      <span className="absolute left-[44%] top-[62%] h-2.5 w-2.5 rounded-full bg-primary/30" />
       <div className="absolute right-3 top-3 space-y-1">
         <Skeleton className="h-8 w-8 rounded-md" />
         <Skeleton className="h-8 w-8 rounded-md" />

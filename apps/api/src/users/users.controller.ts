@@ -19,6 +19,8 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { getClientIp } from '../common/client-ip';
 import { AuditService } from '../audit/audit.service';
+import { updateProfileRequestSchema } from '@prizren/shared-types';
+import { zodBody } from '../common/zod-validation.pipe';
 import { UpdateUserRoleDto } from './dto/update-user-role.dto';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 
@@ -46,7 +48,7 @@ export class UsersController {
   @Patch('me')
   async updateMe(
     @CurrentUser() authUser: AuthUser,
-    @Body() dto: UpdateProfileDto,
+    @Body(zodBody(updateProfileRequestSchema)) dto: UpdateProfileDto,
     @Req() req: Request,
   ) {
     if (!authUser) {

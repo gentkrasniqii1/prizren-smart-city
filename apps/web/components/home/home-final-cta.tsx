@@ -4,7 +4,6 @@ import { getTranslations } from 'next-intl/server';
 import { Button } from '@/components/ui/button';
 import { PageContainer } from '@/components/layout/page-container';
 import { Section } from '@/components/home/section';
-import { Reveal } from '@/components/motion/reveal';
 
 export async function HomeFinalCta() {
   const t = await getTranslations('Home');
@@ -24,27 +23,25 @@ export async function HomeFinalCta() {
           aria-hidden
         />
         <PageContainer className="relative flex min-h-[22rem] flex-col items-start justify-end pb-[calc(3.5rem+var(--bottom-nav-h))] pt-20 sm:min-h-[26rem] sm:pb-16">
-          <Reveal>
-            <h2 className="ds-display max-w-2xl text-overlay-foreground sm:text-display-lg">
-              {t('final.title')}
-            </h2>
-            <p className="mt-cluster max-w-xl text-base text-overlay-muted sm:text-lg">
-              {t('final.body')}
-            </p>
-            <div className="mt-8 flex flex-col gap-cluster sm:flex-row">
-              <Button asChild size="lg" className="w-full sm:w-auto">
-                <Link href="/report">{t('ctaReport')}</Link>
-              </Button>
-              <Button
-                asChild
-                size="lg"
-                variant="secondary"
-                className="w-full border-white/35 bg-white/95 text-chip-foreground sm:w-auto"
-              >
-                <Link href="/reports">{t('ctaBrowse')}</Link>
-              </Button>
-            </div>
-          </Reveal>
+          <h2 className="ds-display max-w-2xl text-overlay-foreground sm:text-display-lg">
+            {t('final.title')}
+          </h2>
+          <p className="mt-cluster max-w-xl text-base text-overlay-muted sm:text-lg">
+            {t('final.body')}
+          </p>
+          <div className="mt-8 flex flex-col gap-cluster sm:flex-row">
+            <Button asChild size="lg" className="w-full sm:w-auto">
+              <Link href="/report">{t('ctaReport')}</Link>
+            </Button>
+            <Button
+              asChild
+              size="lg"
+              variant="secondary"
+              className="w-full border-white/35 bg-white/95 text-chip-foreground sm:w-auto"
+            >
+              <Link href="/reports">{t('ctaBrowse')}</Link>
+            </Button>
+          </div>
         </PageContainer>
       </div>
     </Section>

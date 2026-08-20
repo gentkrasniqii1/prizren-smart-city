@@ -36,7 +36,7 @@ export function ErrorBanner({
             variant="ghost"
             size="sm"
             onClick={onRetry}
-            className="mt-1.5 h-auto px-0 py-0 text-destructive underline underline-offset-2 hover:bg-transparent hover:text-destructive"
+            className="mt-1.5 min-h-11 px-0 py-0 text-destructive underline underline-offset-2 hover:bg-transparent hover:text-destructive"
           >
             {t('retry')}
           </Button>

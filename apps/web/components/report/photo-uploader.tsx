@@ -122,18 +122,19 @@ export function PhotoUploader({
           }}
           onDrop={onDrop}
           className={cn(
-            'flex cursor-pointer flex-col items-center justify-center gap-3 rounded-lg border border-dashed px-4 py-12 text-center transition',
+            'flex cursor-pointer flex-col items-center justify-center gap-3 rounded-lg border border-dashed px-4 py-12 text-center transition duration-fast ease-product',
+            'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring',
             dragging
-              ? 'border-mosque-500 bg-mosque-50'
-              : 'border-stone-300 bg-stone-50 hover:border-mosque-400 hover:bg-card',
+              ? 'border-primary bg-muted'
+              : 'border-border bg-muted/60 hover:border-primary/60 hover:bg-card',
           )}
         >
-          <span className="inline-flex h-12 w-12 items-center justify-center rounded-full bg-card text-mosque-800 shadow-sm">
+          <span className="inline-flex h-12 w-12 items-center justify-center rounded-full bg-card text-primary shadow-sm">
             <ImagePlus className="h-5 w-5" aria-hidden />
           </span>
           <div>
             <p className="text-sm font-medium text-stone-900">{t('photoDropTitle')}</p>
-            <p id="report-photo-hint" className="mt-1 text-xs text-stone-600">
+            <p id="report-photo-hint" className="mt-1 text-xs text-muted-foreground">
               {t('photoHint')}
             </p>
           </div>

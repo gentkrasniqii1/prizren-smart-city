@@ -323,7 +323,7 @@ export function DesignSystemGallery({ locale }: { locale: 'sq' | 'en' }) {
         </Specimen>
 
         <Specimen title={t.cards}>
-          <Card>
+          <Card interactive>
             <CardHeader
               title={locale === 'sq' ? 'Raporti PRZ-2026-000184' : 'Report PRZ-2026-000184'}
               description={

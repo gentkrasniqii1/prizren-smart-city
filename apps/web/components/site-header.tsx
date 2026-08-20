@@ -66,6 +66,7 @@ export function SiteHeader() {
             <Link
               href="/"
               className="inline-flex min-h-11 items-center"
+              aria-label={t('home')}
               onClick={() => setOpen(false)}
             >
               <span className="lg:hidden">
@@ -92,7 +93,6 @@ export function SiteHeader() {
 
           <NavbarUtilities>
             <ThemeToggle />
-            {!loading && user ? <NotificationBell /> : null}
             {!loading && user ? <UserMenu /> : null}
             <LanguageSwitcher variant="compact" />
             {!loading && user ? (
@@ -119,17 +119,20 @@ export function SiteHeader() {
             ) : null}
           </NavbarUtilities>
 
-          <div className="lg:hidden">
-            <Button
-              type="button"
-              variant="icon"
-              size="sm"
-              aria-expanded={open}
-              onClick={() => setOpen(true)}
-              aria-label={t('openMenu')}
-            >
-              <Menu className="h-5 w-5" aria-hidden />
-            </Button>
+          <div className="flex items-center gap-1">
+            {!loading && user ? <NotificationBell /> : null}
+            <div className="lg:hidden">
+              <Button
+                type="button"
+                variant="icon"
+                size="sm"
+                aria-expanded={open}
+                onClick={() => setOpen(true)}
+                aria-label={t('openMenu')}
+              >
+                <Menu className="h-5 w-5" aria-hidden />
+              </Button>
+            </div>
           </div>
         </NavbarRow>
       </PageContainer>

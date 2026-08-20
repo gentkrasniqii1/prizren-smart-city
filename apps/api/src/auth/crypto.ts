@@ -39,13 +39,4 @@ export function decryptSecret(payload: string, keyMaterial: string): string {
   return Buffer.concat([decipher.update(enc), decipher.final()]).toString('utf8');
 }
 
-export function passwordPolicyErrors(password: string): string[] {
-  const errors: string[] = [];
-  if (password.length < 8) errors.push('At least 8 characters');
-  if (password.length > 128) errors.push('Password is too long');
-  if (!/[A-Z]/.test(password)) errors.push('Uppercase letter');
-  if (!/[a-z]/.test(password)) errors.push('Lowercase letter');
-  if (!/\d/.test(password)) errors.push('Number');
-  if (!/[^A-Za-z0-9]/.test(password)) errors.push('Special character');
-  return errors;
-}
+export { passwordPolicyErrors } from '@prizren/shared-types';

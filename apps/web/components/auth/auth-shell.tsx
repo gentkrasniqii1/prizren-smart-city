@@ -2,6 +2,7 @@
 
 import Image from 'next/image';
 import Link from 'next/link';
+import { useTranslations } from 'next-intl';
 import type { ReactNode } from 'react';
 import { Logo } from '@/components/brand/Logo';
 import { ThemeToggle } from '@/components/theme-toggle';
@@ -24,6 +25,7 @@ export function AuthShell({
   body?: string;
   children: ReactNode;
 }) {
+  const tNav = useTranslations('Nav');
   return (
     <div className="flex min-h-dvh flex-col bg-background lg:grid lg:grid-cols-2">
       <aside className="relative hidden overflow-hidden lg:block">
@@ -47,7 +49,11 @@ export function AuthShell({
 
         <div className="relative z-10 flex h-full flex-col justify-end p-12 xl:p-16">
           <div className="max-w-md">
-            <Link href="/" className="inline-flex text-overlay-foreground">
+            <Link
+              href="/"
+              className="inline-flex min-h-11 items-center text-overlay-foreground"
+              aria-label={tNav('home')}
+            >
               <Logo variant="full" theme="dark" size={44} />
             </Link>
             <h2 className="ds-display mt-10 text-overlay-foreground xl:text-display-lg">

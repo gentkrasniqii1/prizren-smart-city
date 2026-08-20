@@ -10,7 +10,7 @@ import { PageContainer } from '@/components/layout/page-container';
 import { ReportCard } from '@/components/reports/report-card';
 import { ReportDrawer } from '@/components/reports/report-drawer';
 import { ReportFilters, type ReportsFilterState } from '@/components/reports/report-filters';
-import { Button, EmptyState, ErrorBanner } from '@/components/ui';
+import { Button, EmptyState, ErrorBanner, Skeleton } from '@/components/ui';
 import { MapSkeleton, ReportCardListSkeleton } from '@/components/ui/skeletons';
 import { useErrorMessage } from '@/lib/use-error-message';
 import {
@@ -155,7 +155,7 @@ export default function ReportsPage() {
       <div className="flex items-center justify-between gap-2 border-b border-border px-3 py-2.5 text-sm text-muted-foreground">
         <span className="min-w-0 truncate">
           {loading ? (
-            <span className="inline-block h-4 w-28 animate-pulse rounded bg-muted" aria-hidden />
+            <Skeleton className="inline-block h-4 w-28" />
           ) : (
             t('count', { count: visible.length })
           )}

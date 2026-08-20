@@ -14,6 +14,22 @@ import {
 } from '../events/status-changed.event';
 import { notificationTypeForStatus } from '@prizren/shared-types';
 
+const IN_APP_MESSAGE_SQ: Record<string, string> = {
+  REPORT_RECEIVED: 'Raporti juaj u pranua.',
+  REPORT_ASSIGNED: 'Raporti juaj është caktuar për shqyrtim.',
+  REPORT_ACCEPTED: 'Raporti juaj u pranua.',
+  REPORT_IN_PROGRESS: 'Raporti juaj është në trajtim.',
+  REPORT_IN_REVIEW: 'Raporti juaj është caktuar për shqyrtim.',
+  REPORT_RESOLVED: 'Raporti juaj u zgjidh.',
+  REPORT_REJECTED: 'Raporti juaj u refuzua.',
+  REPORT_DUPLICATE: 'Raporti juaj u shënua si duplikat.',
+  INFO_REQUESTED: 'Administratori juaj ka kërkuar informacion shtesë.',
+  INSTITUTION_NEW_REPORT: 'Një raport i ri hyri në radhën tuaj.',
+  STATUS_CHANGED: 'Statusi i raportit tuaj u përditësua.',
+};
+
+export type NotificationReadFilter = 'all' | 'unread' | 'read';
+
 @Injectable()
 export class NotificationsService {
   private readonly logger = new Logger(NotificationsService.name);
@@ -61,13 +77,27 @@ export class NotificationsService {
     }
   }
 
-  async listForUser(userId: string, opts: { unreadOnly?: boolean; page?: number; limit?: number }) {
+  async listForUser(
+    userId: string,
+    opts: {
+      read?: NotificationReadFilter;
+      unreadOnly?: boolean;
+      page?: number;
+      limit?: number;
+    },
+  ) {
     const page = opts.page && opts.page > 0 ? opts.page : 1;
     const limit = opts.limit && opts.limit > 0 ? Math.min(opts.limit, 50) : 20;
+    const readFilter: NotificationReadFilter = opts.unreadOnly
+      ? 'unread'
+      : opts.read === 'unread' || opts.read === 'read'
+        ? opts.read
+        : 'all';
     const where = {
       userId,
       channel: 'IN_APP',
-      ...(opts.unreadOnly ? { read: false } : {}),
+      ...(readFilter === 'unread' ? { read: false } : {}),
+      ...(readFilter === 'read' ? { read: true } : {}),
     };
 
     const [total, unreadCount, rows] = await Promise.all([
@@ -91,30 +121,7 @@ export class NotificationsService {
         channel: n.channel,
         read: n.read,
         createdAt: n.createdAt.toISOString(),
-        message:
-          n.type === 'STATUS_CHANGED'
-            ? 'Statusi i raportit tënd u përditësua.'
-            : n.type === 'REPORT_RECEIVED'
-              ? 'Raporti juaj u pranua.'
-              : n.type === 'REPORT_ASSIGNED'
-                ? 'Raporti juaj hyri në radhën e institucionit.'
-                : n.type === 'REPORT_ACCEPTED'
-                  ? 'Institucioni e pranoi raportin tuaj.'
-                  : n.type === 'REPORT_IN_PROGRESS'
-                    ? 'Raporti juaj është në hetim.'
-                    : n.type === 'REPORT_IN_REVIEW'
-                      ? 'Kategoria e raportit tuaj po rishikohet.'
-                      : n.type === 'REPORT_RESOLVED'
-                        ? 'Raporti juaj u zgjidh.'
-                        : n.type === 'REPORT_REJECTED'
-                          ? 'Raporti juaj u refuzua.'
-                          : n.type === 'REPORT_DUPLICATE'
-                            ? 'Raporti juaj u shënua si duplikat.'
-                            : n.type === 'INFO_REQUESTED'
-                              ? 'Institucioni kërkoi informacion shtesë.'
-                              : n.type === 'INSTITUTION_NEW_REPORT'
-                                ? 'Një raport i ri hyri në radhën tuaj.'
-                                : n.type,
+        message: IN_APP_MESSAGE_SQ[n.type] ?? n.type,
       })),
       meta: {
         page,

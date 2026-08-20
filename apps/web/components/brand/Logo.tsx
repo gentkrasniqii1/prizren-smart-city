@@ -13,10 +13,12 @@ function LogoIcon({
   theme,
   size,
   className,
+  decorative,
 }: {
   theme?: LogoTheme;
   size: number;
   className?: string;
+  decorative?: boolean;
 }) {
   // No explicit theme -> inherit `currentColor` so the mark follows the
   // ambient text color (and therefore the site's light/dark mode) for free.
@@ -35,8 +37,9 @@ function LogoIcon({
     <span
       className={cn('relative inline-block shrink-0', className)}
       style={{ width, height: size }}
-      role="img"
-      aria-label="Prizren Smart City"
+      role={decorative ? undefined : 'img'}
+      aria-hidden={decorative || undefined}
+      aria-label={decorative ? undefined : 'Prizren Smart City'}
     >
       {/* HTML letter — SVG <text>/<tspan> hydrates as a different node in some browsers. */}
       <span
@@ -107,7 +110,7 @@ export function Logo({
         className,
       )}
     >
-      <LogoIcon theme={theme} size={size} />
+      <LogoIcon theme={theme} size={size} decorative />
       <span className="leading-tight">
         <span className="block font-display text-base font-semibold tracking-[0.08em] sm:text-lg">
           PRIZREN
