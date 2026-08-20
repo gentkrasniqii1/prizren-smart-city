@@ -4,6 +4,11 @@ import * as nodemailer from 'nodemailer';
 import type { Transporter } from 'nodemailer';
 import { ConfigService } from '../auth/config.service';
 
+/**
+ * Single outbound-mail abstraction. The web app never sends mail and must never
+ * see RESEND_API_KEY / SMTP_*. Production: Resend. Fallback: SMTP. Dev: log.
+ */
+
 type MailPayload = {
   to: string;
   subject: string;
