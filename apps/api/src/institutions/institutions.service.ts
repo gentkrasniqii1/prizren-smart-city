@@ -133,6 +133,7 @@ export class InstitutionsService {
     active: boolean;
     integrationType: InstitutionDto['integrationType'];
     integrationStatus: InstitutionDto['integrationStatus'];
+    createdAt: Date;
   }): InstitutionDto {
     return {
       id: row.id,
@@ -143,6 +144,7 @@ export class InstitutionsService {
       active: row.active,
       integrationType: row.integrationType,
       integrationStatus: row.integrationStatus,
+      createdAt: row.createdAt.toISOString(),
     };
   }
 }
