@@ -4,7 +4,6 @@ import { createContext, useCallback, useContext, useEffect, useRef, type ReactNo
 import type { RealtimeEvent } from '@prizren/shared-types';
 import { useAuth } from '@/components/auth-provider';
 import { ensureAccessToken, refreshAccessToken } from '@/lib/api';
-import { getAccessToken } from '@/lib/auth-token';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001';
 
@@ -89,7 +88,7 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
-    if (loading || !user) return;
+    if (loading || !user?.id) return;
 
     let stopped = false;
     let attempt = 0;

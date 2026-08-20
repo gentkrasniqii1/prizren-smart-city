@@ -120,7 +120,7 @@ export function AccountDashboard() {
     return () => {
       cancelled = true;
     };
-  }, [authLoading, user, t]);
+  }, [authLoading, user, t, errorMessage]);
 
   const refreshLive = useCallback(() => {
     void apiFetch<PaginatedReports>('/reports/mine?limit=50', { auth: true })
@@ -168,7 +168,7 @@ export function AccountDashboard() {
     return () => {
       cancelled = true;
     };
-  }, [authLoading, user]);
+  }, [authLoading, user, setUnreadCount]);
 
   useEffect(() => {
     if (authLoading || !user || reportsLoading) return;
