@@ -1,9 +1,12 @@
 'use client';
 
-import { useState, type FormEvent } from 'react';
+import { useState } from 'react';
+import { useForm } from 'react-hook-form';
 import { useTranslations } from 'next-intl';
 import type { PublicUser, UpdateProfileRequest } from '@prizren/shared-types';
+import { updateProfileRequestSchema } from '@prizren/shared-types';
 import { apiFetch } from '@/lib/api';
+import { issueMessage, zodResolver } from '@/lib/form-validation';
 import { useAuth } from '@/components/auth-provider';
 import { useToast } from '@/components/toast-provider';
 import { Button } from '@/components/ui/button';
@@ -11,9 +14,10 @@ import { Input, Label } from '@/components/ui/field';
 import { Badge, FieldError, FormError } from '@/components/ui';
 import { useErrorMessage } from '@/lib/use-error-message';
 
-type FieldErrors = {
-  firstName?: string;
-  lastName?: string;
+type ProfileFormValues = {
+  firstName: string;
+  lastName: string;
+  phone?: string;
 };
 
 export function ProfileSettings({
@@ -32,49 +36,47 @@ export function ProfileSettings({
   const errorMessage = useErrorMessage();
 
   const [editing, setEditing] = useState(false);
-  const [firstName, setFirstName] = useState(user.firstName ?? '');
-  const [lastName, setLastName] = useState(user.lastName ?? '');
-  const [phone, setPhone] = useState(user.phone ?? '');
-  const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [formError, setFormError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [verifying, setVerifying] = useState(false);
 
+  const {
+    register,
+    handleSubmit,
+    reset,
+    formState: { errors },
+  } = useForm<ProfileFormValues>({
+    resolver: zodResolver(updateProfileRequestSchema),
+    defaultValues: {
+      firstName: user.firstName ?? '',
+      lastName: user.lastName ?? '',
+      phone: user.phone ?? '',
+    },
+  });
+
   function startEdit() {
-    setFirstName(user.firstName ?? '');
-    setLastName(user.lastName ?? '');
-    setPhone(user.phone ?? '');
-    setFieldErrors({});
+    reset({
+      firstName: user.firstName ?? '',
+      lastName: user.lastName ?? '',
+      phone: user.phone ?? '',
+    });
     setFormError(null);
     setEditing(true);
   }
 
   function cancel() {
     setEditing(false);
-    setFieldErrors({});
     setFormError(null);
   }
 
-  function validate(): FieldErrors {
-    const next: FieldErrors = {};
-    if (firstName.trim().length < 2) next.firstName = tAuth('nameMin');
-    if (lastName.trim().length < 2) next.lastName = tAuth('nameMin');
-    return next;
-  }
-
-  async function onSubmit(e: FormEvent) {
-    e.preventDefault();
+  async function onValid(values: ProfileFormValues) {
     setFormError(null);
-    const next = validate();
-    setFieldErrors(next);
-    if (Object.keys(next).length > 0) return;
-
     setSubmitting(true);
     try {
       const payload: UpdateProfileRequest = {
-        firstName: firstName.trim(),
-        lastName: lastName.trim(),
-        phone: phone.trim() || undefined,
+        firstName: values.firstName.trim(),
+        lastName: values.lastName.trim(),
+        phone: values.phone?.trim() || undefined,
       };
       const updated = await apiFetch<PublicUser>('/users/me', {
         method: 'PATCH',
@@ -94,8 +96,6 @@ export function ProfileSettings({
   async function sendVerification() {
     setVerifying(true);
     try {
-      // Public endpoint (rate-limited server-side) — same one used on the
-      // "resend verification" screen, reused here so users don't need to log out.
       await apiFetch('/auth/resend-verification', {
         method: 'POST',
         body: { email: user.email },
@@ -110,46 +110,40 @@ export function ProfileSettings({
 
   if (editing) {
     return (
-      <form onSubmit={onSubmit} className="mt-4 space-y-4" noValidate>
+      <form onSubmit={handleSubmit(onValid)} className="mt-4 space-y-4" noValidate>
         <div className="grid gap-3 sm:grid-cols-2">
           <div>
             <Label htmlFor="profile-first-name">{tAuth('firstName')}</Label>
             <Input
               id="profile-first-name"
               autoComplete="given-name"
-              value={firstName}
-              invalid={Boolean(fieldErrors.firstName)}
-              onChange={(e) => {
-                setFirstName(e.target.value);
-                setFieldErrors((f) => ({ ...f, firstName: undefined }));
-              }}
+              invalid={Boolean(errors.firstName)}
+              aria-describedby={errors.firstName ? 'profile-first-name-error' : undefined}
+              {...register('firstName')}
             />
-            <FieldError message={fieldErrors.firstName} />
+            <FieldError
+              id="profile-first-name-error"
+              message={issueMessage(errors.firstName, tAuth)}
+            />
           </div>
           <div>
             <Label htmlFor="profile-last-name">{tAuth('lastName')}</Label>
             <Input
               id="profile-last-name"
               autoComplete="family-name"
-              value={lastName}
-              invalid={Boolean(fieldErrors.lastName)}
-              onChange={(e) => {
-                setLastName(e.target.value);
-                setFieldErrors((f) => ({ ...f, lastName: undefined }));
-              }}
+              invalid={Boolean(errors.lastName)}
+              aria-describedby={errors.lastName ? 'profile-last-name-error' : undefined}
+              {...register('lastName')}
             />
-            <FieldError message={fieldErrors.lastName} />
+            <FieldError
+              id="profile-last-name-error"
+              message={issueMessage(errors.lastName, tAuth)}
+            />
           </div>
         </div>
         <div>
           <Label htmlFor="profile-phone">{tAuth('phoneOptional')}</Label>
-          <Input
-            id="profile-phone"
-            type="tel"
-            autoComplete="tel"
-            value={phone}
-            onChange={(e) => setPhone(e.target.value)}
-          />
+          <Input id="profile-phone" type="tel" autoComplete="tel" {...register('phone')} />
         </div>
 
         <FormError message={formError} />

@@ -1,11 +1,13 @@
 'use client';
 
-import { useState, type FormEvent } from 'react';
+import { useState } from 'react';
+import { useForm } from 'react-hook-form';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import type { PublicUser } from '@prizren/shared-types';
+import { changePasswordFormSchema } from '@prizren/shared-types';
 import { apiFetch } from '@/lib/api';
-import { isPasswordStrong } from '@/lib/password';
+import { issueMessage, zodResolver } from '@/lib/form-validation';
 import { useAuth } from '@/components/auth-provider';
 import { useToast } from '@/components/toast-provider';
 import { PasswordStrength } from '@/components/auth/password-strength';
@@ -14,10 +16,10 @@ import { Input, Label } from '@/components/ui/field';
 import { FieldError, FormError } from '@/components/ui';
 import { useErrorMessage } from '@/lib/use-error-message';
 
-type FieldErrors = {
-  currentPassword?: string;
-  newPassword?: string;
-  confirmPassword?: string;
+type ChangePasswordFormValues = {
+  currentPassword: string;
+  newPassword: string;
+  confirmPassword: string;
 };
 
 export function ChangePasswordForm({ user }: { user: PublicUser }) {
@@ -27,40 +29,32 @@ export function ChangePasswordForm({ user }: { user: PublicUser }) {
   const { logout } = useAuth();
   const toast = useToast();
   const errorMessage = useErrorMessage();
-
-  const [currentPassword, setCurrentPassword] = useState('');
-  const [newPassword, setNewPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [formError, setFormError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
-  function validate(): FieldErrors {
-    const next: FieldErrors = {};
-    if (!currentPassword) next.currentPassword = t('currentPasswordRequired');
-    if (!newPassword) next.newPassword = tAuth('passwordRequired');
-    else if (!isPasswordStrong(newPassword)) next.newPassword = tAuth('passwordWeak');
-    if (confirmPassword !== newPassword) next.confirmPassword = tAuth('passwordMismatch');
-    return next;
-  }
+  const {
+    register,
+    handleSubmit,
+    watch,
+    formState: { errors },
+  } = useForm<ChangePasswordFormValues>({
+    resolver: zodResolver(changePasswordFormSchema),
+    defaultValues: { currentPassword: '', newPassword: '', confirmPassword: '' },
+  });
 
-  async function onSubmit(e: FormEvent) {
-    e.preventDefault();
+  const newPassword = watch('newPassword');
+
+  async function onValid(values: ChangePasswordFormValues) {
     if (submitting) return;
     setFormError(null);
-    const next = validate();
-    setFieldErrors(next);
-    if (Object.keys(next).length > 0) return;
-
     setSubmitting(true);
     try {
       await apiFetch('/auth/change-password', {
         method: 'POST',
         auth: true,
-        body: { currentPassword, newPassword },
+        body: { currentPassword: values.currentPassword, newPassword: values.newPassword },
       });
       toast.push(t('changePasswordSuccess'), 'success');
-      // The API revokes every session (including this one) on password change.
       await logout();
       router.push('/login');
     } catch (err) {
@@ -78,21 +72,21 @@ export function ChangePasswordForm({ user }: { user: PublicUser }) {
       {!user.hasPassword ? (
         <p className="mt-4 text-sm text-muted-foreground">{t('noPasswordSet')}</p>
       ) : (
-        <form onSubmit={onSubmit} className="mt-4 space-y-4" noValidate>
+        <form onSubmit={handleSubmit(onValid)} className="mt-4 space-y-4" noValidate>
           <div>
             <Label htmlFor="current-password">{t('currentPassword')}</Label>
             <Input
               id="current-password"
               type="password"
               autoComplete="current-password"
-              value={currentPassword}
-              invalid={Boolean(fieldErrors.currentPassword)}
-              onChange={(e) => {
-                setCurrentPassword(e.target.value);
-                setFieldErrors((f) => ({ ...f, currentPassword: undefined }));
-              }}
+              invalid={Boolean(errors.currentPassword)}
+              aria-describedby={errors.currentPassword ? 'current-password-error' : undefined}
+              {...register('currentPassword')}
             />
-            <FieldError message={fieldErrors.currentPassword} />
+            <FieldError
+              id="current-password-error"
+              message={issueMessage(errors.currentPassword, t, tAuth)}
+            />
           </div>
           <div>
             <Label htmlFor="new-password">{t('newPassword')}</Label>
@@ -100,15 +94,15 @@ export function ChangePasswordForm({ user }: { user: PublicUser }) {
               id="new-password"
               type="password"
               autoComplete="new-password"
-              value={newPassword}
-              invalid={Boolean(fieldErrors.newPassword)}
-              onChange={(e) => {
-                setNewPassword(e.target.value);
-                setFieldErrors((f) => ({ ...f, newPassword: undefined }));
-              }}
+              invalid={Boolean(errors.newPassword)}
+              aria-describedby={errors.newPassword ? 'new-password-error' : undefined}
+              {...register('newPassword')}
             />
             <PasswordStrength password={newPassword} />
-            <FieldError message={fieldErrors.newPassword} />
+            <FieldError
+              id="new-password-error"
+              message={issueMessage(errors.newPassword, tAuth, t)}
+            />
           </div>
           <div>
             <Label htmlFor="confirm-new-password">{t('confirmNewPassword')}</Label>
@@ -116,14 +110,14 @@ export function ChangePasswordForm({ user }: { user: PublicUser }) {
               id="confirm-new-password"
               type="password"
               autoComplete="new-password"
-              value={confirmPassword}
-              invalid={Boolean(fieldErrors.confirmPassword)}
-              onChange={(e) => {
-                setConfirmPassword(e.target.value);
-                setFieldErrors((f) => ({ ...f, confirmPassword: undefined }));
-              }}
+              invalid={Boolean(errors.confirmPassword)}
+              aria-describedby={errors.confirmPassword ? 'confirm-new-password-error' : undefined}
+              {...register('confirmPassword')}
             />
-            <FieldError message={fieldErrors.confirmPassword} />
+            <FieldError
+              id="confirm-new-password-error"
+              message={issueMessage(errors.confirmPassword, tAuth, t)}
+            />
           </div>
 
           <FormError message={formError} />

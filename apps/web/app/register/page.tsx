@@ -2,9 +2,11 @@
 
 import Link from 'next/link';
 import { useState } from 'react';
+import { useForm } from 'react-hook-form';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import { isPasswordStrong } from '@/lib/password';
+import { registerFormSchema } from '@prizren/shared-types';
+import { issueMessage, zodResolver } from '@/lib/form-validation';
 import { useAuth } from '@/components/auth-provider';
 import { AuthShell } from '@/components/auth/auth-shell';
 import { OAuthButtons } from '@/components/auth/oauth-buttons';
@@ -14,66 +16,65 @@ import { Button, type ButtonStatus } from '@/components/ui/button';
 import { Input, Label } from '@/components/ui/field';
 import { useErrorMessage } from '@/lib/use-error-message';
 
-type FieldErrors = {
-  firstName?: string;
-  lastName?: string;
-  email?: string;
-  password?: string;
-  confirm?: string;
-  terms?: string;
+type RegisterFormValues = {
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone?: string;
+  password: string;
+  confirm: string;
+  acceptedTerms: boolean;
+  website?: string;
 };
 
 export default function RegisterPage() {
   const t = useTranslations('Auth');
   const router = useRouter();
-  const { register } = useAuth();
+  const { register: registerAccount } = useAuth();
   const errorMessage = useErrorMessage();
-  const [firstName, setFirstName] = useState('');
-  const [lastName, setLastName] = useState('');
-  const [email, setEmail] = useState('');
-  const [phone, setPhone] = useState('');
-  const [password, setPassword] = useState('');
-  const [confirm, setConfirm] = useState('');
-  const [accepted, setAccepted] = useState(false);
-  const [website, setWebsite] = useState('');
-  const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [formError, setFormError] = useState<string | null>(null);
   const [submitStatus, setSubmitStatus] = useState<ButtonStatus>('idle');
   const [oauthBusy, setOauthBusy] = useState(false);
 
-  function validate(): FieldErrors {
-    const next: FieldErrors = {};
-    if (firstName.trim().length < 2) next.firstName = t('nameMin');
-    if (lastName.trim().length < 2) next.lastName = t('nameMin');
-    if (!email.trim()) next.email = t('emailRequired');
-    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) next.email = t('emailInvalid');
-    if (!password) next.password = t('passwordRequired');
-    else if (!isPasswordStrong(password)) next.password = t('passwordWeak');
-    if (confirm !== password) next.confirm = t('passwordMismatch');
-    if (!accepted) next.terms = t('termsRequired');
-    return next;
-  }
+  const {
+    register,
+    handleSubmit,
+    setValue,
+    watch,
+    formState: { errors },
+  } = useForm<RegisterFormValues>({
+    resolver: zodResolver(registerFormSchema),
+    defaultValues: {
+      firstName: '',
+      lastName: '',
+      email: '',
+      phone: '',
+      password: '',
+      confirm: '',
+      acceptedTerms: false,
+      website: '',
+    },
+  });
 
-  async function onSubmit(e: React.FormEvent) {
-    e.preventDefault();
+  const password = watch('password');
+  const acceptedTerms = watch('acceptedTerms');
+
+  async function onValid(values: RegisterFormValues) {
     if (submitStatus === 'loading' || submitStatus === 'success' || oauthBusy) return;
     setFormError(null);
-    const next = validate();
-    setFieldErrors(next);
-    if (Object.keys(next).length > 0) return;
     setSubmitStatus('loading');
     try {
-      await register({
-        firstName: firstName.trim(),
-        lastName: lastName.trim(),
-        email: email.trim(),
-        password,
-        phone: phone.trim() || undefined,
+      await registerAccount({
+        firstName: values.firstName.trim(),
+        lastName: values.lastName.trim(),
+        email: values.email.trim(),
+        password: values.password,
+        phone: values.phone?.trim() || undefined,
         acceptedTerms: true,
-        website,
+        website: values.website,
       });
       setSubmitStatus('success');
-      router.push(`/verify-email?email=${encodeURIComponent(email.trim())}`);
+      router.push(`/verify-email?email=${encodeURIComponent(values.email.trim())}`);
     } catch (err) {
       setFormError(errorMessage(err, t('registerFailed')));
       setSubmitStatus('error');
@@ -93,35 +94,32 @@ export default function RegisterPage() {
         {t('accountType')}: <span className="font-medium text-foreground">{t('citizenRole')}</span>
       </p>
 
-      <form onSubmit={onSubmit} className="relative mt-8 space-y-4" noValidate>
+      <form onSubmit={handleSubmit(onValid)} className="relative mt-8 space-y-4" noValidate>
         <div className="grid gap-4 sm:grid-cols-2">
           <div>
             <Label htmlFor="first-name">{t('firstName')}</Label>
             <Input
               id="first-name"
               autoComplete="given-name"
-              value={firstName}
-              invalid={Boolean(fieldErrors.firstName)}
-              onChange={(e) => {
-                setFirstName(e.target.value);
-                setFieldErrors((f) => ({ ...f, firstName: undefined }));
-              }}
+              invalid={Boolean(errors.firstName)}
+              aria-describedby={errors.firstName ? 'register-first-name-error' : undefined}
+              {...register('firstName')}
             />
-            <FieldError message={fieldErrors.firstName} />
+            <FieldError
+              id="register-first-name-error"
+              message={issueMessage(errors.firstName, t)}
+            />
           </div>
           <div>
             <Label htmlFor="last-name">{t('lastName')}</Label>
             <Input
               id="last-name"
               autoComplete="family-name"
-              value={lastName}
-              invalid={Boolean(fieldErrors.lastName)}
-              onChange={(e) => {
-                setLastName(e.target.value);
-                setFieldErrors((f) => ({ ...f, lastName: undefined }));
-              }}
+              invalid={Boolean(errors.lastName)}
+              aria-describedby={errors.lastName ? 'register-last-name-error' : undefined}
+              {...register('lastName')}
             />
-            <FieldError message={fieldErrors.lastName} />
+            <FieldError id="register-last-name-error" message={issueMessage(errors.lastName, t)} />
           </div>
         </div>
         <div>
@@ -133,14 +131,11 @@ export default function RegisterPage() {
             autoComplete="email"
             autoCapitalize="none"
             autoCorrect="off"
-            value={email}
-            invalid={Boolean(fieldErrors.email)}
-            onChange={(e) => {
-              setEmail(e.target.value);
-              setFieldErrors((f) => ({ ...f, email: undefined }));
-            }}
+            invalid={Boolean(errors.email)}
+            aria-describedby={errors.email ? 'register-email-error' : undefined}
+            {...register('email')}
           />
-          <FieldError message={fieldErrors.email} />
+          <FieldError id="register-email-error" message={issueMessage(errors.email, t)} />
         </div>
         <div>
           <Label htmlFor="register-phone">{t('phoneOptional')}</Label>
@@ -149,8 +144,7 @@ export default function RegisterPage() {
             type="tel"
             inputMode="tel"
             autoComplete="tel"
-            value={phone}
-            onChange={(e) => setPhone(e.target.value)}
+            {...register('phone')}
           />
         </div>
         <div>
@@ -159,15 +153,12 @@ export default function RegisterPage() {
             id="register-password"
             type="password"
             autoComplete="new-password"
-            value={password}
-            invalid={Boolean(fieldErrors.password)}
-            onChange={(e) => {
-              setPassword(e.target.value);
-              setFieldErrors((f) => ({ ...f, password: undefined }));
-            }}
+            invalid={Boolean(errors.password)}
+            aria-describedby={errors.password ? 'register-password-error' : undefined}
+            {...register('password')}
           />
           <PasswordStrength password={password} />
-          <FieldError message={fieldErrors.password} />
+          <FieldError id="register-password-error" message={issueMessage(errors.password, t)} />
         </div>
         <div>
           <Label htmlFor="register-confirm">{t('confirmPassword')}</Label>
@@ -175,23 +166,19 @@ export default function RegisterPage() {
             id="register-confirm"
             type="password"
             autoComplete="new-password"
-            value={confirm}
-            invalid={Boolean(fieldErrors.confirm)}
-            onChange={(e) => {
-              setConfirm(e.target.value);
-              setFieldErrors((f) => ({ ...f, confirm: undefined }));
-            }}
+            invalid={Boolean(errors.confirm)}
+            aria-describedby={errors.confirm ? 'register-confirm-error' : undefined}
+            {...register('confirm')}
           />
-          <FieldError message={fieldErrors.confirm} />
+          <FieldError id="register-confirm-error" message={issueMessage(errors.confirm, t)} />
         </div>
 
         <Checkbox
           id="terms"
-          checked={accepted}
-          onChange={(v) => {
-            setAccepted(v);
-            setFieldErrors((f) => ({ ...f, terms: undefined }));
-          }}
+          checked={acceptedTerms}
+          invalid={Boolean(errors.acceptedTerms)}
+          describedBy={errors.acceptedTerms ? 'register-terms-error' : undefined}
+          onChange={(checked) => setValue('acceptedTerms', checked, { shouldValidate: true })}
         >
           {t('agreePrefix')}{' '}
           <Link href="/privacy" className="font-medium text-primary hover:underline">
@@ -202,19 +189,12 @@ export default function RegisterPage() {
             {t('terms')}
           </Link>
         </Checkbox>
-        <FieldError message={fieldErrors.terms} />
+        <FieldError id="register-terms-error" message={issueMessage(errors.acceptedTerms, t)} />
 
         <div aria-hidden className="absolute -left-[9999px] h-0 w-0 overflow-hidden">
           <label>
             Website
-            <input
-              type="text"
-              name="website"
-              tabIndex={-1}
-              autoComplete="off"
-              value={website}
-              onChange={(e) => setWebsite(e.target.value)}
-            />
+            <input type="text" tabIndex={-1} autoComplete="off" {...register('website')} />
           </label>
         </div>
 
