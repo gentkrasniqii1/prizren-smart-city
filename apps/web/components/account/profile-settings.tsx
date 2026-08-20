@@ -9,6 +9,7 @@ import { apiFetch } from '@/lib/api';
 import { issueMessage, zodResolver } from '@/lib/form-validation';
 import { useAuth } from '@/components/auth-provider';
 import { useToast } from '@/components/toast-provider';
+import { OAuthButtons } from '@/components/auth/oauth-buttons';
 import { Button } from '@/components/ui/button';
 import { Input, Label } from '@/components/ui/field';
 import { Badge, FieldError, FormError } from '@/components/ui';
@@ -175,7 +176,9 @@ export function ProfileSettings({
         </div>
         <div>
           <dt className="text-stone-600">{t('profileEmail')}</dt>
-          <dd className="font-medium text-stone-900">{user.email}</dd>
+          <dd className="font-medium text-stone-900">
+            {user.needsEmail ? t('emailMissing') : user.email}
+          </dd>
         </div>
         <div>
           <dt className="text-stone-600">{t('profilePhone')}</dt>
@@ -191,10 +194,16 @@ export function ProfileSettings({
         </div>
       </dl>
 
+      {user.needsEmail ? (
+        <p className="mt-4 rounded-md border border-border bg-muted/40 p-3 text-sm text-muted-foreground">
+          {t('emailMissingHint')}
+        </p>
+      ) : null}
+
       <div className="mt-4 flex flex-wrap items-center gap-2">
-        {user.emailVerified ? (
+        {user.emailVerified && !user.needsEmail ? (
           <Badge tone="success">{t('emailVerifiedBadge')}</Badge>
-        ) : (
+        ) : user.needsEmail ? null : (
           <>
             <Badge tone="warning">{t('emailUnverifiedBadge')}</Badge>
             <Button
@@ -209,7 +218,21 @@ export function ProfileSettings({
           </>
         )}
         {user.googleLinked ? <Badge tone="info">{t('googleLinkedBadge')}</Badge> : null}
+        {user.facebookLinked ? <Badge tone="info">{t('facebookLinkedBadge')}</Badge> : null}
       </div>
+
+      {!user.needsEmail && (!user.googleLinked || !user.facebookLinked) ? (
+        <div className="mt-6 rounded-md border border-border p-3">
+          <p className="text-sm font-medium text-foreground">{t('linkedAccountsHeading')}</p>
+          <p className="mt-1 text-sm text-muted-foreground">{t('linkedAccountsBody')}</p>
+          <div className="mt-3 max-w-sm">
+            <OAuthButtons
+              variant="link"
+              linked={{ google: user.googleLinked, facebook: Boolean(user.facebookLinked) }}
+            />
+          </div>
+        </div>
+      ) : null}
 
       <Button type="button" variant="secondary" size="sm" className="mt-4" onClick={startEdit}>
         {t('profileEditCta')}

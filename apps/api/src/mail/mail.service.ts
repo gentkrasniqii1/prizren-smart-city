@@ -3,6 +3,7 @@ import { Resend } from 'resend';
 import * as nodemailer from 'nodemailer';
 import type { Transporter } from 'nodemailer';
 import { ConfigService } from '../auth/config.service';
+import { isOauthPlaceholderEmail } from '../auth/oauth-email';
 
 /**
  * Single outbound-mail abstraction. The web app never sends mail and must never
@@ -276,6 +277,10 @@ export class MailService {
   }
 
   private async send(payload: MailPayload): Promise<void> {
+    if (isOauthPlaceholderEmail(payload.to)) {
+      this.logger.warn(`[mail-skip] Placeholder OAuth address, not sending: ${payload.subject}`);
+      return;
+    }
     if (this.resend) {
       const { error } = await this.resend.emails.send({
         from: this.config.mailFrom,

@@ -14,6 +14,8 @@ export const API_MESSAGE_KEYS: Record<string, string> = {
   'Current password is incorrect': 'currentPasswordWrong',
   'Invalid verification code': 'invalidCode',
   'Invalid or expired token': 'tokenExpired',
+  FACEBOOK_PENDING_EXPIRED: 'oauthPendingExpired',
+  PROVIDER_ALREADY_LINKED: 'oauthProviderLinked',
   'Refresh token missing': 'sessionExpired',
   'Invalid refresh token': 'sessionExpired',
   'You must accept the Privacy Policy and Terms of Service': 'termsRequired',

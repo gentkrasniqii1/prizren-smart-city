@@ -33,10 +33,14 @@ export interface PublicUser {
   role: Role;
   emailVerified: boolean;
   totpEnabled: boolean;
-  /** false for accounts created via Google/Apple/Facebook that never set a password. */
+  /** false for accounts created via Google/Facebook that never set a password. */
   hasPassword: boolean;
   /** true if a Google account is linked (via direct OAuth signup or auto-linking). */
   googleLinked: boolean;
+  /** true if a Facebook account is linked. */
+  facebookLinked: boolean;
+  /** true when a leftover Facebook placeholder account still has no real email. */
+  needsEmail?: boolean;
   createdAt: string;
 }
 
@@ -84,7 +88,6 @@ export type LoginResponse = AuthResponse | TwoFactorRequiredResponse;
 
 export interface OAuthProvidersStatus {
   google: boolean;
-  apple: boolean;
   facebook: boolean;
 }
 
@@ -106,6 +109,10 @@ export interface UpdateProfileRequest {
   firstName: string;
   lastName: string;
   phone?: string;
+}
+
+export interface SetAccountEmailRequest {
+  email: string;
 }
 
 export interface ChangePasswordRequest {
@@ -442,6 +449,8 @@ export {
   twoFactorFormSchema,
   twoFactorVerifyRequestSchema,
   updateProfileRequestSchema,
+  setAccountEmailRequestSchema,
+  completeFacebookRequestSchema,
   verifyEmailRequestSchema,
 } from './validation';
 export type {

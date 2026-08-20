@@ -12,7 +12,6 @@ model User {
   email            String         @unique
   passwordHash     String?
   googleId         String?        @unique
-  appleId          String?        @unique
   facebookId       String?        @unique
   name             String
   firstName        String?
@@ -83,6 +82,21 @@ model TrustedDevice {
   lastUsedAt DateTime?
 
   @@index([userId])
+}
+
+/// Facebook (or other) OAuth that did not share an email. No User row until
+/// the person confirms an email; the raw token is never stored.
+model OauthPending {
+  id         String   @id @default(uuid())
+  tokenHash  String   @unique
+  provider   String
+  providerId String
+  name       String
+  email      String?
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+
+  @@index([provider, providerId])
 }
 
 enum Role {

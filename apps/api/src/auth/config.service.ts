@@ -56,32 +56,6 @@ export class ConfigService {
     return Boolean(this.googleClientId && this.googleClientSecret);
   }
 
-  get appleClientId(): string {
-    return process.env.APPLE_CLIENT_ID ?? '';
-  }
-
-  get appleTeamId(): string {
-    return process.env.APPLE_TEAM_ID ?? '';
-  }
-
-  get appleKeyId(): string {
-    return process.env.APPLE_KEY_ID ?? '';
-  }
-
-  get applePrivateKey(): string {
-    return (process.env.APPLE_PRIVATE_KEY ?? '').replace(/\\n/g, '\n');
-  }
-
-  get appleCallbackUrl(): string {
-    return process.env.APPLE_CALLBACK_URL ?? 'http://localhost:3001/auth/apple/callback';
-  }
-
-  get appleAuthEnabled(): boolean {
-    return Boolean(
-      this.appleClientId && this.appleTeamId && this.appleKeyId && this.applePrivateKey,
-    );
-  }
-
   get facebookAppId(): string {
     return process.env.FACEBOOK_APP_ID ?? '';
   }
@@ -135,6 +109,14 @@ export class ConfigService {
 
   get oauthStateCookieName(): string {
     return 'oauth_state';
+  }
+
+  get oauthLinkCookieName(): string {
+    return 'oauth_link';
+  }
+
+  get oauthPendingCookieName(): string {
+    return 'oauth_pending';
   }
 
   get trustedDeviceCookieName(): string {

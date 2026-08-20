@@ -17,7 +17,7 @@ Citizen (apps/web, Next.js 14)
 apps/api (NestJS, TypeScript, single global module graph — no /api/v1 prefix yet)
    │
    ├─ AuthModule            JWT access + httpOnly refresh cookie, bcrypt, TOTP 2FA,
-   │                        Google/Apple/Facebook OAuth, email verification, lockout
+   │                        Google/Facebook OAuth, email verification, lockout
    ├─ ReportsModule         Create/list/nearby/assign/status/vote/comment/AI-accept
    ├─ RoutingModule         RoutingService.routeByCategory() — category → dept/institution
    ├─ AiModule              Claude (Anthropic) vision classification, Zod-validated
@@ -82,7 +82,7 @@ PostgreSQL 16 + PostGIS (Docker) via Prisma ORM
 
 | Model | Notes |
 |---|---|
-| `User` | email/password (bcrypt) + optional `googleId`/`appleId`/`facebookId`; `role` enum; `emailVerified`; TOTP (`totpSecretEnc` encrypted, `totpEnabled`); lockout (`failedLoginCount`, `lockedUntil`); M2M `departments` via `DepartmentStaff` |
+| `User` | email/password (bcrypt) + optional `googleId`/`facebookId`; `role` enum; `emailVerified`; TOTP (`totpSecretEnc` encrypted, `totpEnabled`); lockout (`failedLoginCount`, `lockedUntil`); M2M `departments` via `DepartmentStaff` |
 | `RefreshToken` | hashed, rotated on use, revocable, supports "remember me" (variable expiry) |
 | `AuthToken` | generic token table for `EMAIL_VERIFY` / `PASSWORD_RESET` / `TWO_FACTOR`, hashed + single-use |
 | `Institution` | **this is the Master Spec's "Organization"** — `name`, `slug`, `type` (free string: MUNICIPALITY/UTILITY/EMERGENCY today), `contact`, `active`. **No `integrationType`/`integrationStatus` fields yet.** |
@@ -106,7 +106,7 @@ PostgreSQL 16 + PostGIS (Docker) via Prisma ORM
 | Area | Routes |
 |---|---|
 | Health | `GET /health` |
-| Auth | `GET /auth/providers`, `POST /auth/register`, `POST /auth/login`, `POST /auth/2fa/{verify,setup,confirm,disable}`, `POST /auth/{forgot,reset,change}-password`, `POST /auth/verify-email`, `POST /auth/resend-verification`, `GET/POST /auth/{google,apple,facebook}(/callback)`, `POST /auth/refresh`, `POST /auth/logout(-all)` |
+| Auth | `GET /auth/providers`, `POST /auth/register`, `POST /auth/login`, `POST /auth/2fa/{verify,setup,confirm,disable}`, `POST /auth/{forgot,reset,change}-password`, `POST /auth/verify-email`, `POST /auth/resend-verification`, `GET /auth/{google,facebook}(/callback)`, `POST /auth/refresh`, `POST /auth/logout(-all)` |
 | Users | `GET /users/me`, `PATCH /users/me`, `GET /users/staff`, `PATCH /users/:id/role` |
 | Reports | `POST /reports`, `GET /reports`, `GET /reports/nearby`, `GET /reports/mine`, `GET /reports/mine/stats`, `GET /reports/:id`, `POST /DELETE /reports/:id/votes`, `GET/POST /reports/:id/comments`, `PATCH /reports/:id/status`, `PATCH /reports/:id/assign`, `POST /reports/:id/photo-after`, `PATCH /reports/:id/ai-classification` |
 | Categories | `GET /categories` (read-only) |
@@ -128,7 +128,7 @@ PostgreSQL 16 + PostGIS (Docker) via Prisma ORM
 - **Guards:** `JwtAuthGuard`, `OptionalJwtAuthGuard` (populates viewer if present, doesn't 401 if absent — used for public-but-personalized endpoints like `GET /reports/:id`), `RolesGuard` + `@Roles(...)` decorator, `GoogleEnabledGuard`.
 - **RBAC today:** 4 roles (`CITIZEN`, `DEPARTMENT_STAFF`, `DEPARTMENT_ADMIN`, `SUPER_ADMIN`). Enforced **in controllers/services** (not just frontend) — e.g. `ReportsService.updateStatus` re-checks `STAFF_ROLES` server-side even though the controller already has `@Roles(...)`.
 - **2FA:** TOTP (otplib), encrypted secret at rest (`AUTH_ENCRYPTION_KEY`), optional org-wide `REQUIRE_ADMIN_2FA` enforcement for staff roles.
-- **OAuth:** Google (fully wired), Apple (Sign in with Apple, `apple-signin-auth`), Facebook — with CSRF `state` cookie + auto-link-if-verified-email logic.
+- **OAuth:** Google and Facebook — with CSRF `state` cookie + auto-link-if-verified-email for Google. Facebook can create an account from the Facebook user id when the profile has no email; a real email can be added later in the account page.
 - **Security already in place:** bcrypt (12 rounds), account lockout (10 failed attempts → 15 min), dummy-compare timing mitigation, honeypot field on public forms (`rejectIfHoneypotFilled`), `@nestjs/throttler` (global 100 req/min + per-route stricter limits on auth/report-creation/voting), Prisma parameterized queries (incl. raw `$queryRaw` using tagged templates, so still parameterized), Sentry error monitoring (`@sentry/node`, opt-in via `SENTRY_DSN`), image upload validation (`assertValidImageUpload`, likely magic-byte/`file-type` based — see `image-validation.ts`).
 - **Gaps vs. Master Spec §19:** no `EXTERNAL_OPERATOR`, `AUDITOR`, or dedicated `MUNICIPAL_ADMIN` role; no granular permission strings (`incident:assign`, `routing:manage`, etc.) — authorization is role-based only, not permission-based.
 

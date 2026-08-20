@@ -19,7 +19,7 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { getClientIp } from '../common/client-ip';
 import { AuditService } from '../audit/audit.service';
-import { updateProfileRequestSchema } from '@prizren/shared-types';
+import { updateProfileRequestSchema, setAccountEmailRequestSchema } from '@prizren/shared-types';
 import { zodBody } from '../common/zod-validation.pipe';
 import { UpdateUserRoleDto } from './dto/update-user-role.dto';
 import { UpdateProfileDto } from './dto/update-profile.dto';
@@ -77,6 +77,26 @@ export class UsersController {
     });
 
     return this.authService.toPublicUser(updated);
+  }
+
+  @Patch('me/email')
+  async setEmail(
+    @CurrentUser() authUser: AuthUser,
+    @Body(zodBody(setAccountEmailRequestSchema)) dto: { email: string },
+    @Req() req: Request,
+  ) {
+    if (!authUser) {
+      throw new NotFoundException('User not found');
+    }
+    const updated = await this.authService.setAccountEmail(authUser.id, dto.email);
+    await this.audit.log({
+      userId: authUser.id,
+      action: 'user.email_set',
+      entityType: 'User',
+      entityId: authUser.id,
+      ipAddress: getClientIp(req),
+    });
+    return updated;
   }
 
   @Get('staff')

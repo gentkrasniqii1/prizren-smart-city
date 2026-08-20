@@ -20,7 +20,6 @@ export default async function PrivacyPage() {
     { id: 'cookies', label: t('privacy.cookiesTitle'), review: true },
     { id: 'auth', label: t('privacy.authTitle'), review: true },
     { id: 'google', label: t('privacy.googleTitle'), review: true },
-    { id: 'apple', label: t('privacy.appleTitle'), review: true },
     { id: 'facebook', label: t('privacy.facebookTitle'), review: true },
     { id: 'retention', label: t('privacy.retentionTitle'), review: true },
     { id: 'rights', label: t('privacy.rightsTitle'), review: true },
@@ -83,17 +82,8 @@ export default async function PrivacyPage() {
         <p>{t('privacy.googleBody')}</p>
       </LegalSection>
       <LegalSection
-        id="apple"
-        index={9}
-        title={t('privacy.appleTitle')}
-        review
-        reviewLabel={review}
-      >
-        <p>{t('privacy.appleBody')}</p>
-      </LegalSection>
-      <LegalSection
         id="facebook"
-        index={10}
+        index={9}
         title={t('privacy.facebookTitle')}
         review
         reviewLabel={review}
@@ -102,7 +92,7 @@ export default async function PrivacyPage() {
       </LegalSection>
       <LegalSection
         id="retention"
-        index={11}
+        index={10}
         title={t('privacy.retentionTitle')}
         review
         reviewLabel={review}
@@ -112,7 +102,7 @@ export default async function PrivacyPage() {
       </LegalSection>
       <LegalSection
         id="rights"
-        index={12}
+        index={11}
         title={t('privacy.rightsTitle')}
         review
         reviewLabel={review}
@@ -122,7 +112,7 @@ export default async function PrivacyPage() {
       </LegalSection>
       <LegalSection
         id="deletion"
-        index={13}
+        index={12}
         title={t('privacy.deletionTitle')}
         review
         reviewLabel={review}
@@ -132,7 +122,7 @@ export default async function PrivacyPage() {
       </LegalSection>
       <LegalSection
         id="contact"
-        index={14}
+        index={13}
         title={t('privacy.contactTitle')}
         review
         reviewLabel={review}

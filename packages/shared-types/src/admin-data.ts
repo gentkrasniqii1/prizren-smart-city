@@ -16,6 +16,7 @@ export const ADMIN_DATA_BLOCKED_RESOURCES = [
   'auth-tokens',
   'refresh-tokens',
   'trusted-devices',
+  'oauth-pendings',
   'sequence-counters',
 ] as const;
 

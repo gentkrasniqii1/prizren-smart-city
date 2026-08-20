@@ -31,14 +31,6 @@ function GoogleIcon() {
   );
 }
 
-function AppleIcon() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
-      <path d="M16.37 12.64c.02 2.37 2.08 3.16 2.1 3.17-.02.05-.33 1.12-1.08 2.22-.65.95-1.33 1.9-2.4 1.92-1.05.02-1.39-.62-2.59-.62-1.2 0-1.57.6-2.57.64-1.03.04-1.82-1.03-2.48-1.98-1.34-1.94-2.37-5.48-1-7.9.69-1.2 1.91-1.96 3.24-1.98 1.01-.02 1.97.68 2.59.68.62 0 1.78-.84 3.01-.72.51.02 1.95.21 2.88 1.56-.07.05-1.72 1-1.7 2.99zM14.5 6.9c.55-.66.92-1.58.82-2.5-.8.03-1.76.53-2.33 1.2-.51.58-.96 1.52-.84 2.41.89.07 1.8-.45 2.35-1.11z" />
-    </svg>
-  );
-}
-
 function FacebookIcon() {
   return (
     <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden>
@@ -53,32 +45,33 @@ function FacebookIcon() {
 const PROVIDERS: {
   id: Provider;
   icon: typeof GoogleIcon;
-  labelKey: 'google' | 'apple' | 'facebook';
-  connectingKey: 'googleConnecting' | 'appleConnecting' | 'facebookConnecting';
+  labelKey: 'google' | 'facebook';
+  connectingKey: 'googleConnecting' | 'facebookConnecting';
 }[] = [
   { id: 'google', icon: GoogleIcon, labelKey: 'google', connectingKey: 'googleConnecting' },
-  { id: 'apple', icon: AppleIcon, labelKey: 'apple', connectingKey: 'appleConnecting' },
   { id: 'facebook', icon: FacebookIcon, labelKey: 'facebook', connectingKey: 'facebookConnecting' },
 ];
 
 const IDLE: Record<Provider, ButtonStatus> = {
   google: 'idle',
-  apple: 'idle',
   facebook: 'idle',
 };
 
 export function OAuthButtons({
   disabled,
   onBusyChange,
+  variant = 'signin',
+  linked,
 }: {
   disabled?: boolean;
   onBusyChange?: (busy: boolean) => void;
+  variant?: 'signin' | 'link';
+  linked?: { google?: boolean; facebook?: boolean };
 }) {
   const t = useTranslations('Auth');
   const api = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001';
   const [enabled, setEnabled] = useState<OAuthProvidersStatus>({
     google: process.env.NEXT_PUBLIC_GOOGLE_AUTH_ENABLED === 'true',
-    apple: false,
     facebook: false,
   });
   const [statuses, setStatuses] = useState<Record<Provider, ButtonStatus>>(IDLE);
@@ -90,7 +83,6 @@ export function OAuthButtons({
       .then((data: OAuthProvidersStatus) => {
         setEnabled({
           google: Boolean(data.google),
-          apple: Boolean(data.apple),
           facebook: Boolean(data.facebook),
         });
       })
@@ -110,29 +102,44 @@ export function OAuthButtons({
     onBusyChange?.(true);
     setStatuses({
       google: provider === 'google' ? 'loading' : 'idle',
-      apple: provider === 'apple' ? 'loading' : 'idle',
       facebook: provider === 'facebook' ? 'loading' : 'idle',
     });
     window.location.assign(`${api}/auth/${provider}`);
   }
 
   const anyLoading = Object.values(statuses).some((value) => value === 'loading');
+  const visible = PROVIDERS.filter((provider) => {
+    if (variant === 'link' && linked?.[provider.id]) return false;
+    return true;
+  });
+
+  if (variant === 'link' && visible.length === 0) {
+    return null;
+  }
 
   return (
     <>
-      <div className="my-6 flex items-center gap-3">
-        <span className="h-px flex-1 bg-border" />
-        <span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
-          {t('orContinue')}
-        </span>
-        <span className="h-px flex-1 bg-border" />
-      </div>
+      {variant === 'signin' ? (
+        <div className="my-6 flex items-center gap-3">
+          <span className="h-px flex-1 bg-border" />
+          <span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+            {t('orContinue')}
+          </span>
+          <span className="h-px flex-1 bg-border" />
+        </div>
+      ) : null}
       <div className="space-y-2.5">
-        {PROVIDERS.map((provider) => {
+        {visible.map((provider) => {
           const Icon = provider.icon;
           const status = statuses[provider.id];
           const connecting = status === 'loading';
           const showBrandIcon = status === 'idle';
+          const labelKey =
+            variant === 'link'
+              ? provider.id === 'google'
+                ? 'linkGoogle'
+                : 'linkFacebook'
+              : provider.labelKey;
           return (
             <Button
               key={provider.id}
@@ -144,7 +151,7 @@ export function OAuthButtons({
               onClick={() => start(provider.id)}
             >
               {showBrandIcon ? <Icon /> : null}
-              {connecting ? t(provider.connectingKey) : t(provider.labelKey)}
+              {connecting ? t(provider.connectingKey) : t(labelKey)}
             </Button>
           );
         })}

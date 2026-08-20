@@ -102,6 +102,7 @@ describe('AdminDataService', () => {
     expect(() => service.assertResource('auth-tokens')).toThrow('Unknown resource');
     expect(() => service.assertResource('refresh-tokens')).toThrow('Unknown resource');
     expect(() => service.assertResource('trusted-devices')).toThrow('Unknown resource');
+    expect(() => service.assertResource('oauth-pendings')).toThrow('Unknown resource');
     expect(() => service.assertResource('sequence-counters')).toThrow('Unknown resource');
     expect(() => service.assertResource('password-hashes')).toThrow(NotFoundException);
   });
@@ -113,7 +114,6 @@ describe('AdminDataService', () => {
         id: 'u1',
         email: 'user@test.local',
         googleId: null,
-        appleId: null,
         facebookId: null,
         name: 'Test User',
         firstName: 'Test',
