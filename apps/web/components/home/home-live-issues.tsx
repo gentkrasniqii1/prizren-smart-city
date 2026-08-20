@@ -3,7 +3,6 @@ import { getLocale, getTranslations } from 'next-intl/server';
 import type { ReportDto } from '@prizren/shared-types';
 import { PageContainer } from '@/components/layout/page-container';
 import { Section, SectionHeading } from '@/components/home/section';
-import { Reveal } from '@/components/motion/reveal';
 import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
 import { StatusBadge } from '@/components/ui/badge';
@@ -24,20 +23,18 @@ export async function HomeLiveIssues({ reports }: { reports: ReportDto[] }) {
   return (
     <Section className="bg-card">
       <PageContainer>
-        <Reveal>
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-            <SectionHeading
-              eyebrow={t('live.eyebrow')}
-              title={t('live.title')}
-              description={t('live.description')}
-            />
-            <Link href="/reports" className="shrink-0">
-              <Button variant="secondary" size="sm">
-                {t('live.viewMap')}
-              </Button>
-            </Link>
-          </div>
-        </Reveal>
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+          <SectionHeading
+            eyebrow={t('live.eyebrow')}
+            title={t('live.title')}
+            description={t('live.description')}
+          />
+          <Link href="/reports" className="shrink-0">
+            <Button variant="secondary" size="sm">
+              {t('live.viewMap')}
+            </Button>
+          </Link>
+        </div>
 
         {reports.length === 0 ? (
           <div className="mt-8">
@@ -57,14 +54,14 @@ export async function HomeLiveIssues({ reports }: { reports: ReportDto[] }) {
               <li key={report.id}>
                 <Link
                   href={`/reports/${report.id}`}
-                  className="group flex h-full flex-col overflow-hidden rounded-lg border border-stone-200 bg-muted/50 transition hover:border-mosque-300 hover:bg-card hover:shadow-sm"
+                  className="surface-card-interactive group flex h-full flex-col overflow-hidden rounded-lg border border-border bg-muted/50"
                 >
                   <div className="relative aspect-[16/10] overflow-hidden bg-stone-200">
                     {report.photoUrl ? (
                       <RemoteImage
                         src={report.photoUrl}
                         alt=""
-                        className="h-full w-full object-cover transition duration-normal group-hover:scale-[1.02]"
+                        className="h-full w-full object-cover"
                         sizes="(max-width: 640px) 100vw, 33vw"
                       />
                     ) : (
