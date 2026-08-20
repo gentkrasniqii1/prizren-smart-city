@@ -22,11 +22,13 @@ function relativeTime(iso: string, locale: AppLocale): string {
 export function NotificationItem({
   notification,
   onMarkRead,
+  onOpen,
   busy,
   compact = false,
 }: {
   notification: NotificationDto;
   onMarkRead?: (id: string) => void;
+  onOpen?: () => void;
   busy?: boolean;
   compact?: boolean;
 }) {
@@ -58,6 +60,11 @@ export function NotificationItem({
             ? t(`types.${notification.type}`)
             : (notification.message ?? notification.type)}
         </p>
+        {compact ? null : (
+          <p className="mt-0.5 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+            {unread ? t('stateUnread') : t('stateRead')}
+          </p>
+        )}
         <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-xs text-stone-600">
           <time dateTime={notification.createdAt}>
             {relativeTime(notification.createdAt, locale)}
@@ -65,7 +72,11 @@ export function NotificationItem({
           {notification.reportId ? (
             <Link
               href={`/reports/${notification.reportId}`}
-              className="inline-flex min-h-9 items-center font-medium text-mosque-800 underline-offset-2 hover:underline"
+              className="inline-flex min-h-11 items-center font-medium text-primary underline-offset-2 hover:underline"
+              onClick={() => {
+                if (unread) onMarkRead?.(notification.id);
+                onOpen?.();
+              }}
             >
               {t('openReport')}
             </Link>
@@ -77,7 +88,7 @@ export function NotificationItem({
               size="sm"
               disabled={busy}
               onClick={() => onMarkRead(notification.id)}
-              className="min-h-9 gap-1 px-2"
+              className="gap-1 px-2"
             >
               <CheckCheck className="h-3.5 w-3.5" aria-hidden />
               {t('markRead')}
