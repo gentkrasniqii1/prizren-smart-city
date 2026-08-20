@@ -7,9 +7,6 @@ function makeConfig(): ConfigService {
     googleClientId: 'google-client',
     googleCallbackUrl: 'http://localhost:3001/auth/google/callback',
     googleAuthEnabled: true,
-    appleClientId: 'apple.client',
-    appleCallbackUrl: 'http://localhost:3001/auth/apple/callback',
-    appleAuthEnabled: true,
     facebookAppId: 'fb-app',
     facebookCallbackUrl: 'http://localhost:3001/auth/facebook/callback',
     facebookAuthEnabled: true,
@@ -29,6 +26,7 @@ describe('OauthService', () => {
   it('rejects a malformed or foreign state', () => {
     expect(oauth.parseState('not-a-state')).toBeNull();
     expect(oauth.parseState('twitter.csrf.nonce')).toBeNull();
+    expect(oauth.parseState('apple.csrf.nonce')).toBeNull();
     expect(oauth.parseState(undefined)).toBeNull();
   });
 
@@ -40,11 +38,9 @@ describe('OauthService', () => {
     expect(parsed.searchParams.get('scope')).toContain('openid');
   });
 
-  it('hashes the Apple nonce in the authorization URL', () => {
-    const url = oauth.authorizationUrl('apple', 'apple.csrf.nonce', 'nonce-value');
-    const parsed = new URL(url);
-    expect(parsed.searchParams.get('nonce')).not.toBe('nonce-value');
-    expect(parsed.searchParams.get('nonce')).toHaveLength(64);
+  it('does not advertise Apple as an available provider', () => {
+    expect(oauth.providersStatus()).toEqual({ google: true, facebook: true });
+    expect(oauth.providersStatus()).not.toHaveProperty('apple');
   });
 
   it('rejects a Google token response whose id_token nonce does not match', async () => {

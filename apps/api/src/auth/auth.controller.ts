@@ -13,6 +13,7 @@ import {
 import { Throttle } from '@nestjs/throttler';
 import { CookieOptions, Request, Response } from 'express';
 import {
+  completeFacebookRequestSchema,
   changePasswordRequestSchema,
   forgotPasswordRequestSchema,
   loginRequestSchema,
@@ -30,6 +31,7 @@ import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
+import { CompleteFacebookDto } from './dto/complete-facebook.dto';
 import { VerifyEmailDto } from './dto/verify-email.dto';
 import { ResendVerificationDto } from './dto/resend-verification.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
@@ -201,8 +203,8 @@ export class AuthController {
 
   @Get('google')
   @Throttle({ default: { limit: 20, ttl: 60_000 } })
-  startGoogle(@Res() res: Response) {
-    return this.startOauth(res, 'google');
+  startGoogle(@Req() req: Request, @Res() res: Response) {
+    return this.startOauth(req, res, 'google');
   }
 
   @Get('google/callback')
@@ -216,42 +218,10 @@ export class AuthController {
     return this.finishOauth(res, req, 'google', { code, state, error });
   }
 
-  @Get('apple')
-  @Throttle({ default: { limit: 20, ttl: 60_000 } })
-  startApple(@Res() res: Response) {
-    return this.startOauth(res, 'apple');
-  }
-
-  @Post('apple/callback')
-  async appleCallbackPost(
-    @Body()
-    body: { code?: string; state?: string; error?: string; user?: string; id_token?: string },
-    @Req() req: Request,
-    @Res() res: Response,
-  ) {
-    return this.finishOauth(res, req, 'apple', {
-      code: body.code,
-      state: body.state,
-      error: body.error,
-      user: body.user,
-    });
-  }
-
-  @Get('apple/callback')
-  async appleCallbackGet(
-    @Query('code') code: string | undefined,
-    @Query('state') state: string | undefined,
-    @Query('error') error: string | undefined,
-    @Req() req: Request,
-    @Res() res: Response,
-  ) {
-    return this.finishOauth(res, req, 'apple', { code, state, error });
-  }
-
   @Get('facebook')
   @Throttle({ default: { limit: 20, ttl: 60_000 } })
-  startFacebook(@Res() res: Response) {
-    return this.startOauth(res, 'facebook');
+  startFacebook(@Req() req: Request, @Res() res: Response) {
+    return this.startOauth(req, res, 'facebook');
   }
 
   @Get('facebook/callback')
@@ -263,6 +233,40 @@ export class AuthController {
     @Res() res: Response,
   ) {
     return this.finishOauth(res, req, 'facebook', { code, state, error });
+  }
+
+  @Post('facebook/complete')
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(CsrfOriginGuard)
+  @Throttle({ default: { limit: 5, ttl: 60_000 } })
+  async completeFacebook(
+    @Body(zodBody(completeFacebookRequestSchema)) dto: CompleteFacebookDto,
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    rejectIfHoneypotFilled(dto.website);
+    const raw = req.cookies?.[this.config.oauthPendingCookieName] as string | undefined;
+    const result = await this.authService.completeFacebookEmail(raw, dto.email);
+    this.clearOauthPendingCookie(res);
+    return result;
+  }
+
+  @Post('facebook/verify')
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(CsrfOriginGuard)
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
+  async verifyFacebook(
+    @Body(zodBody(verifyEmailRequestSchema)) dto: VerifyEmailDto,
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const result = await this.authService.verifyFacebookPending(dto.token, {
+      ip: getClientIp(req),
+      userAgent: req.headers['user-agent'] ?? null,
+    });
+    this.clearOauthPendingCookie(res);
+    this.setRefreshCookie(res, result.refreshToken, result.refreshDays);
+    return result.auth;
   }
 
   @Get('google/status')
@@ -303,10 +307,18 @@ export class AuthController {
     return { ok: true };
   }
 
-  private startOauth(res: Response, provider: OAuthProvider) {
+  private async startOauth(req: Request, res: Response, provider: OAuthProvider) {
     this.oauth.assertEnabled(provider);
     const { state, nonce } = this.oauth.buildState(provider);
     res.cookie(this.config.oauthStateCookieName, state, this.oauthCookieOptions());
+    const sessionUser = await this.authService.peekRefreshUser(
+      req.cookies?.[this.config.refreshCookieName] as string | undefined,
+    );
+    if (sessionUser) {
+      res.cookie(this.config.oauthLinkCookieName, sessionUser.id, this.oauthCookieOptions());
+    } else {
+      this.clearOauthLinkCookie(res);
+    }
     return res.redirect(this.oauth.authorizationUrl(provider, state, nonce));
   }
 
@@ -314,7 +326,7 @@ export class AuthController {
     res: Response,
     req: Request,
     provider: OAuthProvider,
-    payload: { code?: string; state?: string; error?: string; user?: string },
+    payload: { code?: string; state?: string; error?: string },
   ) {
     const loginUrl = `${this.config.webOrigin}/login`;
     if (payload.error) {
@@ -337,14 +349,24 @@ export class AuthController {
       const profile =
         provider === 'google'
           ? await this.oauth.exchangeGoogle(payload.code, parsed.nonce)
-          : provider === 'apple'
-            ? await this.oauth.exchangeApple(payload.code, parsed.nonce, payload.user)
-            : await this.oauth.exchangeFacebook(payload.code);
+          : await this.oauth.exchangeFacebook(payload.code);
 
-      const session = await this.authService.loginWithOAuth(profile, {
-        ip: getClientIp(req),
-        userAgent: req.headers['user-agent'] ?? null,
-      });
+      const linkUserId = await this.resolveOauthLinkUser(req, res);
+      const session = await this.authService.loginWithOAuth(
+        profile,
+        {
+          ip: getClientIp(req),
+          userAgent: req.headers['user-agent'] ?? null,
+        },
+        linkUserId,
+      );
+
+      if (session.kind === 'needs_email') {
+        this.setOauthPendingCookie(res, session.pendingToken);
+        return res.redirect(`${this.config.webOrigin}/auth/complete-facebook`);
+      }
+
+      this.clearOauthPendingCookie(res);
       this.setRefreshCookie(res, session.refreshToken, session.refreshDays);
       const callbackUrl = new URL(`${this.config.webOrigin}/auth/callback`);
       if (session.linkedAccount) {
@@ -363,8 +385,25 @@ export class AuthController {
         ? String((err as { message: string }).message)
         : '';
     if (message.includes('ACCOUNT_EXISTS_PASSWORD')) return 'account_exists';
+    if (message.includes('PROVIDER_ALREADY_LINKED')) return 'provider_linked';
     if (message.includes('EMAIL_REQUIRED')) return 'email_required';
+    if (message.includes('FACEBOOK_PENDING_EXPIRED')) return 'pending_expired';
     return 'failed';
+  }
+
+  private async resolveOauthLinkUser(req: Request, res: Response): Promise<string | undefined> {
+    const linkCookie = req.cookies?.[this.config.oauthLinkCookieName] as string | undefined;
+    this.clearOauthLinkCookie(res);
+    if (!linkCookie) {
+      return undefined;
+    }
+    const sessionUser = await this.authService.peekRefreshUser(
+      req.cookies?.[this.config.refreshCookieName] as string | undefined,
+    );
+    if (!sessionUser || sessionUser.id !== linkCookie) {
+      return undefined;
+    }
+    return sessionUser.id;
   }
 
   private oauthCookieOptions(): CookieOptions {
@@ -375,6 +414,28 @@ export class AuthController {
       path: '/',
       maxAge: 10 * 60 * 1000,
     };
+  }
+
+  private oauthPendingCookieOptions(): CookieOptions {
+    return {
+      httpOnly: true,
+      secure: this.config.isProduction,
+      sameSite: 'lax',
+      path: '/',
+      maxAge: 60 * 60 * 1000,
+    };
+  }
+
+  private setOauthPendingCookie(res: Response, token: string) {
+    res.cookie(this.config.oauthPendingCookieName, token, this.oauthPendingCookieOptions());
+  }
+
+  private clearOauthPendingCookie(res: Response) {
+    res.clearCookie(this.config.oauthPendingCookieName, { path: '/' });
+  }
+
+  private clearOauthLinkCookie(res: Response) {
+    res.clearCookie(this.config.oauthLinkCookieName, { path: '/' });
   }
 
   /**

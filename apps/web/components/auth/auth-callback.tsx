@@ -18,7 +18,8 @@ export function AuthCallback() {
     void (async () => {
       const ok = await refreshSession({ force: true });
       if (ok && linked) {
-        toast.success(t('oauthLinked'));
+        const provider = linked === 'facebook' ? 'Facebook' : 'Google';
+        toast.success(t('oauthLinked', { provider }));
       }
       router.replace(ok ? '/account' : '/login');
     })();

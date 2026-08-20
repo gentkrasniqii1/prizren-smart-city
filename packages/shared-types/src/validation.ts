@@ -128,6 +128,15 @@ export const updateProfileRequestSchema = z.object({
   phone: optionalPhoneSchema,
 });
 
+export const setAccountEmailRequestSchema = z.object({
+  email: emailSchema,
+});
+
+export const completeFacebookRequestSchema = z.object({
+  email: emailSchema,
+  website: honeypotSchema,
+});
+
 export const createCommentRequestSchema = z.object({
   text: z.string().trim().min(1, 'commentRequired').max(COMMENT_MAX),
 });

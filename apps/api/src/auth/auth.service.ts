@@ -24,6 +24,7 @@ import {
   sha256Hex,
 } from './crypto';
 import type { OAuthProfile, OAuthProvider } from './oauth.service';
+import { isOauthPlaceholderEmail } from './oauth-email';
 import { AuditService } from '../audit/audit.service';
 
 const BCRYPT_ROUNDS = 12;
@@ -177,19 +178,46 @@ export class AuthService {
     return { ...issued, refreshDays, trustedDeviceToken };
   }
 
+  async peekRefreshUser(rawToken: string | undefined): Promise<{ id: string } | null> {
+    if (!rawToken) {
+      return null;
+    }
+    const stored = await this.prisma.refreshToken.findUnique({
+      where: { tokenHash: sha256Hex(rawToken) },
+      select: { userId: true, revokedAt: true, expiresAt: true },
+    });
+    if (!stored || stored.revokedAt || stored.expiresAt.getTime() <= Date.now()) {
+      return null;
+    }
+    return { id: stored.userId };
+  }
+
   async loginWithOAuth(
     profile: OAuthProfile,
     ctx: LoginContext = {},
-  ): Promise<{
-    auth: AuthResponse;
-    refreshToken: string;
-    refreshDays: number;
-    linkedAccount: boolean;
-  }> {
+    linkUserId?: string,
+  ): Promise<
+    | {
+        kind: 'auth';
+        auth: AuthResponse;
+        refreshToken: string;
+        refreshDays: number;
+        linkedAccount: boolean;
+      }
+    | { kind: 'needs_email'; pendingToken: string }
+  > {
+    if (linkUserId) {
+      return { kind: 'auth', ...(await this.linkOAuthToSessionUser(linkUserId, profile, ctx)) };
+    }
+
     const providerIdField = this.providerIdField(profile.provider);
     let user = await this.prisma.user.findFirst({
       where: { [providerIdField]: profile.providerId },
     });
+
+    if (user && isOauthPlaceholderEmail(user.email)) {
+      return { kind: 'needs_email', pendingToken: await this.createOauthPending(profile) };
+    }
 
     let linkedAccount = false;
 
@@ -199,22 +227,24 @@ export class AuthService {
       });
       if (byEmail) {
         const existingProviderId = byEmail[providerIdField];
-        // Email matches an existing account, but it's already linked to a
-        // *different* provider account (rare — e.g. a stale/changed provider id).
         if (existingProviderId && existingProviderId !== profile.providerId) {
           throw new ConflictException('ACCOUNT_EXISTS_PASSWORD');
         }
 
         const hasPassword = Boolean(byEmail.passwordHash);
-        // Google verifies the email address itself, so it's safe to auto-link
-        // an existing password account without an extra confirmation step.
-        const canAutoLink = hasPassword && profile.provider === 'google' && profile.emailVerified;
+        // Google verifies the mailbox itself. Facebook only shares an address when
+        // the person granted email permission — treat that as enough to auto-link.
+        const canAutoLink =
+          hasPassword &&
+          !existingProviderId &&
+          (profile.provider === 'google' ? profile.emailVerified : Boolean(profile.email));
 
         if (hasPassword && !existingProviderId && !canAutoLink) {
           throw new ConflictException('ACCOUNT_EXISTS_PASSWORD');
         }
 
         linkedAccount = canAutoLink;
+        await this.releaseProviderIdIfEmptyPlaceholder(providerIdField, profile.providerId);
 
         user = await this.prisma.user.update({
           where: { id: byEmail.id },
@@ -229,8 +259,12 @@ export class AuthService {
 
     if (!user) {
       if (!profile.email) {
-        throw new BadRequestException('EMAIL_REQUIRED');
+        if (profile.provider !== 'facebook') {
+          throw new BadRequestException('EMAIL_REQUIRED');
+        }
+        return { kind: 'needs_email', pendingToken: await this.createOauthPending(profile) };
       }
+      await this.releaseProviderIdIfEmptyPlaceholder(providerIdField, profile.providerId);
       user = await this.prisma.user.create({
         data: {
           email: profile.email.toLowerCase().trim(),
@@ -241,17 +275,86 @@ export class AuthService {
           emailVerifiedAt: new Date(),
         },
       });
-    } else if (!user.emailVerified) {
-      user = await this.prisma.user.update({
-        where: { id: user.id },
-        data: { emailVerified: true, emailVerifiedAt: new Date() },
-      });
+    } else {
+      user = await this.maybeAttachFacebookEmail(user, profile);
+      if (
+        !user.emailVerified &&
+        profile.email &&
+        !isOauthPlaceholderEmail(user.email) &&
+        user.email.toLowerCase() === profile.email.toLowerCase()
+      ) {
+        user = await this.prisma.user.update({
+          where: { id: user.id },
+          data: { emailVerified: true, emailVerifiedAt: new Date() },
+        });
+      }
     }
 
     const refreshDays = this.config.refreshExpiresDays;
     const issued = await this.issueAuth(user, refreshDays);
     await this.recordSuccessfulLogin(user, ctx);
-    return { ...issued, refreshDays, linkedAccount };
+    return { kind: 'auth', ...issued, refreshDays, linkedAccount };
+  }
+
+  async completeFacebookEmail(
+    rawPending: string | undefined,
+    email: string,
+  ): Promise<{ ok: true; email: string; devVerifyToken?: string }> {
+    const pending = await this.requireOauthPending(rawPending);
+    if (pending.provider !== 'facebook') {
+      throw new BadRequestException('FACEBOOK_PENDING_EXPIRED');
+    }
+    const normalized = email.toLowerCase().trim();
+    if (isOauthPlaceholderEmail(normalized)) {
+      throw new BadRequestException('Invalid email');
+    }
+
+    const nextRaw = randomToken(48);
+    await this.prisma.oauthPending.update({
+      where: { id: pending.id },
+      data: {
+        email: normalized,
+        tokenHash: sha256Hex(nextRaw),
+        expiresAt: new Date(Date.now() + VERIFY_HOURS * 60 * 60 * 1000),
+      },
+    });
+
+    const verifyUrl = `${this.config.webOrigin}/auth/complete-facebook?token=${encodeURIComponent(nextRaw)}`;
+    await this.safeSendMail('verification', () =>
+      this.mail.sendVerificationEmail(normalized, verifyUrl),
+    );
+
+    return {
+      ok: true,
+      email: normalized,
+      ...(!this.mail.configured && !this.config.isProduction ? { devVerifyToken: nextRaw } : {}),
+    };
+  }
+
+  async verifyFacebookPending(
+    rawToken: string,
+    ctx: LoginContext = {},
+  ): Promise<{
+    auth: AuthResponse;
+    refreshToken: string;
+    refreshDays: number;
+    linkedAccount: boolean;
+  }> {
+    const pending = await this.requireOauthPending(rawToken);
+    if (pending.provider !== 'facebook' || !pending.email) {
+      throw new UnauthorizedException('Invalid or expired token');
+    }
+
+    const result = await this.fulfillFacebookPending(
+      {
+        providerId: pending.providerId,
+        name: pending.name,
+        email: pending.email,
+      },
+      ctx,
+    );
+    await this.prisma.oauthPending.delete({ where: { id: pending.id } });
+    return result;
   }
 
   async requestEmailVerification(email: string): Promise<{ ok: true }> {
@@ -330,7 +433,7 @@ export class AuthService {
     }
     if (!user.passwordHash) {
       throw new BadRequestException(
-        'This account signs in with a provider (Google/Apple/Facebook) and has no password. Use "Forgot password" to set one.',
+        'This account signs in with a provider (Google/Facebook) and has no password. Use "Forgot password" to set one.',
       );
     }
     const valid = await bcrypt.compare(currentPassword, user.passwordHash);
@@ -481,29 +584,246 @@ export class AuthService {
   }
 
   toPublicUser(user: User): PublicUser {
+    const needsEmail = isOauthPlaceholderEmail(user.email);
     return {
       id: user.id,
-      email: user.email,
+      email: needsEmail ? '' : user.email,
       name: user.name,
       firstName: user.firstName,
       lastName: user.lastName,
       phone: user.phone,
       role: user.role,
-      emailVerified: user.emailVerified,
+      emailVerified: needsEmail ? false : user.emailVerified,
       totpEnabled: user.totpEnabled,
       hasPassword: Boolean(user.passwordHash),
       googleLinked: Boolean(user.googleId),
+      facebookLinked: Boolean(user.facebookId),
+      needsEmail,
       createdAt: user.createdAt.toISOString(),
     };
   }
 
-  private providerIdField(provider: OAuthProvider): 'googleId' | 'appleId' | 'facebookId' {
-    if (provider === 'google') return 'googleId';
-    if (provider === 'apple') return 'appleId';
-    return 'facebookId';
+  async setAccountEmail(userId: string, email: string): Promise<PublicUser> {
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (!user) {
+      throw new UnauthorizedException();
+    }
+    if (!isOauthPlaceholderEmail(user.email)) {
+      throw new BadRequestException('Email is already set on this account');
+    }
+    const normalized = email.toLowerCase().trim();
+    const taken = await this.prisma.user.findUnique({ where: { email: normalized } });
+    if (taken) {
+      throw new ConflictException('Email is already registered');
+    }
+    const updated = await this.prisma.user.update({
+      where: { id: userId },
+      data: {
+        email: normalized,
+        emailVerified: false,
+        emailVerifiedAt: null,
+      },
+    });
+    await this.issueEmailVerification(updated);
+    return this.toPublicUser(updated);
+  }
+
+  private async linkOAuthToSessionUser(
+    userId: string,
+    profile: OAuthProfile,
+    ctx: LoginContext,
+  ): Promise<{
+    auth: AuthResponse;
+    refreshToken: string;
+    refreshDays: number;
+    linkedAccount: boolean;
+  }> {
+    const current = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (!current) {
+      throw new UnauthorizedException();
+    }
+    const providerIdField = this.providerIdField(profile.provider);
+    const existingId = current[providerIdField];
+    if (existingId && existingId !== profile.providerId) {
+      throw new ConflictException('PROVIDER_ALREADY_LINKED');
+    }
+
+    await this.releaseProviderIdIfEmptyPlaceholder(providerIdField, profile.providerId, current.id);
+
+    const holder = await this.prisma.user.findFirst({
+      where: { [providerIdField]: profile.providerId },
+    });
+    if (holder && holder.id !== current.id) {
+      throw new ConflictException('PROVIDER_ALREADY_LINKED');
+    }
+
+    const linkedAccount = !existingId;
+    const user = existingId
+      ? current
+      : await this.prisma.user.update({
+          where: { id: current.id },
+          data: { [providerIdField]: profile.providerId },
+        });
+
+    const refreshDays = this.config.refreshExpiresDays;
+    const issued = await this.issueAuth(user, refreshDays);
+    await this.recordSuccessfulLogin(user, ctx);
+    return { ...issued, refreshDays, linkedAccount };
+  }
+
+  private async fulfillFacebookPending(
+    pending: { providerId: string; name: string; email: string },
+    ctx: LoginContext,
+  ): Promise<{
+    auth: AuthResponse;
+    refreshToken: string;
+    refreshDays: number;
+    linkedAccount: boolean;
+  }> {
+    const email = pending.email.toLowerCase().trim();
+    await this.releaseProviderIdIfEmptyPlaceholder('facebookId', pending.providerId);
+
+    const byFacebook = await this.prisma.user.findFirst({
+      where: { facebookId: pending.providerId },
+    });
+    const byEmail = await this.prisma.user.findUnique({ where: { email } });
+
+    if (byFacebook && byEmail && byFacebook.id !== byEmail.id) {
+      throw new ConflictException('PROVIDER_ALREADY_LINKED');
+    }
+    if (byFacebook && !byEmail) {
+      throw new ConflictException('PROVIDER_ALREADY_LINKED');
+    }
+
+    let user = byEmail;
+    let linkedAccount = false;
+    if (user) {
+      if (user.facebookId && user.facebookId !== pending.providerId) {
+        throw new ConflictException('PROVIDER_ALREADY_LINKED');
+      }
+      linkedAccount = !user.facebookId;
+      user = await this.prisma.user.update({
+        where: { id: user.id },
+        data: {
+          facebookId: pending.providerId,
+          emailVerified: true,
+          emailVerifiedAt: user.emailVerifiedAt ?? new Date(),
+        },
+      });
+    } else {
+      user = await this.prisma.user.create({
+        data: {
+          email,
+          name: pending.name.trim() || email.split('@')[0],
+          facebookId: pending.providerId,
+          role: Role.CITIZEN,
+          emailVerified: true,
+          emailVerifiedAt: new Date(),
+        },
+      });
+    }
+
+    const refreshDays = this.config.refreshExpiresDays;
+    const issued = await this.issueAuth(user, refreshDays);
+    await this.recordSuccessfulLogin(user, ctx);
+    return { ...issued, refreshDays, linkedAccount };
+  }
+
+  private async createOauthPending(profile: OAuthProfile): Promise<string> {
+    await this.prisma.oauthPending.deleteMany({
+      where: { provider: profile.provider, providerId: profile.providerId },
+    });
+    const raw = randomToken(48);
+    const expiresAt = new Date(Date.now() + VERIFY_HOURS * 60 * 60 * 1000);
+    await this.prisma.oauthPending.create({
+      data: {
+        tokenHash: sha256Hex(raw),
+        provider: profile.provider,
+        providerId: profile.providerId,
+        name: profile.name.trim() || 'Citizen',
+        expiresAt,
+      },
+    });
+    return raw;
+  }
+
+  private async requireOauthPending(rawToken: string | undefined) {
+    if (!rawToken) {
+      throw new BadRequestException('FACEBOOK_PENDING_EXPIRED');
+    }
+    const pending = await this.prisma.oauthPending.findUnique({
+      where: { tokenHash: sha256Hex(rawToken) },
+    });
+    if (!pending || pending.expiresAt.getTime() <= Date.now()) {
+      throw new UnauthorizedException('Invalid or expired token');
+    }
+    return pending;
+  }
+
+  /** Drop a leftover Facebook stub so the real account can take the provider id. */
+  private async releaseProviderIdIfEmptyPlaceholder(
+    field: 'googleId' | 'facebookId',
+    providerId: string,
+    exceptUserId?: string,
+  ): Promise<void> {
+    const holder = await this.prisma.user.findFirst({
+      where: { [field]: providerId },
+    });
+    if (!holder || holder.id === exceptUserId) {
+      return;
+    }
+    if (!(await this.isEmptyOauthPlaceholder(holder))) {
+      return;
+    }
+    await this.prisma.$transaction([
+      this.prisma.notification.deleteMany({ where: { userId: holder.id } }),
+      this.prisma.auditLog.deleteMany({ where: { userId: holder.id } }),
+      this.prisma.user.delete({ where: { id: holder.id } }),
+    ]);
+  }
+
+  private async isEmptyOauthPlaceholder(user: User): Promise<boolean> {
+    if (!isOauthPlaceholderEmail(user.email)) {
+      return false;
+    }
+    if (user.passwordHash || user.googleId) {
+      return false;
+    }
+    const [reports, comments, votes] = await Promise.all([
+      this.prisma.report.count({ where: { userId: user.id } }),
+      this.prisma.comment.count({ where: { userId: user.id } }),
+      this.prisma.vote.count({ where: { userId: user.id } }),
+    ]);
+    return reports + comments + votes === 0;
+  }
+
+  private providerIdField(provider: OAuthProvider): 'googleId' | 'facebookId' {
+    return provider === 'google' ? 'googleId' : 'facebookId';
+  }
+
+  private async maybeAttachFacebookEmail(user: User, profile: OAuthProfile): Promise<User> {
+    if (profile.provider !== 'facebook' || !profile.email || !isOauthPlaceholderEmail(user.email)) {
+      return user;
+    }
+    const normalized = profile.email.toLowerCase().trim();
+    const taken = await this.prisma.user.findUnique({ where: { email: normalized } });
+    if (taken) {
+      return user;
+    }
+    return this.prisma.user.update({
+      where: { id: user.id },
+      data: {
+        email: normalized,
+        emailVerified: Boolean(profile.emailVerified),
+        emailVerifiedAt: profile.emailVerified ? new Date() : null,
+      },
+    });
   }
 
   private async issueEmailVerification(user: User): Promise<string> {
+    if (isOauthPlaceholderEmail(user.email)) {
+      return '';
+    }
     await this.prisma.authToken.updateMany({
       where: { userId: user.id, type: AuthTokenType.EMAIL_VERIFY, usedAt: null },
       data: { usedAt: new Date() },

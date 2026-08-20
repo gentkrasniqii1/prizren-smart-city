@@ -17,6 +17,8 @@ export function LoginQueryEffects() {
         state: t('oauthState'),
         account_exists: t('oauthAccountExists'),
         email_required: t('oauthEmailRequired'),
+        provider_linked: t('oauthProviderLinked'),
+        pending_expired: t('oauthPendingExpired'),
         failed: t('oauthFailed'),
         missing_code: t('oauthFailed'),
       };

@@ -65,6 +65,18 @@ describe('AuthService', () => {
       update: ReturnType<typeof vi.fn>;
       deleteMany: ReturnType<typeof vi.fn>;
     };
+    oauthPending: {
+      create: ReturnType<typeof vi.fn>;
+      findUnique: ReturnType<typeof vi.fn>;
+      update: ReturnType<typeof vi.fn>;
+      delete: ReturnType<typeof vi.fn>;
+      deleteMany: ReturnType<typeof vi.fn>;
+    };
+    report: { count: ReturnType<typeof vi.fn> };
+    comment: { count: ReturnType<typeof vi.fn> };
+    vote: { count: ReturnType<typeof vi.fn> };
+    notification: { deleteMany: ReturnType<typeof vi.fn> };
+    auditLog: { deleteMany: ReturnType<typeof vi.fn> };
     $transaction: ReturnType<typeof vi.fn>;
   };
   let jwt: { signAsync: ReturnType<typeof vi.fn> };
@@ -74,6 +86,7 @@ describe('AuthService', () => {
     sendPasswordChangedEmail: ReturnType<typeof vi.fn>;
     sendSuspiciousLoginEmail: ReturnType<typeof vi.fn>;
     sendAccountLockedEmail: ReturnType<typeof vi.fn>;
+    configured: boolean;
   };
   let audit: { log: ReturnType<typeof vi.fn> };
   let service: AuthService;
@@ -104,6 +117,18 @@ describe('AuthService', () => {
         update: vi.fn(),
         deleteMany: vi.fn().mockResolvedValue({ count: 0 }),
       },
+      oauthPending: {
+        create: vi.fn().mockResolvedValue({ id: 'op-1' }),
+        findUnique: vi.fn(),
+        update: vi.fn(),
+        delete: vi.fn(),
+        deleteMany: vi.fn().mockResolvedValue({ count: 0 }),
+      },
+      report: { count: vi.fn().mockResolvedValue(0) },
+      comment: { count: vi.fn().mockResolvedValue(0) },
+      vote: { count: vi.fn().mockResolvedValue(0) },
+      notification: { deleteMany: vi.fn().mockResolvedValue({ count: 0 }) },
+      auditLog: { deleteMany: vi.fn().mockResolvedValue({ count: 0 }) },
       $transaction: vi.fn((ops: Promise<unknown>[]) => Promise.all(ops)),
     };
     jwt = {
@@ -115,6 +140,7 @@ describe('AuthService', () => {
       sendPasswordChangedEmail: vi.fn().mockResolvedValue(undefined),
       sendSuspiciousLoginEmail: vi.fn().mockResolvedValue(undefined),
       sendAccountLockedEmail: vi.fn().mockResolvedValue(undefined),
+      configured: false,
     };
     audit = { log: vi.fn().mockResolvedValue({ id: 'audit-1' }) };
     const config = {
@@ -125,6 +151,7 @@ describe('AuthService', () => {
       encryptionKey: 'test-key',
       requireAdmin2fa: false,
       webOrigin: 'http://localhost:3000',
+      isProduction: false,
     } as ConfigService;
 
     service = new AuthService(
@@ -253,6 +280,8 @@ describe('AuthService', () => {
         emailVerified: true,
       });
 
+      expect(result.kind).toBe('auth');
+      if (result.kind !== 'auth') return;
       expect(result.linkedAccount).toBe(true);
       expect(prisma.user.update).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -272,6 +301,8 @@ describe('AuthService', () => {
         emailVerified: true,
       });
 
+      expect(result.kind).toBe('auth');
+      if (result.kind !== 'auth') return;
       expect(result.linkedAccount).toBe(false);
       expect(prisma.user.findUnique).not.toHaveBeenCalled();
     });
@@ -291,19 +322,145 @@ describe('AuthService', () => {
       ).rejects.toBeInstanceOf(ConflictException);
     });
 
-    it('still rejects non-Google providers matching an existing password account', async () => {
+    it('auto-links a Facebook profile that shares an email with a password account', async () => {
       prisma.user.findFirst.mockResolvedValue(null);
       prisma.user.findUnique.mockResolvedValue({ ...user, facebookId: null });
+      prisma.user.update.mockResolvedValue({ ...user, facebookId: 'fb-sub-1' });
 
+      const result = await service.loginWithOAuth({
+        provider: 'facebook',
+        providerId: 'fb-sub-1',
+        email: 'citizen@test.local',
+        name: 'Citizen Test',
+        emailVerified: true,
+      });
+
+      expect(result.kind).toBe('auth');
+      if (result.kind !== 'auth') return;
+      expect(result.linkedAccount).toBe(true);
+      expect(prisma.user.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ facebookId: 'fb-sub-1' }),
+        }),
+      );
+    });
+
+    it('does not create a user when Facebook shares no email', async () => {
+      prisma.user.findFirst.mockResolvedValue(null);
+
+      const result = await service.loginWithOAuth({
+        provider: 'facebook',
+        providerId: '123',
+        email: null,
+        name: 'FB User',
+        emailVerified: false,
+      });
+
+      expect(result).toMatchObject({ kind: 'needs_email' });
+      expect(prisma.user.create).not.toHaveBeenCalled();
+      expect(prisma.oauthPending.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            provider: 'facebook',
+            providerId: '123',
+          }),
+        }),
+      );
+    });
+
+    it('attaches Facebook to the session user without requiring an email', async () => {
+      prisma.user.findUnique.mockResolvedValue({ ...user, facebookId: null });
+      prisma.user.findFirst.mockResolvedValue(null);
+      prisma.user.update.mockResolvedValue({ ...user, facebookId: 'fb-link-1' });
+
+      const result = await service.loginWithOAuth(
+        {
+          provider: 'facebook',
+          providerId: 'fb-link-1',
+          email: null,
+          name: 'Gent',
+          emailVerified: false,
+        },
+        {},
+        'user-1',
+      );
+
+      expect(result.kind).toBe('auth');
+      if (result.kind !== 'auth') return;
+      expect(result.linkedAccount).toBe(true);
+      expect(prisma.user.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: 'user-1' },
+          data: { facebookId: 'fb-link-1' },
+        }),
+      );
+      expect(prisma.user.create).not.toHaveBeenCalled();
+    });
+
+    it('rejects a new Google profile that does not share an email', async () => {
+      prisma.user.findFirst.mockResolvedValue(null);
       await expect(
         service.loginWithOAuth({
-          provider: 'facebook',
-          providerId: 'fb-sub-1',
-          email: 'citizen@test.local',
-          name: 'Citizen Test',
-          emailVerified: true,
+          provider: 'google',
+          providerId: 'g-sub-1',
+          email: null,
+          name: 'No Email',
+          emailVerified: false,
         }),
-      ).rejects.toBeInstanceOf(ConflictException);
+      ).rejects.toBeInstanceOf(BadRequestException);
+    });
+  });
+
+  describe('completeFacebookEmail / verifyFacebookPending', () => {
+    const pending = {
+      id: 'op-1',
+      provider: 'facebook',
+      providerId: 'fb-pending-1',
+      name: 'Gent',
+      email: null as string | null,
+      tokenHash: 'hash',
+      expiresAt: new Date(Date.now() + 60 * 60 * 1000),
+      createdAt: new Date(),
+    };
+
+    it('stores the email and sends a verification link without creating a user', async () => {
+      prisma.oauthPending.findUnique.mockResolvedValue(pending);
+      prisma.oauthPending.update.mockResolvedValue({ ...pending, email: 'new@test.local' });
+
+      const result = await service.completeFacebookEmail(
+        'pending-token-value-20ch',
+        'New@test.local',
+      );
+
+      expect(result.ok).toBe(true);
+      expect(result.email).toBe('new@test.local');
+      expect(prisma.user.create).not.toHaveBeenCalled();
+      expect(mail.sendVerificationEmail).toHaveBeenCalledWith(
+        'new@test.local',
+        expect.stringContaining('/auth/complete-facebook?token='),
+      );
+    });
+
+    it('links Facebook to an existing account after the email is verified', async () => {
+      prisma.oauthPending.findUnique.mockResolvedValue({
+        ...pending,
+        email: 'citizen@test.local',
+      });
+      prisma.user.findFirst.mockResolvedValue(null);
+      prisma.user.findUnique.mockResolvedValue({ ...user, facebookId: null });
+      prisma.user.update.mockResolvedValue({ ...user, facebookId: 'fb-pending-1' });
+      prisma.oauthPending.delete.mockResolvedValue(pending);
+
+      const result = await service.verifyFacebookPending('verify-token-value-20ch');
+
+      expect(result.linkedAccount).toBe(true);
+      expect(prisma.user.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ facebookId: 'fb-pending-1' }),
+        }),
+      );
+      expect(prisma.user.create).not.toHaveBeenCalled();
+      expect(prisma.oauthPending.delete).toHaveBeenCalledWith({ where: { id: 'op-1' } });
     });
   });
 
@@ -369,13 +526,25 @@ describe('AuthService', () => {
       totpEnabled: false,
       hasPassword: true,
       googleLinked: false,
+      facebookLinked: false,
+      needsEmail: false,
       createdAt: '2026-01-01T00:00:00.000Z',
     });
   });
 
-  it('reports googleLinked: true for a user with a linked Google account', () => {
-    expect(service.toPublicUser({ ...user, googleId: 'google-sub-1' } as never)).toMatchObject({
-      googleLinked: true,
+  it('reports needsEmail for a Facebook placeholder mailbox', () => {
+    expect(service.toPublicUser({ ...user, email: 'fb.123@oauth.invalid' } as never)).toMatchObject(
+      {
+        email: '',
+        needsEmail: true,
+        emailVerified: false,
+      },
+    );
+  });
+
+  it('reports facebookLinked: true for a user with a linked Facebook account', () => {
+    expect(service.toPublicUser({ ...user, facebookId: 'fb-1' } as never)).toMatchObject({
+      facebookLinked: true,
     });
   });
 

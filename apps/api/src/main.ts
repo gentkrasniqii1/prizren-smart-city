@@ -1,13 +1,12 @@
-import { config } from 'dotenv';
-import { resolve } from 'path';
 import { ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import type { NextFunction, Request, Response } from 'express';
 import cookieParser = require('cookie-parser');
 import { AppModule } from './app.module';
+import { loadLocalEnv } from './load-env';
 import { initSentry } from './monitoring/sentry';
 
-config({ path: resolve(__dirname, '../.env') });
+loadLocalEnv();
 initSentry();
 
 async function bootstrap() {

@@ -222,7 +222,8 @@ export function AccountDashboard() {
               <p className="text-sm text-stone-600">{t('greeting')}</p>
               <h1 className="ds-page-title">{t('welcome', { name: firstName })}</h1>
               <p className="mt-1 text-sm text-stone-600">
-                {getRoleLabel(user.role, locale)} · {user.email}
+                {getRoleLabel(user.role, locale)}
+                {user.needsEmail ? '' : ` · ${user.email}`}
               </p>
             </div>
           </div>

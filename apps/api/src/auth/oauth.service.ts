@@ -1,10 +1,9 @@
 import { Injectable, ServiceUnavailableException } from '@nestjs/common';
-import { createHash, createPrivateKey, randomBytes, sign } from 'crypto';
-import { verifyIdToken } from 'apple-signin-auth';
+import { randomBytes } from 'crypto';
 import { ConfigService } from './config.service';
 import { timingSafeEqualString } from './crypto';
 
-export type OAuthProvider = 'google' | 'apple' | 'facebook';
+export type OAuthProvider = 'google' | 'facebook';
 
 export type OAuthProfile = {
   provider: OAuthProvider;
@@ -21,14 +20,12 @@ export class OauthService {
   providersStatus() {
     return {
       google: this.config.googleAuthEnabled,
-      apple: this.config.appleAuthEnabled,
       facebook: this.config.facebookAuthEnabled,
     };
   }
 
   isEnabled(provider: OAuthProvider): boolean {
     if (provider === 'google') return this.config.googleAuthEnabled;
-    if (provider === 'apple') return this.config.appleAuthEnabled;
     return this.config.facebookAuthEnabled;
   }
 
@@ -49,7 +46,7 @@ export class OauthService {
   parseState(raw: string | undefined): { provider: OAuthProvider; nonce: string } | null {
     if (!raw) return null;
     const [provider, , nonce] = raw.split('.');
-    if (provider !== 'google' && provider !== 'apple' && provider !== 'facebook') return null;
+    if (provider !== 'google' && provider !== 'facebook') return null;
     if (!nonce) return null;
     return { provider, nonce };
   }
@@ -68,18 +65,6 @@ export class OauthService {
         prompt: 'select_account',
       });
       return `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`;
-    }
-    if (provider === 'apple') {
-      const params = new URLSearchParams({
-        client_id: this.config.appleClientId,
-        redirect_uri: this.config.appleCallbackUrl,
-        response_type: 'code id_token',
-        response_mode: 'form_post',
-        scope: 'name email',
-        state,
-        nonce: createHash('sha256').update(nonce).digest('hex'),
-      });
-      return `https://appleid.apple.com/auth/authorize?${params.toString()}`;
     }
     const params = new URLSearchParams({
       client_id: this.config.facebookAppId,
@@ -136,54 +121,6 @@ export class OauthService {
     };
   }
 
-  async exchangeApple(code: string, nonce: string, userJson?: string): Promise<OAuthProfile> {
-    const clientSecret = this.createAppleClientSecret();
-    const body = new URLSearchParams({
-      grant_type: 'authorization_code',
-      code,
-      redirect_uri: this.config.appleCallbackUrl,
-      client_id: this.config.appleClientId,
-      client_secret: clientSecret,
-    });
-    const tokenRes = await fetch('https://appleid.apple.com/auth/token', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body,
-    });
-    if (!tokenRes.ok) {
-      throw new ServiceUnavailableException('Apple token exchange failed');
-    }
-    const tokens = (await tokenRes.json()) as { id_token?: string };
-    if (!tokens.id_token) {
-      throw new ServiceUnavailableException('Apple did not return an identity token');
-    }
-    const payload = await verifyIdToken(tokens.id_token, {
-      audience: this.config.appleClientId,
-      nonce: createHash('sha256').update(nonce).digest('hex'),
-    });
-
-    let name = payload.email?.split('@')[0] || 'Citizen';
-    if (userJson) {
-      try {
-        const parsed = JSON.parse(userJson) as {
-          name?: { firstName?: string; lastName?: string };
-        };
-        const full = [parsed.name?.firstName, parsed.name?.lastName].filter(Boolean).join(' ');
-        if (full) name = full;
-      } catch {
-        // Apple user payload is only present on first authorization
-      }
-    }
-
-    return {
-      provider: 'apple',
-      providerId: payload.sub,
-      email: payload.email ?? null,
-      name,
-      emailVerified: Boolean(payload.email_verified),
-    };
-  }
-
   async exchangeFacebook(code: string): Promise<OAuthProfile> {
     const tokenParams = new URLSearchParams({
       client_id: this.config.facebookAppId,
@@ -229,28 +166,6 @@ export class OauthService {
     if (!tokenNonce || !timingSafeEqualString(tokenNonce, nonce)) {
       throw new ServiceUnavailableException('Google identity token nonce mismatch');
     }
-  }
-
-  private createAppleClientSecret(): string {
-    const now = Math.floor(Date.now() / 1000);
-    const header = Buffer.from(
-      JSON.stringify({ alg: 'ES256', kid: this.config.appleKeyId }),
-    ).toString('base64url');
-    const payload = Buffer.from(
-      JSON.stringify({
-        iss: this.config.appleTeamId,
-        iat: now,
-        exp: now + 86400 * 150,
-        aud: 'https://appleid.apple.com',
-        sub: this.config.appleClientId,
-      }),
-    ).toString('base64url');
-    const key = createPrivateKey(this.config.applePrivateKey);
-    const signature = sign('sha256', Buffer.from(`${header}.${payload}`), {
-      key,
-      dsaEncoding: 'ieee-p1363',
-    }).toString('base64url');
-    return `${header}.${payload}.${signature}`;
   }
 }
 

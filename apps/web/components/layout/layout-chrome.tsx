@@ -9,8 +9,7 @@ const AUTH_PATHS = [
   '/forgot-password',
   '/reset-password',
   '/verify-email',
-  '/auth/callback',
-  '/auth/two-factor',
+  '/auth',
 ];
 
 function isAuthPath(pathname: string | null) {

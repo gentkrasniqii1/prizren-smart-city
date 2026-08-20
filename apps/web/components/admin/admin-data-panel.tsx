@@ -55,7 +55,6 @@ const RESOURCE_COLUMNS: Record<AdminDataResource, readonly string[]> = {
     'id',
     'email',
     'googleId',
-    'appleId',
     'facebookId',
     'name',
     'firstName',
