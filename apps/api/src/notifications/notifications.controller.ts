@@ -22,11 +22,14 @@ export class NotificationsController {
   list(
     @CurrentUser() user: AuthUser,
     @Query('unreadOnly') unreadOnly?: string,
+    @Query('read') read?: string,
     @Query('page') page?: string,
     @Query('limit') limit?: string,
   ) {
+    const readFilter = read === 'unread' || read === 'read' || read === 'all' ? read : undefined;
     return this.notificationsService.listForUser(user.id, {
       unreadOnly: unreadOnly === 'true' || unreadOnly === '1',
+      read: readFilter,
       page: page ? Number(page) : 1,
       limit: limit ? Number(limit) : 20,
     });

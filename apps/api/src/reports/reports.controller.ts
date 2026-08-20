@@ -32,6 +32,8 @@ import {
   ParseCreateReportFieldsPipe,
 } from './dto/create-report.dto';
 import { AssignReportDto } from './dto/assign-report.dto';
+import { createCommentRequestSchema } from '@prizren/shared-types';
+import { zodBody } from '../common/zod-validation.pipe';
 import { CreateCommentDto } from './dto/create-comment.dto';
 import { ListReportsQueryDto } from './dto/list-reports-query.dto';
 import { NearbyReportsQueryDto } from './dto/nearby-reports-query.dto';
@@ -155,7 +157,7 @@ export class ReportsController {
   addComment(
     @Param('id', ParseUUIDPipe) id: string,
     @CurrentUser() user: AuthUser,
-    @Body() dto: CreateCommentDto,
+    @Body(zodBody(createCommentRequestSchema)) dto: CreateCommentDto,
   ) {
     if (!user) {
       throw new BadRequestException('Unauthorized');

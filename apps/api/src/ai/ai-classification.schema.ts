@@ -1,6 +1,8 @@
 import { z } from 'zod';
 import type { AIClassification } from '@prizren/shared-types';
 
+/** Claude JSON only. HTTP bodies use shared Zod schemas plus class-validator DTOs. */
+
 export const AI_CONFIDENCE_THRESHOLD = 0.6;
 
 export const AIClassificationSchema = z.object({
