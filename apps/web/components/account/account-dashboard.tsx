@@ -25,6 +25,7 @@ import { apiFetch } from '@/lib/api';
 import { usePolling } from '@/lib/use-polling';
 import { useAuth } from '@/components/auth-provider';
 import { useRealtimeRefresh } from '@/components/realtime-provider';
+import { useNotificationInbox } from '@/components/notifications/notification-inbox';
 import { useToast } from '@/components/toast-provider';
 import { PageContainer } from '@/components/layout/page-container';
 import { ReportCard } from '@/components/reports/report-card';
@@ -84,8 +85,8 @@ export function AccountDashboard() {
   const [filter, setFilter] = useState<ReportFilter>('all');
 
   const [notifications, setNotifications] = useState<NotificationDto[]>([]);
-  const [unreadCount, setUnreadCount] = useState(0);
   const [notifLoading, setNotifLoading] = useState(true);
+  const { unreadCount, setUnreadCount } = useNotificationInbox();
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -137,7 +138,7 @@ export function AccountDashboard() {
         setUnreadCount(res.meta.unreadCount);
       })
       .catch(() => undefined);
-  }, []);
+  }, [setUnreadCount]);
 
   // Live SSE for new reports and status changes; slow poll if the stream drops.
   usePolling(refreshLive, 90_000, Boolean(user) && !authLoading);
