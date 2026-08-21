@@ -4,17 +4,22 @@ import Image from 'next/image';
 import { useEffect, useState } from 'react';
 import { cn } from '@/lib/utils';
 
-/** Local Wikimedia-sourced city photos (see public/images/prizren/CREDITS.md). */
+/** Local city photos. Sources and licenses: public/images/prizren/CREDITS.md */
 export const AUTH_HERO_SLIDES = [
-  '/images/prizren/overview.jpg',
+  '/images/prizren/fortress.jpg',
+  '/images/prizren/stone-bridge-mosque.jpg',
+  '/images/prizren/shadervan.jpg',
+  '/images/prizren/sunset-mosque.jpg',
+  '/images/prizren/old-town-summer.jpg',
+  '/images/prizren/night.jpg',
+  '/images/prizren/stone-bridge-autumn.jpg',
+  '/images/prizren/cityscape.jpg',
+  '/images/prizren/sinan-pasha-from-bridge.jpg',
   '/images/prizren/stone-bridge.jpg',
-  '/images/prizren/kalaja.jpg',
-  '/images/prizren/sinan-pasha.jpg',
-  '/images/prizren/old-town.jpg',
-  '/images/prizren/bistrica.jpg',
 ] as const;
 
-const INTERVAL_MS = 6500;
+const INTERVAL_MS = 3000;
+const FADE_MS = 700;
 
 export function AuthHeroSlideshow({
   alt,
@@ -44,7 +49,7 @@ export function AuthHeroSlideshow({
           src={src}
           alt={i === index ? alt : ''}
           fill
-          quality={92}
+          quality={80}
           priority={priority && i === 0}
           sizes={sizes}
           className={cn(
@@ -52,7 +57,7 @@ export function AuthHeroSlideshow({
             objectPosition,
             i === index ? 'opacity-100' : 'pointer-events-none opacity-0',
           )}
-          style={{ transitionDuration: '1.2s' }}
+          style={{ transitionDuration: `${FADE_MS}ms` }}
         />
       ))}
     </div>
