@@ -90,7 +90,11 @@ export default function RegisterPage() {
         {t('accountType')}: <span className="font-medium text-foreground">{t('citizenRole')}</span>
       </p>
 
-      <form onSubmit={handleSubmit(onValid)} className="relative mt-8 space-y-4" noValidate>
+      <form
+        onSubmit={handleSubmit(onValid)}
+        className="relative mt-8 space-y-4 lg:mt-5 lg:space-y-3"
+        noValidate
+      >
         <div className="grid gap-4 sm:grid-cols-2">
           <div>
             <Label htmlFor="first-name">{t('firstName')}</Label>
@@ -211,7 +215,7 @@ export default function RegisterPage() {
         onBusyChange={setOauthBusy}
       />
 
-      <p className="mt-6 text-sm text-muted-foreground">
+      <p className="mt-6 text-sm text-muted-foreground lg:mt-4">
         {t('hasAccount')}{' '}
         <Link href="/login" className="font-medium text-primary hover:underline">
           {t('loginCta')}
