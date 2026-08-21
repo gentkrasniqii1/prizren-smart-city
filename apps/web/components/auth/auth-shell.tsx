@@ -37,15 +37,12 @@ export function AuthShell({
           priority
         />
         <div
-          className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/80 via-black/25 to-transparent"
+          className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/70 via-black/45 to-black/20"
           aria-hidden
         />
-        <div
-          className="pointer-events-none absolute inset-x-0 bottom-0 h-[55%] bg-gradient-to-t from-black/70 to-transparent"
-          aria-hidden
-        />
+        <div className="pointer-events-none absolute inset-0 bg-black/20" aria-hidden />
 
-        <div className="relative z-10 flex h-full flex-col justify-end px-12 pb-[18%] pt-12 lg:pb-[16%] xl:px-16 xl:pt-16">
+        <div className="relative z-10 flex h-full flex-col justify-center px-12 xl:px-16">
           <div className="max-w-md">
             <Link
               href="/"
