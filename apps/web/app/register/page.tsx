@@ -9,9 +9,10 @@ import { registerFormSchema } from '@prizren/shared-types';
 import { issueMessage, zodResolver } from '@/lib/form-validation';
 import { useAuth } from '@/components/auth-provider';
 import { AuthShell } from '@/components/auth/auth-shell';
+import { ConnectingHint } from '@/components/auth/connecting-hint';
 import { OAuthButtons } from '@/components/auth/oauth-buttons';
 import { PasswordStrength } from '@/components/auth/password-strength';
-import { Checkbox, FieldError, FormError } from '@/components/ui';
+import { Checkbox, FieldError, FormError, PasswordInput } from '@/components/ui';
 import { Button, type ButtonStatus } from '@/components/ui/button';
 import { Input, Label } from '@/components/ui/field';
 import { useErrorMessage } from '@/lib/use-error-message';
@@ -82,12 +83,7 @@ export default function RegisterPage() {
   }
 
   return (
-    <AuthShell
-      imageSrc="/images/prizren/stone-bridge.jpg"
-      imageAlt={t('registerPanelAlt')}
-      headline={t('panelHeadline')}
-      body={t('panelBody')}
-    >
+    <AuthShell headline={t('panelHeadline')} body={t('panelBody')}>
       <h1 className="ds-page-title">{t('registerTitle')}</h1>
       <p className="mt-2 text-sm text-muted-foreground">{t('registerSubtitle')}</p>
       <p className="mt-2 text-xs text-muted-foreground">
@@ -149,9 +145,8 @@ export default function RegisterPage() {
         </div>
         <div>
           <Label htmlFor="register-password">{t('password')}</Label>
-          <Input
+          <PasswordInput
             id="register-password"
-            type="password"
             autoComplete="new-password"
             invalid={Boolean(errors.password)}
             aria-describedby={errors.password ? 'register-password-error' : undefined}
@@ -162,9 +157,8 @@ export default function RegisterPage() {
         </div>
         <div>
           <Label htmlFor="register-confirm">{t('confirmPassword')}</Label>
-          <Input
+          <PasswordInput
             id="register-confirm"
-            type="password"
             autoComplete="new-password"
             invalid={Boolean(errors.confirm)}
             aria-describedby={errors.confirm ? 'register-confirm-error' : undefined}
@@ -199,6 +193,7 @@ export default function RegisterPage() {
         </div>
 
         <FormError message={formError} />
+        <ConnectingHint active={submitStatus === 'loading'} />
 
         <Button
           type="submit"

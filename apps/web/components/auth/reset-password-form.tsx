@@ -9,10 +9,11 @@ import { resetPasswordFormSchema } from '@prizren/shared-types';
 import { apiFetch } from '@/lib/api';
 import { issueMessage, zodResolver } from '@/lib/form-validation';
 import { AuthShell } from '@/components/auth/auth-shell';
+import { ConnectingHint } from '@/components/auth/connecting-hint';
 import { PasswordStrength } from '@/components/auth/password-strength';
-import { FieldError, FormError } from '@/components/ui';
+import { FieldError, FormError, PasswordInput } from '@/components/ui';
 import { Button, type ButtonStatus } from '@/components/ui/button';
-import { Input, Label } from '@/components/ui/field';
+import { Label } from '@/components/ui/field';
 import { useErrorMessage } from '@/lib/use-error-message';
 
 type ResetFormValues = {
@@ -58,6 +59,8 @@ export function ResetPasswordForm() {
         method: 'POST',
         body: { token, password: values.password },
         skipRefresh: true,
+        networkRetries: 2,
+        retryDelayMs: 2500,
       });
       setSubmitStatus('success');
       router.push('/login?reset=1');
@@ -68,21 +71,15 @@ export function ResetPasswordForm() {
   }
 
   return (
-    <AuthShell
-      imageSrc="/images/prizren/old-town.jpg"
-      imageAlt={t('loginPanelAlt')}
-      headline={t('panelHeadline')}
-      body={t('panelBody')}
-    >
+    <AuthShell headline={t('panelHeadline')} body={t('panelBody')}>
       <h1 className="ds-page-title">{t('resetTitle')}</h1>
       <p className="mt-2 text-sm text-muted-foreground">{t('resetBody')}</p>
 
       <form onSubmit={handleSubmit(onValid)} className="mt-8 space-y-4" noValidate>
         <div>
           <Label htmlFor="reset-password">{t('password')}</Label>
-          <Input
+          <PasswordInput
             id="reset-password"
-            type="password"
             autoComplete="new-password"
             invalid={Boolean(errors.password)}
             aria-describedby={errors.password ? 'reset-password-error' : undefined}
@@ -93,9 +90,8 @@ export function ResetPasswordForm() {
         </div>
         <div>
           <Label htmlFor="reset-confirm">{t('confirmPassword')}</Label>
-          <Input
+          <PasswordInput
             id="reset-confirm"
-            type="password"
             autoComplete="new-password"
             invalid={Boolean(errors.confirm)}
             aria-describedby={errors.confirm ? 'reset-confirm-error' : undefined}
@@ -104,6 +100,7 @@ export function ResetPasswordForm() {
           <FieldError id="reset-confirm-error" message={issueMessage(errors.confirm, t)} />
         </div>
         <FormError message={formError} />
+        <ConnectingHint active={submitStatus === 'loading'} />
         <Button type="submit" className="w-full" size="lg" status={submitStatus} disabled={!token}>
           {t('savePassword')}
         </Button>

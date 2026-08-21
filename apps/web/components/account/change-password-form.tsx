@@ -11,9 +11,9 @@ import { issueMessage, zodResolver } from '@/lib/form-validation';
 import { useAuth } from '@/components/auth-provider';
 import { useToast } from '@/components/toast-provider';
 import { PasswordStrength } from '@/components/auth/password-strength';
+import { FieldError, FormError, PasswordInput } from '@/components/ui';
 import { Button } from '@/components/ui/button';
-import { Input, Label } from '@/components/ui/field';
-import { FieldError, FormError } from '@/components/ui';
+import { Label } from '@/components/ui/field';
 import { useErrorMessage } from '@/lib/use-error-message';
 
 type ChangePasswordFormValues = {
@@ -75,9 +75,8 @@ export function ChangePasswordForm({ user }: { user: PublicUser }) {
         <form onSubmit={handleSubmit(onValid)} className="mt-4 space-y-4" noValidate>
           <div>
             <Label htmlFor="current-password">{t('currentPassword')}</Label>
-            <Input
+            <PasswordInput
               id="current-password"
-              type="password"
               autoComplete="current-password"
               invalid={Boolean(errors.currentPassword)}
               aria-describedby={errors.currentPassword ? 'current-password-error' : undefined}
@@ -90,9 +89,8 @@ export function ChangePasswordForm({ user }: { user: PublicUser }) {
           </div>
           <div>
             <Label htmlFor="new-password">{t('newPassword')}</Label>
-            <Input
+            <PasswordInput
               id="new-password"
-              type="password"
               autoComplete="new-password"
               invalid={Boolean(errors.newPassword)}
               aria-describedby={errors.newPassword ? 'new-password-error' : undefined}
@@ -106,9 +104,8 @@ export function ChangePasswordForm({ user }: { user: PublicUser }) {
           </div>
           <div>
             <Label htmlFor="confirm-new-password">{t('confirmNewPassword')}</Label>
-            <Input
+            <PasswordInput
               id="confirm-new-password"
-              type="password"
               autoComplete="new-password"
               invalid={Boolean(errors.confirmPassword)}
               aria-describedby={errors.confirmPassword ? 'confirm-new-password-error' : undefined}

@@ -8,6 +8,7 @@ import { forgotPasswordRequestSchema } from '@prizren/shared-types';
 import { apiFetch } from '@/lib/api';
 import { issueMessage, zodResolver } from '@/lib/form-validation';
 import { AuthShell } from '@/components/auth/auth-shell';
+import { ConnectingHint } from '@/components/auth/connecting-hint';
 import { FieldError } from '@/components/ui';
 import { Button, type ButtonStatus } from '@/components/ui/button';
 import { Input, Label } from '@/components/ui/field';
@@ -39,6 +40,8 @@ export default function ForgotPasswordPage() {
         method: 'POST',
         body: { email: values.email.trim(), website: values.website },
         skipRefresh: true,
+        networkRetries: 2,
+        retryDelayMs: 2500,
       });
     } catch {
       // Always show the same success screen so emails cannot be enumerated.
@@ -48,12 +51,7 @@ export default function ForgotPasswordPage() {
   }
 
   return (
-    <AuthShell
-      imageSrc="/images/prizren/kalaja.jpg"
-      imageAlt={t('loginPanelAlt')}
-      headline={t('panelHeadline')}
-      body={t('panelBody')}
-    >
+    <AuthShell headline={t('panelHeadline')} body={t('panelBody')}>
       <h1 className="ds-page-title">{t('forgotTitle')}</h1>
       <p className="mt-2 text-sm text-muted-foreground">{t('forgotBody')}</p>
 
@@ -91,6 +89,7 @@ export default function ForgotPasswordPage() {
           <Button type="submit" className="w-full" size="lg" status={submitStatus}>
             {t('sendResetLink')}
           </Button>
+          <ConnectingHint active={submitStatus === 'loading'} />
           <p className="text-sm text-muted-foreground">
             <Link href="/login" className="font-medium text-primary hover:underline">
               {t('backToLogin')}

@@ -20,6 +20,8 @@ type RequestOptions = Omit<RequestInit, 'body'> & {
   skipRefresh?: boolean;
   /** Extra attempt after a network failure (e.g. API mid-restart). Default 0. */
   networkRetries?: number;
+  /** Delay before a network retry. Default 900ms; use longer for Render cold starts. */
+  retryDelayMs?: number;
 };
 
 let refreshPromise: Promise<string | null> | null = null;
@@ -121,7 +123,15 @@ async function rawFetch(path: string, init: RequestInit): Promise<Response> {
 }
 
 export async function apiFetch<T>(path: string, options: RequestOptions = {}): Promise<T> {
-  const { body, auth = false, skipRefresh = false, networkRetries = 0, headers, ...rest } = options;
+  const {
+    body,
+    auth = false,
+    skipRefresh = false,
+    networkRetries = 0,
+    retryDelayMs = 900,
+    headers,
+    ...rest
+  } = options;
   const finalHeaders = new Headers(headers);
   const isFormData = typeof FormData !== 'undefined' && body instanceof FormData;
 
@@ -149,7 +159,7 @@ export async function apiFetch<T>(path: string, options: RequestOptions = {}): P
     });
   } catch (err) {
     if (err instanceof ApiError && err.status === 0 && networkRetries > 0) {
-      await new Promise((r) => setTimeout(r, 900));
+      await new Promise((r) => setTimeout(r, retryDelayMs));
       return apiFetch<T>(path, { ...options, networkRetries: networkRetries - 1 });
     }
     throw err;
