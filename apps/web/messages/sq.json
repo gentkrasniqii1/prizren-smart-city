@@ -52,6 +52,20 @@
     "ctaBrowse": "Shiko raportet",
     "ctaTransparency": "Transparenca",
     "heroAlt": "Pamje e qytetit të Prizrenit",
+    "heritage": {
+      "eyebrow": "Qyteti",
+      "title": "Trashëgimia e Prizrenit",
+      "description": "Monumente dhe lagje historike që e bëjnë qytetin — dhe që kjo platformë ndihmon t’i ruajmë.",
+      "places": {
+        "kalaja": "Kalaja e Prizrenit",
+        "league": "Lidhja e Prizrenit",
+        "stoneBridge": "Ura e Gurit",
+        "sinanPasha": "Xhamia Sinan Pasha",
+        "shadervan": "Shatërvani",
+        "tabakhane": "Tabakhane",
+        "marash": "Marash"
+      }
+    },
     "trust": {
       "transparent": "Raportim transparent",
       "transparentHint": "Çdo raport publik shfaqet pa të dhëna personale.",

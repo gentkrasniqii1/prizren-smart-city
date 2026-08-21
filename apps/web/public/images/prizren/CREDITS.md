@@ -4,8 +4,9 @@ All photographs under `apps/web/public/images/prizren/` are stored locally and s
 through `next/image` (responsive `srcset` / WebP / AVIF). Do not hotlink the
 original Wikimedia files.
 
-Auth slideshow (`AUTH_HERO_SLIDES` in `auth-hero-slideshow.tsx`) uses the files
-marked **in slideshow** below. Other files remain as a winter/archive set.
+Auth slideshow (`AUTH_HERO_SLIDES`) and homepage hero (`HOME_HERO_SLIDES`) use the
+files marked in the last column. The heritage gallery uses monument + mahalla
+rows marked **homepage** / **gallery**.
 
 CC BY and CC BY-SA require **public attribution**. This file is the canonical
 list; a public Credits page (or footer) should repeat the in-slideshow rows.
@@ -21,6 +22,9 @@ list; a public Credits page (or footer) should repeat the in-slideshow rows.
 | `sinan-pasha-from-bridge.jpg` | Sinan Pasha Mosque from the bridge, dusk | Ravi Dwivedi (Libreravi) | [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/) | [Sinan Pasha Mosque view from Prizren Bridge.jpg](https://commons.wikimedia.org/wiki/File:Sinan_Pasha_Mosque_view_from_Prizren_Bridge.jpg) | yes |
 | `sunset-mosque.jpg` | Sunset over Sinan Pasha + Sharr | Tom.whitehead337 | [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/) | [Sunset over Sinan Pasha Mosque, Accursed Mountains.jpg](https://commons.wikimedia.org/wiki/File:Sunset_over_Sinan_Pasha_Mosque,_Accursed_Mountains.jpg) | yes |
 | `night.jpg` | Ura e Gurit + Sinan Pasha at night | (released) | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) | [Night view of Prizren 2025.jpg](https://commons.wikimedia.org/wiki/File:Night_view_of_Prizren_2025.jpg) | yes |
+| `league.jpg` | League of Prizren building (Lidhja) | Aljabakphoto | [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/) | [League of Prizren, Kosovo.JPG](https://commons.wikimedia.org/wiki/File:League_of_Prizren,_Kosovo.JPG) | homepage |
+| `tabakhane.jpg` | Ura e Tabakhanës | GentiBehramaj | [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/) | [Ura e Tabakhanës, Prizren.jpg](https://commons.wikimedia.org/wiki/File:Ura_e_Tabakhan%C3%ABs,_Prizren.jpg) | gallery |
+| `marash.jpg` | Rrapi i Marashit / lagjja Marash | Aljabakphoto | [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/) | [Rrapi (Platanus orientalis) në Marash, Prizren.jpg](https://commons.wikimedia.org/wiki/File:Rrapi_(Platanus_orientalis)_n%C3%AB_Marash,_Prizren.jpg) | gallery |
 | `stone-bridge.jpg` | Ura e Gurit, winter snow | Wikimedia Commons (see file history) | typically CC BY-SA | local archive | yes |
 | `overview.jpg` | Winter panorama (archive) | Wikimedia Commons | typically CC BY-SA | local archive | no |
 | `kalaja.jpg` | Hammam in snow (archive) | Wikimedia Commons | typically CC BY-SA | local archive | no |

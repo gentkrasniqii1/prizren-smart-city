@@ -1,21 +1,23 @@
-import Image from 'next/image';
 import Link from 'next/link';
 import { getTranslations } from 'next-intl/server';
 import { Button } from '@/components/ui/button';
 import { PageContainer } from '@/components/layout/page-container';
+import { PrizrenSlideshow } from '@/components/media/prizren-slideshow';
+import { HOME_HERO_INTERVAL_MS, HOME_HERO_SLIDES } from '@/lib/prizren-photos';
 
 export async function HomeHero() {
   const t = await getTranslations('Home');
 
   return (
     <section className="relative min-h-[min(92svh,52rem)] overflow-hidden">
-      <Image
-        src="/images/prizren/overview.jpg"
+      <PrizrenSlideshow
+        slides={HOME_HERO_SLIDES}
         alt={t('heroAlt')}
-        fill
-        priority
         sizes="100vw"
-        className="object-cover object-center"
+        objectPosition="object-center"
+        intervalMs={HOME_HERO_INTERVAL_MS}
+        fadeMs={800}
+        priority
       />
       <div
         className="absolute inset-0 bg-gradient-to-r from-overlay-surface/85 via-overlay-surface/60 to-overlay-surface/40"

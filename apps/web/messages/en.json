@@ -52,6 +52,20 @@
     "ctaBrowse": "Browse reports",
     "ctaTransparency": "Transparency",
     "heroAlt": "View of Prizren city",
+    "heritage": {
+      "eyebrow": "The city",
+      "title": "Prizren’s heritage",
+      "description": "Monuments and historic quarters that define the city — and that this platform helps to look after.",
+      "places": {
+        "kalaja": "Prizren Fortress",
+        "league": "League of Prizren",
+        "stoneBridge": "Stone Bridge",
+        "sinanPasha": "Sinan Pasha Mosque",
+        "shadervan": "Shadervan",
+        "tabakhane": "Tabakhane",
+        "marash": "Marash"
+      }
+    },
     "trust": {
       "transparent": "Transparent reporting",
       "transparentHint": "Public reports appear without personal data.",
