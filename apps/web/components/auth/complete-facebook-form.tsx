@@ -94,12 +94,7 @@ export function CompleteFacebookForm() {
   }
 
   return (
-    <AuthShell
-      imageSrc="/images/prizren/bistrica.jpg"
-      imageAlt={t('loginPanelAlt')}
-      headline={t('panelHeadline')}
-      body={t('panelBody')}
-    >
+    <AuthShell headline={t('panelHeadline')} body={t('panelBody')}>
       <div className="flex h-12 w-12 items-center justify-center rounded-full bg-mosque-100 text-mosque-800 dark:bg-mosque-950 dark:text-mosque-200">
         <Mail className="h-6 w-6" aria-hidden />
       </div>

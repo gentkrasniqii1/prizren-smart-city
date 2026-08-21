@@ -1,49 +1,47 @@
 'use client';
 
-import Image from 'next/image';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import type { ReactNode } from 'react';
+import { AuthHeroSlideshow } from '@/components/auth/auth-hero-slideshow';
 import { Logo } from '@/components/brand/Logo';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { LanguageSwitcher } from '@/components/language-switcher';
 
 /**
  * Split-screen civic auth layout.
- * Desktop: photograph + form. Mobile: compact top visual, form immediately below.
+ * Desktop: photograph slideshow + form. Mobile: compact top visual, form below.
  */
 export function AuthShell({
-  imageSrc,
   imageAlt,
   headline = 'Raporto. Ndiq. Ndrysho.',
   body = 'Platformë qytetare për raportimin dhe ndjekjen e problemeve urbane.',
   children,
 }: {
-  imageSrc: string;
-  imageAlt: string;
+  imageAlt?: string;
   headline?: string;
   body?: string;
   children: ReactNode;
 }) {
   const tNav = useTranslations('Nav');
+  const tAuth = useTranslations('Auth');
+  const alt = imageAlt ?? tAuth('heroSlideshowAlt');
+
   return (
     <div className="flex min-h-dvh flex-col bg-background lg:grid lg:grid-cols-2">
       <aside className="relative hidden overflow-hidden lg:block">
-        <Image
-          src={imageSrc}
-          alt={imageAlt}
-          fill
-          className="object-cover object-[center_78%]"
-          sizes="50vw"
+        <AuthHeroSlideshow
+          alt={alt}
+          sizes="(min-width: 1024px) 50vw, 100vw"
+          objectPosition="object-[center_72%]"
           priority
         />
-        <div className="absolute inset-0 bg-overlay-surface/50" aria-hidden />
         <div
-          className="absolute inset-0 bg-gradient-to-r from-overlay-surface/92 via-overlay-surface/55 to-overlay-surface/15"
+          className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/80 via-black/25 to-transparent"
           aria-hidden
         />
         <div
-          className="absolute inset-0 bg-gradient-to-t from-overlay-surface/90 via-overlay-surface/30 to-transparent"
+          className="pointer-events-none absolute inset-x-0 bottom-0 h-[55%] bg-gradient-to-t from-black/70 to-transparent"
           aria-hidden
         />
 
@@ -56,10 +54,10 @@ export function AuthShell({
             >
               <Logo variant="full" theme="dark" size={44} />
             </Link>
-            <h2 className="ds-display mt-10 text-overlay-foreground xl:text-display-lg">
+            <h2 className="ds-display mt-10 text-overlay-foreground drop-shadow-sm xl:text-display-lg">
               {headline}
             </h2>
-            <p className="mt-4 max-w-sm text-base leading-relaxed text-overlay-muted xl:text-lg">
+            <p className="mt-4 max-w-sm text-base leading-relaxed text-overlay-muted drop-shadow-sm xl:text-lg">
               {body}
             </p>
           </div>
@@ -68,17 +66,9 @@ export function AuthShell({
 
       <section className="flex min-h-0 flex-1 flex-col bg-background">
         <div className="relative h-[8.5rem] shrink-0 overflow-hidden lg:hidden">
-          <Image
-            src={imageSrc}
-            alt=""
-            fill
-            className="object-cover object-[center_70%]"
-            sizes="100vw"
-            priority
-          />
-          <div className="absolute inset-0 bg-overlay-surface/55" aria-hidden />
+          <AuthHeroSlideshow alt="" sizes="100vw" objectPosition="object-[center_68%]" />
           <div
-            className="absolute inset-0 bg-gradient-to-t from-overlay-surface/90 via-overlay-surface/40 to-overlay-surface/15"
+            className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/85 via-black/35 to-black/10"
             aria-hidden
           />
           <div className="absolute inset-x-0 top-0 z-10 flex items-center justify-end gap-1 px-2 pt-[max(0.5rem,env(safe-area-inset-top))]">

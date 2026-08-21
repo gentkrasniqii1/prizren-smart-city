@@ -8,6 +8,7 @@ export { ErrorState } from './error-state';
 export { FormError } from './form-error';
 export { FieldError } from './field-error';
 export { Input, Label, Select, Textarea, Checkbox } from './field';
+export { PasswordInput } from './password-input';
 export { Skeleton } from './skeleton';
 export {
   AccountPageSkeleton,

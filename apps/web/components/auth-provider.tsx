@@ -166,6 +166,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         method: 'POST',
         body: payload,
         skipRefresh: true,
+        networkRetries: 2,
+        retryDelayMs: 2500,
       });
       if ('requiresTwoFactor' in data && data.requiresTwoFactor) {
         return { requiresTwoFactor: true as const, challengeToken: data.challengeToken };
@@ -199,6 +201,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       method: 'POST',
       body: payload,
       skipRefresh: true,
+      networkRetries: 2,
+      retryDelayMs: 2500,
     });
   }, []);
 

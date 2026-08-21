@@ -65,12 +65,7 @@ export default function TwoFactorPage() {
   }
 
   return (
-    <AuthShell
-      imageSrc="/images/prizren/sinan-pasha.jpg"
-      imageAlt={t('loginPanelAlt')}
-      headline={t('panelHeadline')}
-      body={t('panelBody')}
-    >
+    <AuthShell headline={t('panelHeadline')} body={t('panelBody')}>
       <h1 className="ds-page-title">{t('twoFactorTitle')}</h1>
       <p className="mt-2 text-sm text-muted-foreground">{t('twoFactorBody')}</p>
 

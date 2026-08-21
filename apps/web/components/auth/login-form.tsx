@@ -8,9 +8,10 @@ import { useTranslations } from 'next-intl';
 import { loginRequestSchema } from '@prizren/shared-types';
 import { useAuth } from '@/components/auth-provider';
 import { AuthShell } from '@/components/auth/auth-shell';
+import { ConnectingHint } from '@/components/auth/connecting-hint';
 import { OAuthButtons } from '@/components/auth/oauth-buttons';
 import { Logo } from '@/components/brand/Logo';
-import { FieldError, Checkbox, FormError } from '@/components/ui';
+import { FieldError, Checkbox, FormError, PasswordInput } from '@/components/ui';
 import { Button, type ButtonStatus } from '@/components/ui/button';
 import { Input, Label } from '@/components/ui/field';
 import { ApiError } from '@/lib/api';
@@ -75,12 +76,7 @@ export function LoginForm() {
   }
 
   return (
-    <AuthShell
-      imageSrc="/images/prizren/overview.jpg"
-      imageAlt={t('loginHeroAlt')}
-      headline={t('panelHeadline')}
-      body={t('panelBody')}
-    >
+    <AuthShell headline={t('panelHeadline')} body={t('panelBody')}>
       <Link
         href="/"
         className="hidden min-h-11 items-center text-foreground lg:inline-flex"
@@ -111,9 +107,8 @@ export function LoginForm() {
         </div>
         <div>
           <Label htmlFor="login-password">{t('password')}</Label>
-          <Input
+          <PasswordInput
             id="login-password"
-            type="password"
             autoComplete="current-password"
             enterKeyHint="go"
             invalid={Boolean(errors.password)}
@@ -147,6 +142,7 @@ export function LoginForm() {
         </div>
 
         <FormError message={formError} />
+        <ConnectingHint active={submitStatus === 'loading'} />
 
         <Button
           type="submit"
