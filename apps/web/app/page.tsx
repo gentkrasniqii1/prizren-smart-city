@@ -1,6 +1,7 @@
 import { getTranslations } from 'next-intl/server';
 import type { PaginatedReports, TransparencyStats } from '@prizren/shared-types';
 import { HomeFinalCta } from '@/components/home/home-final-cta';
+import { HomeHeritage } from '@/components/home/home-heritage';
 import { HomeHero } from '@/components/home/home-hero';
 import { HomeHowItWorks } from '@/components/home/home-how-it-works';
 import { HomeLiveIssues } from '@/components/home/home-live-issues';
@@ -28,6 +29,7 @@ export default async function Home() {
     <main>
       <HomeHero />
       <HomeTrust stats={stats} />
+      <HomeHeritage />
       <HomeHowItWorks />
       <HomeLiveIssues reports={reports} />
       <HomeTransparency stats={stats} />

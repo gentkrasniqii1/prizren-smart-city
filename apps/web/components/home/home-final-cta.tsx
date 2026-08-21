@@ -12,7 +12,7 @@ export async function HomeFinalCta() {
     <Section className="relative overflow-hidden py-0">
       <div className="relative min-h-[22rem] sm:min-h-[26rem]">
         <Image
-          src="/images/prizren/kalaja.jpg"
+          src="/images/prizren/fortress.jpg"
           alt=""
           fill
           sizes="100vw"

@@ -1,8 +1,6 @@
 'use client';
 
-import Image from 'next/image';
-import { useEffect, useState } from 'react';
-import { cn } from '@/lib/utils';
+import { PrizrenSlideshow } from '@/components/media/prizren-slideshow';
 
 /** Local city photos. Sources and licenses: public/images/prizren/CREDITS.md */
 export const AUTH_HERO_SLIDES = [
@@ -32,34 +30,15 @@ export function AuthHeroSlideshow({
   objectPosition?: string;
   priority?: boolean;
 }) {
-  const [index, setIndex] = useState(0);
-
-  useEffect(() => {
-    const id = window.setInterval(() => {
-      setIndex((current) => (current + 1) % AUTH_HERO_SLIDES.length);
-    }, INTERVAL_MS);
-    return () => window.clearInterval(id);
-  }, []);
-
   return (
-    <div className="absolute inset-0">
-      {AUTH_HERO_SLIDES.map((src, i) => (
-        <Image
-          key={src}
-          src={src}
-          alt={i === index ? alt : ''}
-          fill
-          quality={80}
-          priority={priority && i === 0}
-          sizes={sizes}
-          className={cn(
-            'object-cover transition-opacity ease-in-out',
-            objectPosition,
-            i === index ? 'opacity-100' : 'pointer-events-none opacity-0',
-          )}
-          style={{ transitionDuration: `${FADE_MS}ms` }}
-        />
-      ))}
-    </div>
+    <PrizrenSlideshow
+      slides={AUTH_HERO_SLIDES}
+      alt={alt}
+      sizes={sizes}
+      objectPosition={objectPosition}
+      intervalMs={INTERVAL_MS}
+      fadeMs={FADE_MS}
+      priority={priority}
+    />
   );
 }
