@@ -135,6 +135,7 @@ export interface InstitutionDto {
   name: string;
   slug: string;
   type: string;
+  phone: string | null;
   contact: string | null;
   active: boolean;
   /** How incidents are exchanged with this organization — MANUAL until an adapter is configured. */

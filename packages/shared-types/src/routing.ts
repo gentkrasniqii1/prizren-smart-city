@@ -34,6 +34,7 @@ export interface UpsertInstitutionRequest {
   name: string;
   slug?: string;
   type: string;
+  phone?: string | null;
   contact?: string | null;
   active?: boolean;
 }

@@ -136,6 +136,9 @@ model Institution {
   name              String
   slug              String            @unique
   type              String
+  /// Public call-center / switchboard. Never store an email here.
+  phone             String?
+  /// Email mailbox only. Null until a public address is verified on an official page.
   contact           String?
   active            Boolean           @default(true)
   integrationType   IntegrationType   @default(MANUAL)

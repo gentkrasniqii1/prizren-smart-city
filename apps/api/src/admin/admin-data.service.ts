@@ -323,6 +323,7 @@ export class AdminDataService {
         name: row.name,
         slug: row.slug,
         type: row.type,
+        phone: row.phone,
         contact: row.contact,
         active: row.active,
         integrationType: row.integrationType,

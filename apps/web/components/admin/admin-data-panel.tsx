@@ -105,6 +105,7 @@ const RESOURCE_COLUMNS: Record<AdminDataResource, readonly string[]> = {
     'name',
     'slug',
     'type',
+    'phone',
     'contact',
     'active',
     'integrationType',

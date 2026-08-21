@@ -32,6 +32,7 @@ export class InstitutionsService {
         name: dto.name.trim(),
         slug,
         type: dto.type.trim(),
+        phone: dto.phone?.trim() || null,
         contact: dto.contact?.trim() || null,
         active: dto.active ?? true,
       },
@@ -67,6 +68,7 @@ export class InstitutionsService {
         name: dto.name.trim(),
         slug,
         type: dto.type.trim(),
+        phone: dto.phone?.trim() || null,
         contact: dto.contact?.trim() || null,
         active: dto.active ?? existing.active,
       },
@@ -129,6 +131,7 @@ export class InstitutionsService {
     name: string;
     slug: string;
     type: string;
+    phone: string | null;
     contact: string | null;
     active: boolean;
     integrationType: InstitutionDto['integrationType'];
@@ -140,6 +143,7 @@ export class InstitutionsService {
       name: row.name,
       slug: row.slug,
       type: row.type,
+      phone: row.phone,
       contact: row.contact,
       active: row.active,
       integrationType: row.integrationType,

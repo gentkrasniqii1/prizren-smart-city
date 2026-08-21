@@ -2,9 +2,56 @@ import { IntegrationStatus, IntegrationType, Priority, PrismaClient } from '@pri
 
 const prisma = new PrismaClient();
 
-/** Public switchboard only — never stored in `contact` (that field is treated as email). */
-const KOMUNA_PUBLIC_TEL = '0800 11 002';
-const KOMUNA_ADDRESS = 'Remzi Ademaj p.n., Prizren 20000';
+/**
+ * Verified public channels only. `contact` is email; `phone` is the switchboard.
+ * Office numbers / street address for Komuna are documented here, not stored as email:
+ * zyrë 038 200 44-702 / 44-722, Remzi Ademaj p.n., Prizren 20000.
+ */
+const INSTITUTIONS: {
+  name: string;
+  slug: string;
+  aliases?: string[];
+  type: string;
+  phone: string | null;
+  contact: string | null;
+}[] = [
+  {
+    name: 'Komuna e Prizrenit',
+    slug: 'komuna-prizren',
+    type: 'MUNICIPALITY',
+    phone: '0800 11 002',
+    contact: null,
+  },
+  {
+    name: 'KEDS',
+    slug: 'keds',
+    type: 'UTILITY',
+    phone: '0800 791 00',
+    // Cloudflare email-protection hashes on keds-energy.com/shq/rreth-nesh/si-te-na-kontaktoni/
+    // all decode to this address; also printed in plaintext on the Call Center news page.
+    contact: 'info@keds-energy.com',
+  },
+  {
+    name: 'Hidroregjioni Jugor',
+    slug: 'hidroregjioni-jugor',
+    aliases: ['kru-prizreni'],
+    type: 'UTILITY',
+    phone: '0800 44000',
+    // Confirmed by user against hidroregjioni-jugor.com/kontakt/
+    contact: 'info@hidroregjioni-jugor.com',
+  },
+  {
+    name: 'Eco-Regjioni',
+    slug: 'eco-regjioni',
+    type: 'UTILITY',
+    phone: '029 241 167',
+    // ekoregjioni.com/zyret-kontaktuese lists info@ekoregjioni.com next to a personal
+    // mailbox — left null until the user confirms which address is the public inbox.
+    contact: null,
+  },
+];
+
+const KEEP_INSTITUTION_SLUGS = INSTITUTIONS.map((i) => i.slug);
 
 const DEPARTMENT_ALIASES: Record<string, string[]> = {
   Administratë: ['Administrata'],
@@ -241,34 +288,42 @@ async function upsertCategory(
   return prisma.category.create({ data });
 }
 
-async function main() {
-  const komuna = await prisma.institution.upsert({
-    where: { slug: 'komuna-prizren' },
-    update: {
-      name: 'Komuna e Prizrenit',
-      type: 'MUNICIPALITY',
-      contact: null,
-      active: true,
-      integrationType: IntegrationType.MANUAL,
-      integrationStatus: IntegrationStatus.NOT_CONFIGURED,
-    },
-    create: {
-      name: 'Komuna e Prizrenit',
-      slug: 'komuna-prizren',
-      type: 'MUNICIPALITY',
-      contact: null,
-      active: true,
-      integrationType: IntegrationType.MANUAL,
-      integrationStatus: IntegrationStatus.NOT_CONFIGURED,
-    },
-  });
+async function upsertSeedInstitution(inst: (typeof INSTITUTIONS)[number]) {
+  const existing =
+    (await prisma.institution.findUnique({ where: { slug: inst.slug } })) ??
+    (inst.aliases?.length
+      ? await prisma.institution.findFirst({ where: { slug: { in: inst.aliases } } })
+      : null);
+  const data = {
+    name: inst.name,
+    slug: inst.slug,
+    type: inst.type,
+    phone: inst.phone,
+    contact: inst.contact,
+    active: true,
+    integrationType: IntegrationType.MANUAL,
+    integrationStatus: IntegrationStatus.NOT_CONFIGURED,
+  };
+  if (existing) {
+    return prisma.institution.update({ where: { id: existing.id }, data });
+  }
+  return prisma.institution.create({ data });
+}
 
-  // Do not seed KEDS / KRU / Eco / Police / Fire — no confirmed mailbox.
-  // Deactivate leftover utility institutions from the previous seed and strip emails.
+async function main() {
+  const seeded = new Map<string, { id: string }>();
+  for (const inst of INSTITUTIONS) {
+    const row = await upsertSeedInstitution(inst);
+    seeded.set(inst.slug, row);
+  }
+  const komuna = seeded.get('komuna-prizren');
+  if (!komuna) throw new Error('Seed missing Komuna e Prizrenit');
+
   await prisma.institution.updateMany({
-    where: { slug: { not: 'komuna-prizren' } },
+    where: { slug: { notIn: KEEP_INSTITUTION_SLUGS } },
     data: {
       contact: null,
+      phone: null,
       active: false,
       integrationType: IntegrationType.MANUAL,
       integrationStatus: IntegrationStatus.NOT_CONFIGURED,
@@ -404,10 +459,9 @@ async function main() {
   }
 
   await prisma.department.updateMany({ data: { contact: null } });
-  await prisma.institution.updateMany({ data: { contact: null } });
 
   const extraInstitutions = await prisma.institution.findMany({
-    where: { slug: { not: 'komuna-prizren' } },
+    where: { slug: { notIn: KEEP_INSTITUTION_SLUGS } },
   });
   for (const inst of extraInstitutions) {
     const [depts, reports, rules] = await Promise.all([
@@ -428,7 +482,7 @@ async function main() {
   ]);
 
   console.log(
-    `Seeded Komuna e Prizrenit (${KOMUNA_PUBLIC_TEL}, ${KOMUNA_ADDRESS}, contact=null): ${deptCount} departments, ${catCount} categories, ${ruleCount} routing rules, ${slaCount} SLA policies.`,
+    `Seeded ${KEEP_INSTITUTION_SLUGS.join(', ')}: ${deptCount} municipal departments, ${catCount} categories, ${ruleCount} routing rules, ${slaCount} SLA policies. Institution.contact is email-only; unused mailboxes stay null. No outbound mail to institutions.`,
   );
 }
 
