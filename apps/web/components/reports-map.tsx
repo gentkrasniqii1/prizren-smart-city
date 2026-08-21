@@ -11,12 +11,24 @@ import { cn } from '@/lib/utils';
 const PRIZREN: [number, number] = [20.7397, 42.2139];
 
 const CATEGORY_COLORS: Record<string, string> = {
-  'Dëmtim rruge': '#b91c1c',
-  Ndriçim: '#d97706',
-  Mbeturina: '#15803d',
-  'Ujë / kanalizim': '#1d4ed8',
-  'Hapësirë publike': '#7c3aed',
-  Tjetër: '#57534e',
+  'Grope / dëmtim rruge': '#b91c1c',
+  'Ndriçim publik i prishur': '#d97706',
+  'Grumbullim mbeturinash / konteiner': '#15803d',
+  'Kanalizim / përmbytje urbane': '#0e7490',
+  'Ujë i pijshëm (ndërprerje / cilësi)': '#1d4ed8',
+  'Parke, pemë, hapësirë e gjelbër': '#7c3aed',
+  'Ndërtim pa leje / shkelje urbanistike': '#c2410c',
+  'Pengesë në trotuar / qasje': '#a16207',
+  'Hedhje e paligjshme / ndotje': '#166534',
+  'Zhurmë / shqetësim në lagje': '#6d28d9',
+  'Rrezik zjarri / emergjencë': '#991b1b',
+  'Sinjalistikë / rrezik në trafik': '#b45309',
+  'Monument / trashëgimi e dëmtuar': '#9f1239',
+  'Infrastrukturë shkollore e rrezikshme': '#1e40af',
+  'Infrastrukturë e kujdesit shëndetësor komunal': '#0f766e',
+  'Tjetër / e paklasifikuar': '#57534e',
+  'Kafshë endacake': '#3f6212',
+  'Okupim i paligjshëm i pronës komunale': '#44403c',
 };
 
 function colorForCategory(name: string | null | undefined): string {
