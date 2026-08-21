@@ -357,11 +357,13 @@ export function RoutingConfig() {
 
           <TabsContent value="institutions">
             <div className="-mx-gutter overflow-x-auto border-y border-border bg-card sm:mx-0 sm:rounded-xl sm:border">
-              <Table className="min-w-[40rem]">
+              <Table className="min-w-[52rem]">
                 <TableHeader>
                   <TableRow>
                     <TableHead>{t('colName')}</TableHead>
                     <TableHead>{t('colType')}</TableHead>
+                    <TableHead>{t('colPhone')}</TableHead>
+                    <TableHead>{t('colContact')}</TableHead>
                     <TableHead>{t('colStatus')}</TableHead>
                     <TableHead className="text-right">{t('colActions')}</TableHead>
                   </TableRow>
@@ -375,6 +377,8 @@ export function RoutingConfig() {
                           ? t(`types.${inst.type}`)
                           : inst.type}
                       </TableCell>
+                      <TableCell className="text-sm">{inst.phone ?? '—'}</TableCell>
+                      <TableCell className="text-sm">{inst.contact ?? '—'}</TableCell>
                       <TableCell>{inst.active ? t('active') : t('inactive')}</TableCell>
                       <TableCell className="text-right">
                         <RowActions
@@ -786,6 +790,7 @@ function InstitutionDialog({
   const existing = open && open !== 'new' ? open : null;
   const [name, setName] = useState('');
   const [type, setType] = useState('MUNICIPALITY');
+  const [phone, setPhone] = useState('');
   const [contact, setContact] = useState('');
   const [active, setActive] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -795,6 +800,7 @@ function InstitutionDialog({
     if (!open) return;
     setName(existing?.name ?? '');
     setType(existing?.type ?? 'MUNICIPALITY');
+    setPhone(existing?.phone ?? '');
     setContact(existing?.contact ?? '');
     setActive(existing?.active ?? true);
     setError(null);
@@ -804,7 +810,13 @@ function InstitutionDialog({
     setSaving(true);
     setError(null);
     try {
-      const body = { name, type, contact: emptyToNull(contact), active };
+      const body = {
+        name,
+        type,
+        phone: emptyToNull(phone),
+        contact: emptyToNull(contact),
+        active,
+      };
       if (existing) {
         await apiFetch(`/institutions/${existing.id}`, {
           method: 'PATCH',
@@ -847,8 +859,17 @@ function InstitutionDialog({
             </Select>
           </div>
           <div>
+            <Label htmlFor="inst-phone">{t('colPhone')}</Label>
+            <Input id="inst-phone" value={phone} onChange={(e) => setPhone(e.target.value)} />
+          </div>
+          <div>
             <Label htmlFor="inst-contact">{t('colContact')}</Label>
-            <Input id="inst-contact" value={contact} onChange={(e) => setContact(e.target.value)} />
+            <Input
+              id="inst-contact"
+              type="email"
+              value={contact}
+              onChange={(e) => setContact(e.target.value)}
+            />
           </div>
           <Checkbox id="inst-active" checked={active} onChange={setActive}>
             {t('active')}

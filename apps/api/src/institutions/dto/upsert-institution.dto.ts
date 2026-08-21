@@ -17,6 +17,12 @@ export class UpsertInstitutionDto {
   @IsOptional()
   @ValidateIf((_, value) => value !== null && value !== '')
   @IsString()
+  @MaxLength(40)
+  phone?: string | null;
+
+  @IsOptional()
+  @ValidateIf((_, value) => value !== null && value !== '')
+  @IsString()
   @MaxLength(200)
   contact?: string | null;
 
