@@ -85,10 +85,14 @@ export function LoginForm() {
         <Logo variant="icon" size={36} />
       </Link>
 
-      <p className="ds-kicker lg:mt-8">{t('welcomeBack')}</p>
+      <p className="ds-kicker lg:mt-4">{t('welcomeBack')}</p>
       <h1 className="ds-page-title mt-2">{t('loginTitle')}</h1>
 
-      <form onSubmit={handleSubmit(onValid)} className="relative mt-6 space-y-4 lg:mt-8" noValidate>
+      <form
+        onSubmit={handleSubmit(onValid)}
+        className="relative mt-6 space-y-4 lg:mt-4 lg:space-y-3"
+        noValidate
+      >
         <div>
           <Label htmlFor="login-email">{t('email')}</Label>
           <Input
@@ -160,13 +164,13 @@ export function LoginForm() {
         onBusyChange={setOauthBusy}
       />
 
-      <p className="mt-6 text-sm text-muted-foreground">
+      <p className="mt-6 text-sm text-muted-foreground lg:mt-4">
         {t('noAccount')}{' '}
         <Link href="/register" className="font-medium text-primary hover:underline">
           {t('registerCta')}
         </Link>
       </p>
-      <p className="mt-8 flex gap-4 text-xs text-muted-foreground">
+      <p className="mt-8 flex gap-4 text-xs text-muted-foreground lg:mt-5">
         <Link href="/privacy" className="hover:underline">
           {t('privacy')}
         </Link>

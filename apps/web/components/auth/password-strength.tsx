@@ -20,14 +20,14 @@ export function PasswordStrength({ password }: { password: string }) {
   const bar = score <= 2 ? 'bg-destructive' : score <= 4 ? 'bg-amber-500' : 'bg-river-600';
 
   return (
-    <div className="mt-3 space-y-2" aria-live="polite">
+    <div className="mt-3 space-y-2 lg:mt-2" aria-live="polite">
       <div className="h-1.5 overflow-hidden rounded-full bg-muted">
         <div
           className={cn('h-full rounded-full transition-all duration-normal', bar)}
           style={{ width: `${(score / 5) * 100}%` }}
         />
       </div>
-      <ul className="grid gap-1 sm:grid-cols-2">
+      <ul className="grid gap-1 sm:grid-cols-2 lg:gap-0.5">
         {items.map((item) => (
           <li
             key={item.key}

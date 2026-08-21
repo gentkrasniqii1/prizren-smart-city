@@ -45,19 +45,19 @@ export function AuthShell({
           aria-hidden
         />
 
-        <div className="relative z-10 flex h-full flex-col justify-end p-12 xl:p-16">
+        <div className="relative z-10 flex h-full flex-col justify-end px-12 pb-[18%] pt-12 lg:pb-[16%] xl:px-16 xl:pt-16">
           <div className="max-w-md">
             <Link
               href="/"
               className="inline-flex min-h-11 items-center text-overlay-foreground"
               aria-label={tNav('home')}
             >
-              <Logo variant="full" theme="dark" size={44} />
+              <Logo variant="full" theme="dark" size={36} />
             </Link>
-            <h2 className="ds-display mt-10 text-overlay-foreground drop-shadow-sm xl:text-display-lg">
+            <h2 className="mt-6 font-display text-h1 text-overlay-foreground drop-shadow-sm xl:text-display">
               {headline}
             </h2>
-            <p className="mt-4 max-w-sm text-base leading-relaxed text-overlay-muted drop-shadow-sm xl:text-lg">
+            <p className="mt-3 max-w-sm text-base leading-relaxed text-overlay-muted drop-shadow-sm xl:text-lg">
               {body}
             </p>
           </div>
@@ -90,8 +90,8 @@ export function AuthShell({
           <LanguageSwitcher />
         </div>
 
-        <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-gutter pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-5 sm:px-8 lg:items-center lg:justify-center lg:py-8">
-          <div className="w-full min-w-0 lg:max-w-[26rem] lg:rounded-lg lg:border lg:border-border lg:bg-card lg:p-10 lg:shadow-sm">
+        <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-gutter pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-5 sm:px-8 lg:items-center lg:justify-center lg:py-5">
+          <div className="w-full min-w-0 lg:max-w-[26rem] lg:rounded-lg lg:border lg:border-border lg:bg-card lg:px-8 lg:py-6 lg:shadow-sm">
             {children}
           </div>
         </div>

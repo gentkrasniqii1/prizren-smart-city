@@ -120,7 +120,7 @@ export function OAuthButtons({
   return (
     <>
       {variant === 'signin' ? (
-        <div className="my-6 flex items-center gap-3">
+        <div className="my-6 flex items-center gap-3 lg:my-4">
           <span className="h-px flex-1 bg-border" />
           <span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
             {t('orContinue')}
@@ -128,7 +128,7 @@ export function OAuthButtons({
           <span className="h-px flex-1 bg-border" />
         </div>
       ) : null}
-      <div className="space-y-2.5">
+      <div className="space-y-2.5 lg:space-y-2">
         {visible.map((provider) => {
           const Icon = provider.icon;
           const status = statuses[provider.id];
