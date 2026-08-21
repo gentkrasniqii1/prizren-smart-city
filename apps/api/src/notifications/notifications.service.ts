@@ -44,6 +44,7 @@ export class NotificationsService {
   @OnEvent(REPORT_CREATED_EVENT)
   async handleReportCreated(event: ReportCreatedEvent) {
     await this.createInApp(event.ownerUserId, event.reportId, 'REPORT_RECEIVED');
+    // In-app only for staff on the assigned department. Do not email Institution.contact.
     await this.notifyInstitutionStaff(event.reportId, event.ownerUserId);
   }
 

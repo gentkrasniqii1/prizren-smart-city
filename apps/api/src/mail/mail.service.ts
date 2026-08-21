@@ -276,6 +276,9 @@ export class MailService {
 </body></html>`;
   }
 
+  // Outbound mail is citizen-facing only (verify, reset, report received/status).
+  // TODO: kërkon konfirmim email nga Komuna përpara aktivizimit — do not send to
+  // Institution.contact / Department.contact. No such sender exists today.
   private async send(payload: MailPayload): Promise<void> {
     if (isOauthPlaceholderEmail(payload.to)) {
       this.logger.warn(`[mail-skip] Placeholder OAuth address, not sending: ${payload.subject}`);
