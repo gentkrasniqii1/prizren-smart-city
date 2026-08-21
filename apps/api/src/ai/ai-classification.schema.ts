@@ -21,12 +21,12 @@ export function parseAIClassification(raw: unknown): AIClassification | null {
 }
 
 export const AI_CATEGORY_TO_DB_NAME: Record<ParsedAIClassification['category'], string> = {
-  road_damage: 'Dëmtim rruge',
-  lighting: 'Ndriçim',
-  waste: 'Mbeturina',
-  water: 'Ujë / kanalizim',
-  public_space: 'Hapësirë publike',
-  other: 'Tjetër',
+  road_damage: 'Grope / dëmtim rruge',
+  lighting: 'Ndriçim publik i prishur',
+  waste: 'Grumbullim mbeturinash / konteiner',
+  water: 'Ujë i pijshëm (ndërprerje / cilësi)',
+  public_space: 'Parke, pemë, hapësirë e gjelbër',
+  other: 'Tjetër / e paklasifikuar',
 };
 
 export const AI_SEVERITY_TO_PRIORITY: Record<

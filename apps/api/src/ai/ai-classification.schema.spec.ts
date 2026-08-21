@@ -63,7 +63,7 @@ describe('AI mapping helpers', () => {
   });
 
   it('maps categories and severities to DB / priority values', () => {
-    expect(AI_CATEGORY_TO_DB_NAME.road_damage).toBe('Dëmtim rruge');
+    expect(AI_CATEGORY_TO_DB_NAME.road_damage).toBe('Grope / dëmtim rruge');
     expect(AI_SEVERITY_TO_PRIORITY.critical).toBe('CRITICAL');
     expect(AI_SEVERITY_TO_PRIORITY.medium).toBe('MEDIUM');
   });
