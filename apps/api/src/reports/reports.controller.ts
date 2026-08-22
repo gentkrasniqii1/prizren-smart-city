@@ -52,6 +52,7 @@ import { WorkflowActionDto } from './dto/workflow-action.dto';
 import { ModerateReportDto } from './dto/moderate-report.dto';
 import { ReportsService } from './reports.service';
 import { ReportPdfService } from './report-pdf.service';
+import { ParseReportRefPipe } from './parse-report-ref.pipe';
 
 @Controller('reports')
 export class ReportsController {
@@ -145,14 +146,14 @@ export class ReportsController {
 
   @Get(':id')
   @UseGuards(OptionalJwtAuthGuard)
-  findOne(@Param('id', ParseUUIDPipe) id: string, @CurrentUser() user: AuthUser | null) {
+  findOne(@Param('id', ParseReportRefPipe) id: string, @CurrentUser() user: AuthUser | null) {
     return this.reportsService.findOne(id, user ?? null);
   }
 
   @Post(':id/votes')
   @UseGuards(JwtAuthGuard)
   @Throttle({ default: { limit: 30, ttl: 60_000 } })
-  addVote(@Param('id', ParseUUIDPipe) id: string, @CurrentUser() user: AuthUser) {
+  addVote(@Param('id', ParseReportRefPipe) id: string, @CurrentUser() user: AuthUser) {
     if (!user) {
       throw new BadRequestException('Unauthorized');
     }
@@ -162,7 +163,7 @@ export class ReportsController {
   @Delete(':id/votes')
   @UseGuards(JwtAuthGuard)
   @Throttle({ default: { limit: 30, ttl: 60_000 } })
-  removeVote(@Param('id', ParseUUIDPipe) id: string, @CurrentUser() user: AuthUser) {
+  removeVote(@Param('id', ParseReportRefPipe) id: string, @CurrentUser() user: AuthUser) {
     if (!user) {
       throw new BadRequestException('Unauthorized');
     }
@@ -172,7 +173,7 @@ export class ReportsController {
   @Get(':id/comments')
   @UseGuards(OptionalJwtAuthGuard)
   listComments(
-    @Param('id', ParseUUIDPipe) id: string,
+    @Param('id', ParseReportRefPipe) id: string,
     @CurrentUser() user: AuthUser | null,
     @Query('page') page?: string,
     @Query('limit') limit?: string,
@@ -187,8 +188,9 @@ export class ReportsController {
 
   @Post(':id/comments')
   @UseGuards(JwtAuthGuard)
+  @Throttle({ default: { limit: 20, ttl: 60_000 } })
   addComment(
-    @Param('id', ParseUUIDPipe) id: string,
+    @Param('id', ParseReportRefPipe) id: string,
     @CurrentUser() user: AuthUser,
     @Body(zodBody(createCommentRequestSchema)) dto: CreateCommentDto,
   ) {
@@ -237,6 +239,7 @@ export class ReportsController {
   @Post(':id/moderate')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.DEPARTMENT_STAFF, Role.DEPARTMENT_ADMIN, Role.SUPER_ADMIN)
+  @Throttle({ default: { limit: 20, ttl: 60_000 } })
   moderate(
     @Param('id', ParseUUIDPipe) id: string,
     @CurrentUser() user: AuthUser,

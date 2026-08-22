@@ -1,5 +1,10 @@
 import { describe, expect, it, vi } from 'vitest';
-import { formatPublicId, nextReportPublicId } from './public-id';
+import {
+  formatPublicId,
+  isReportPublicId,
+  nextReportPublicId,
+  reportWhereByRef,
+} from './public-id';
 
 describe('formatPublicId', () => {
   it('zero-pads the sequence to 6 digits', () => {
@@ -9,6 +14,22 @@ describe('formatPublicId', () => {
 
   it('does not truncate sequences beyond 6 digits', () => {
     expect(formatPublicId(2026, 1234567)).toBe('PRZ-2026-1234567');
+  });
+});
+
+describe('reportWhereByRef', () => {
+  it('treats a publicId as a publicId lookup', () => {
+    expect(isReportPublicId('PRZ-2026-000001')).toBe(true);
+    expect(reportWhereByRef('prz-2026-000001')).toEqual({ publicId: 'PRZ-2026-000001' });
+    expect(reportWhereByRef('PRZ-2026-1234567')).toEqual({ publicId: 'PRZ-2026-1234567' });
+  });
+
+  it('treats everything else as a report id, including unit-test stubs', () => {
+    expect(isReportPublicId('r1')).toBe(false);
+    expect(reportWhereByRef('r1')).toEqual({ id: 'r1' });
+    expect(reportWhereByRef('aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee')).toEqual({
+      id: 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee',
+    });
   });
 });
 

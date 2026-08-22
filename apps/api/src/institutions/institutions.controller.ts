@@ -37,7 +37,7 @@ export class InstitutionsController {
       user?.role === Role.DEPARTMENT_STAFF ||
       user?.role === Role.DEPARTMENT_ADMIN ||
       user?.role === Role.SUPER_ADMIN;
-    return this.institutions.list(staff && includeInactive === 'true');
+    return this.institutions.list(staff && includeInactive === 'true', Boolean(staff));
   }
 
   @Post()

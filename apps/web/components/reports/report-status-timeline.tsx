@@ -21,6 +21,7 @@ export function ReportStatusTimeline({
   history,
   hasAi,
   hasPhotoAfter,
+  showNotes = false,
 }: {
   status: string;
   createdAt: string;
@@ -28,6 +29,7 @@ export function ReportStatusTimeline({
   history?: StatusHistoryDto[];
   hasAi?: boolean;
   hasPhotoAfter?: boolean;
+  showNotes?: boolean;
 }) {
   const t = useTranslations('ReportDetail');
   const locale = useLocale() as AppLocale;
@@ -118,7 +120,9 @@ export function ReportStatusTimeline({
               <span className="font-medium text-foreground">{t(`timeline.${row.newStatus}`)}</span>
               {' · '}
               {formatWhen(row.changedAt, locale)}
-              {row.note ? <span className="mt-0.5 block text-foreground">{row.note}</span> : null}
+              {showNotes && row.note ? (
+                <span className="mt-0.5 block text-foreground">{row.note}</span>
+              ) : null}
             </li>
           ))}
         </ol>

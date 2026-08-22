@@ -15,6 +15,7 @@ import { Request } from 'express';
 import { CurrentUser, AuthUser } from '../auth/decorators/current-user.decorator';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { OptionalJwtAuthGuard } from '../auth/guards/optional-jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { getClientIp } from '../common/client-ip';
 import { DepartmentsService } from './departments.service';
@@ -25,8 +26,13 @@ export class DepartmentsController {
   constructor(private readonly departments: DepartmentsService) {}
 
   @Get()
-  list() {
-    return this.departments.list();
+  @UseGuards(OptionalJwtAuthGuard)
+  list(@CurrentUser() user: AuthUser | null) {
+    const staff =
+      user?.role === Role.DEPARTMENT_STAFF ||
+      user?.role === Role.DEPARTMENT_ADMIN ||
+      user?.role === Role.SUPER_ADMIN;
+    return this.departments.list(Boolean(staff));
   }
 
   @Post()

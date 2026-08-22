@@ -1,8 +1,19 @@
 import { Prisma } from '@prisma/client';
 
 /** Human-readable incident code shown to citizens/staff, e.g. "PRZ-2026-000184". */
+export const REPORT_PUBLIC_ID_PATTERN = /^PRZ-\d{4}-\d{6,}$/i;
+
 export function formatPublicId(year: number, sequence: number): string {
   return `PRZ-${year}-${String(sequence).padStart(6, '0')}`;
+}
+
+export function isReportPublicId(value: string): boolean {
+  return REPORT_PUBLIC_ID_PATTERN.test(value.trim());
+}
+
+export function reportWhereByRef(ref: string): Prisma.ReportWhereUniqueInput {
+  const value = ref.trim();
+  return isReportPublicId(value) ? { publicId: value.toUpperCase() } : { id: value };
 }
 
 /**

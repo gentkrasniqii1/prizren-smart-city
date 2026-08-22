@@ -21,3 +21,25 @@ export function viewerCanAccessReport(
   if (viewer.id === report.userId) return true;
   return isStaffUser(viewer);
 }
+
+/** Logged-in citizens may comment on official cases; owners/staff may comment while it is still in review. */
+export function canCommentOnReport(
+  report: { status: ReportStatus; userId: string },
+  viewer: AuthUser | null,
+): boolean {
+  if (!viewer) return false;
+  if (isStaffUser(viewer)) return true;
+  if (viewer.id === report.userId) return true;
+  return isPublicReportStatus(report.status);
+}
+
+/** Public viewers only see official-case transitions, never moderation internals. */
+export function publicStatusHistory<T extends { newStatus: ReportStatus }>(
+  history: T[],
+  reportStatus: ReportStatus,
+): T[] {
+  if (!isPublicReportStatus(reportStatus)) {
+    return history;
+  }
+  return history.filter((row) => isPublicReportStatus(row.newStatus));
+}

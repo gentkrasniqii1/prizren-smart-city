@@ -8,6 +8,7 @@ import { EmptyState } from '@/components/ui/empty-state';
 import { StatusBadge } from '@/components/ui/badge';
 import { RemoteImage } from '@/components/remote-image';
 import { getStatusLabel } from '@/lib/labels';
+import { reportPublicPath } from '@/lib/report-path';
 import type { AppLocale } from '@/i18n/request';
 
 function excerpt(text: string, max = 110) {
@@ -53,7 +54,7 @@ export async function HomeLiveIssues({ reports }: { reports: ReportDto[] }) {
             {reports.map((report) => (
               <li key={report.id}>
                 <Link
-                  href={`/reports/${report.id}`}
+                  href={reportPublicPath(report)}
                   className="surface-card-interactive group flex h-full flex-col overflow-hidden rounded-lg border border-border bg-muted/50"
                 >
                   <div className="relative aspect-[16/10] overflow-hidden bg-stone-200">
@@ -77,6 +78,7 @@ export async function HomeLiveIssues({ reports }: { reports: ReportDto[] }) {
                         <span className="text-xs text-stone-600">{report.categoryName}</span>
                       ) : null}
                     </div>
+                    <p className="font-mono text-xs text-mosque-800">{report.publicId}</p>
                     <p className="text-sm font-medium leading-snug text-stone-900">
                       {excerpt(report.description)}
                     </p>

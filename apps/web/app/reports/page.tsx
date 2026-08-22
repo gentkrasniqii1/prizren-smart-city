@@ -93,6 +93,7 @@ export default function ReportsPage() {
       if (filters.priority && r.priority !== filters.priority) return false;
       if (!q) return true;
       return (
+        r.publicId.toLowerCase().includes(q) ||
         r.description.toLowerCase().includes(q) ||
         (r.address?.toLowerCase().includes(q) ?? false) ||
         (r.categoryName?.toLowerCase().includes(q) ?? false)

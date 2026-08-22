@@ -5,7 +5,8 @@ import { ChevronDown, Search, SlidersHorizontal } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/button';
 import { Input, Label, Select } from '@/components/ui/field';
-import { getPriorityLabel, getStatusLabel, REPORT_PRIORITIES, REPORT_STATUSES } from '@/lib/labels';
+import { PUBLIC_REPORT_STATUSES } from '@prizren/shared-types';
+import { getPriorityLabel, getStatusLabel, REPORT_PRIORITIES } from '@/lib/labels';
 import { cn } from '@/lib/utils';
 import type { AppLocale } from '@/i18n/request';
 
@@ -139,7 +140,7 @@ export function ReportFilters({
               onChange={(e) => patch({ status: e.target.value })}
             >
               <option value="">{t('all')}</option>
-              {REPORT_STATUSES.map((s) => (
+              {PUBLIC_REPORT_STATUSES.map((s) => (
                 <option key={s} value={s}>
                   {getStatusLabel(s, locale)}
                 </option>

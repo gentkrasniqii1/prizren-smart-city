@@ -27,6 +27,7 @@ import {
   createCommentRequestSchema,
 } from '@prizren/shared-types';
 import { apiDownload, apiFetch } from '@/lib/api';
+import { reportPublicPath } from '@/lib/report-path';
 import { issueMessage, zodResolver } from '@/lib/form-validation';
 import { useAuth } from '@/components/auth-provider';
 import { useRealtimeRefresh } from '@/components/realtime-provider';
@@ -380,7 +381,6 @@ export function ReportDetailView() {
   }
 
   const bucket = slaBucket(report.dueAt);
-  const shortId = report.id.slice(0, 8);
   const initialPhotos = (report.media ?? []).filter((item) => item.role === 'INITIAL');
   const afterPhotos = (report.media ?? []).filter((item) => item.role === 'AFTER');
   const beforeUrls = initialPhotos.length
@@ -409,7 +409,7 @@ export function ReportDetailView() {
           items={[
             { href: '/', label: t('crumbHome') },
             { href: '/reports', label: t('crumbReports') },
-            { label: shortId },
+            { label: report.publicId },
           ]}
         />
 
@@ -450,10 +450,9 @@ export function ReportDetailView() {
             ) : null}
           </div>
 
-          <h1 className="ds-page-title mt-3">{t('title')}</h1>
+          <h1 className="ds-page-title mt-3">{report.publicId}</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            {t('idLabel', { id: shortId })}
-            {report.categoryName ? ` · ${report.categoryName}` : ''}
+            {report.categoryName ?? t('title')}
             {report.departmentName ? ` · ${report.departmentName}` : ''}
             {report.institutionName ? ` · ${report.institutionName}` : ''}
           </p>
@@ -606,7 +605,7 @@ export function ReportDetailView() {
                   {t('resolutionHeading')}
                 </h2>
                 <p className="mt-2 text-sm text-foreground">{t('resolutionBody')}</p>
-                {report.latestNote ? (
+                {canStaff && report.latestNote ? (
                   <p className="mt-3 rounded-md bg-card px-3 py-2 text-sm text-foreground">
                     {report.latestNote}
                   </p>
@@ -989,7 +988,7 @@ export function ReportDetailView() {
                   {related.map((r) => (
                     <li key={r.id}>
                       <Link
-                        href={`/reports/${r.id}`}
+                        href={reportPublicPath(r)}
                         className="flex items-start gap-3 px-4 py-3 transition hover:bg-muted"
                       >
                         <div className="min-w-0 flex-1">
@@ -1001,7 +1000,8 @@ export function ReportDetailView() {
                             {r.description}
                           </p>
                           <p className="mt-1 text-xs text-muted-foreground">
-                            {r.categoryName ?? t('relatedNearby')}
+                            {r.publicId}
+                            {r.categoryName ? ` · ${r.categoryName}` : ` · ${t('relatedNearby')}`}
                           </p>
                         </div>
                       </Link>
@@ -1020,8 +1020,9 @@ export function ReportDetailView() {
                 createdAt={report.createdAt}
                 updatedAt={report.updatedAt}
                 history={report.history}
-                hasAi={Boolean(report.aiClassification)}
-                hasPhotoAfter={Boolean(report.photoAfterUrl)}
+                hasAi={canStaff && Boolean(report.aiClassification)}
+                hasPhotoAfter={Boolean(report.photoAfterUrl) || afterUrls.length > 0}
+                showNotes={canStaff}
               />
             </div>
 

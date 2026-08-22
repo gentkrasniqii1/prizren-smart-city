@@ -12,6 +12,7 @@ import { PageContainer } from '@/components/layout/page-container';
 import { Button, EmptyState, ErrorBanner, Skeleton, StatCard } from '@/components/ui';
 import { MapSkeleton, MetricGridSkeleton } from '@/components/ui/skeletons';
 import { getStatusLabel } from '@/lib/labels';
+import { reportPublicPath } from '@/lib/report-path';
 import { useErrorMessage } from '@/lib/use-error-message';
 import type { AppLocale } from '@/i18n/request';
 import { cn } from '@/lib/utils';
@@ -209,7 +210,10 @@ export function TransparencyView() {
                   <ReportsMap
                     reports={mapReports}
                     selectedId={null}
-                    onSelect={(id) => router.push(`/reports/${id}`)}
+                    onSelect={(id) => {
+                      const match = mapReports.find((report) => report.id === id);
+                      router.push(match ? reportPublicPath(match) : `/reports/${id}`);
+                    }}
                     className="h-full min-h-0"
                   />
                 </div>

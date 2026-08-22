@@ -249,6 +249,50 @@ describe('OutboundEmailService', () => {
     expect(REPORT_STATUS_CHANGED_EVENT).toBe('report.status_changed');
   });
 
+  it('enqueues when approve jumps from SUBMITTED to ASSIGNED', async () => {
+    prisma.outboundEmail.create.mockResolvedValue(ledgerRow());
+    await service.handleStatusChanged(
+      new StatusChangedEvent('r1', 'owner', 'SUBMITTED' as never, 'ASSIGNED' as never, staff.id),
+    );
+    expect(prisma.outboundEmail.create).toHaveBeenCalled();
+  });
+
+  it('retries a failed send when the admin asks', async () => {
+    config.institutionalMailEnabled = true;
+    prisma.outboundEmail.findUnique.mockResolvedValue(
+      ledgerRow({ status: OutboundEmailStatus.FAILED, skipReason: null, attemptCount: 1 }),
+    );
+    prisma.report.findUnique.mockResolvedValue({
+      ...reportRow(),
+      institution: {
+        id: 'inst-1',
+        name: 'KEDS',
+        contact: 'info@keds-energy.com',
+        integrationType: 'EMAIL',
+        integrationStatus: 'ACTIVE',
+      },
+    });
+    prisma.outboundEmail.update
+      .mockResolvedValueOnce(ledgerRow({ status: OutboundEmailStatus.SENDING, skipReason: null }))
+      .mockResolvedValueOnce(
+        ledgerRow({
+          status: OutboundEmailStatus.SENT,
+          skipReason: null,
+          provider: 'resend',
+          sentAt: new Date(),
+          attemptCount: 2,
+        }),
+      );
+    mail.sendInstitutionalNewCase.mockResolvedValue({ provider: 'resend', messageId: 're_retry' });
+
+    const dto = await service.retry('mail-1', staff as never);
+    expect(dto.status).toBe(OutboundEmailStatus.SENT);
+    expect(mail.sendInstitutionalNewCase).toHaveBeenCalled();
+    expect(audit.log).toHaveBeenCalledWith(
+      expect.objectContaining({ action: 'outbound_email.retry' }),
+    );
+  });
+
   it('forbids staff from retrying', async () => {
     await expect(
       service.retry('mail-1', {
