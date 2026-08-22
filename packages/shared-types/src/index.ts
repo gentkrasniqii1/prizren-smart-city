@@ -4,6 +4,7 @@ export type { ReportStatus } from './report-status';
 export { REPORT_STATUSES } from './report-status';
 import type { ReportStatus } from './report-status';
 import type { ModerationAction, QueueLane, WorkflowAction } from './workflow';
+import type { ReportMediaDto } from './report-media';
 
 export type Priority = 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
 
@@ -172,6 +173,8 @@ export interface ReportDto {
   address: string | null;
   photoUrl: string | null;
   photoAfterUrl: string | null;
+  /** Relational photos; photoUrl/photoAfterUrl remain the denormalized primary. */
+  media?: ReportMediaDto[];
   aiClassification: AIClassification | null;
   aiConfidence: number | null;
   /** true when confidence < 0.6; null when no AI result */
@@ -499,3 +502,5 @@ export type {
   InstitutionAccessRevokeDto,
 } from './institution-access';
 export { INSTITUTION_ACCESS_PURPOSES } from './institution-access';
+export type { ReportMediaDto, ReportMediaRole, ReportMediaVisibility } from './report-media';
+export { MAX_REPORT_PHOTOS, REPORT_MEDIA_ROLES, REPORT_MEDIA_VISIBILITIES } from './report-media';
