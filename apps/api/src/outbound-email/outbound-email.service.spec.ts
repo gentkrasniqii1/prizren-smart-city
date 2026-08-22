@@ -188,6 +188,51 @@ describe('OutboundEmailService', () => {
     expect(dto.status).toBe(OutboundEmailStatus.SENT);
   });
 
+  it('audits a failed send without storing the recipient in the audit metadata', async () => {
+    config.institutionalMailEnabled = true;
+    prisma.report.findUnique.mockResolvedValue({
+      ...reportRow(),
+      institution: {
+        id: 'inst-1',
+        name: 'KEDS',
+        contact: 'info@keds-energy.com',
+        integrationType: 'EMAIL',
+        integrationStatus: 'ACTIVE',
+      },
+    });
+    prisma.outboundEmail.create.mockResolvedValue(
+      ledgerRow({ status: OutboundEmailStatus.QUEUED, skipReason: null }),
+    );
+    prisma.outboundEmail.update
+      .mockResolvedValueOnce(ledgerRow({ status: OutboundEmailStatus.SENDING, skipReason: null }))
+      .mockResolvedValueOnce(
+        ledgerRow({
+          status: OutboundEmailStatus.FAILED,
+          skipReason: null,
+          attemptCount: 1,
+        }),
+      );
+    prisma.outboundEmail.findUnique
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce(ledgerRow({ status: OutboundEmailStatus.QUEUED, skipReason: null }));
+    mail.sendInstitutionalNewCase.mockRejectedValue(new Error('provider timeout'));
+
+    const dto = await service.enqueueInstitutionNewCase('r1', staff.id);
+
+    expect(dto.status).toBe(OutboundEmailStatus.FAILED);
+    expect(access.revokeQuiet).toHaveBeenCalledWith('tok-1');
+    expect(audit.log).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: 'outbound_email.failed',
+        metadata: expect.objectContaining({ attemptCount: 1, permanent: false }),
+      }),
+    );
+    const failedCall = audit.log.mock.calls.find(
+      (call) => (call[0] as { action: string }).action === 'outbound_email.failed',
+    );
+    expect(JSON.stringify(failedCall?.[0])).not.toContain('info@keds-energy.com');
+  });
+
   it('ignores ASSIGNED transitions that are not the first queue entry', async () => {
     await service.handleStatusChanged(
       new StatusChangedEvent('r1', 'owner', 'RECEIVED' as never, 'ASSIGNED' as never, staff.id),

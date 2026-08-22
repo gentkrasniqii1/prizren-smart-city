@@ -56,6 +56,53 @@ describe('AuditService.log', () => {
     });
   });
 
+  it('emits a structured log and redacts secret metadata', async () => {
+    const log = vi.fn();
+    (service as unknown as { logger: { log: ReturnType<typeof vi.fn> } }).logger = { log };
+
+    await service.log({
+      userId: 'u1',
+      action: 'report.create',
+      entityType: 'Report',
+      entityId: 'r1',
+      metadata: {
+        publicId: 'PRZ-2026-000001',
+        jwt: 'eyJhbGciOiJub25lIn0.eyJzdWIiOiIxIn0.sig',
+      },
+    });
+
+    const payload = JSON.parse(log.mock.calls[0][0] as string) as {
+      event: string;
+      metadata: { publicId: string; jwt: string };
+    };
+    expect(payload.event).toBe('report.create');
+    expect(payload.metadata.publicId).toBe('PRZ-2026-000001');
+    expect(payload.metadata.jwt).toBe('[redacted]');
+  });
+
+  it('keeps notes in the audit row but omits them from the process log', async () => {
+    const log = vi.fn();
+    (service as unknown as { logger: { log: ReturnType<typeof vi.fn> } }).logger = { log };
+
+    await service.log({
+      userId: 'u1',
+      action: 'report.note',
+      entityType: 'Report',
+      entityId: 'r1',
+      metadata: { note: 'site visit details' },
+    });
+
+    expect(prisma.auditLog.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        metadata: { note: 'site visit details' },
+      }),
+    });
+    const payload = JSON.parse(log.mock.calls[0][0] as string) as {
+      metadata: Record<string, unknown>;
+    };
+    expect(payload.metadata).not.toHaveProperty('note');
+  });
+
   it('writes through the provided transaction client when given', async () => {
     const txCreate = vi.fn().mockResolvedValue({ id: 'log-2' });
     const tx = { auditLog: { create: txCreate } };

@@ -359,7 +359,9 @@ Lidhja skadon dhe mund të revokohet. Mos përfshini të dhëna personale të qy
   // and sendInstitutionalNewCase() only after policy allows it.
   private async send(payload: MailPayload): Promise<SendResult> {
     if (isOauthPlaceholderEmail(payload.to)) {
-      this.logger.warn(`[mail-skip] Placeholder OAuth address, not sending: ${payload.subject}`);
+      this.logger.warn(
+        JSON.stringify({ event: 'mail.skip_placeholder', subject: payload.subject }),
+      );
       return { provider: 'console' };
     }
     if (this.resend) {
@@ -371,14 +373,14 @@ Lidhja skadon dhe mund të revokohet. Mos përfshini të dhëna personale të qy
         html: payload.html,
       });
       if (error) {
-        this.logger.error(`Resend failed to send to ${payload.to}: ${error.message}`);
+        this.logger.error(JSON.stringify({ event: 'mail.resend_failed', message: error.message }));
         throw new Error(`Failed to send email via Resend: ${error.message}`);
       }
       return { provider: 'resend', messageId: data?.id };
     }
 
     if (!this.transporter) {
-      this.logger.warn(`[mail-dev] To ${payload.to} | ${payload.subject}\n${payload.text}`);
+      this.logger.warn(JSON.stringify({ event: 'mail.console', subject: payload.subject }));
       return { provider: 'console' };
     }
 

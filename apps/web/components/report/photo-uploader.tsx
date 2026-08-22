@@ -1,8 +1,9 @@
 'use client';
 
-import { useCallback, useRef, useState, type ChangeEvent, type DragEvent } from 'react';
+import { useCallback, useEffect, useRef, useState, type ChangeEvent, type DragEvent } from 'react';
 import { Camera, ImagePlus, X } from 'lucide-react';
 import { useTranslations } from 'next-intl';
+import { MAX_REPORT_PHOTOS } from '@prizren/shared-types';
 import { RemoteImage } from '@/components/remote-image';
 import { Button } from '@/components/ui/button';
 import { FieldError } from '@/components/ui/field-error';
@@ -12,47 +13,67 @@ const ACCEPT = 'image/jpeg,image/png,image/webp';
 const MAX_BYTES = 5 * 1024 * 1024;
 
 export function PhotoUploader({
-  preview,
+  files,
   error,
-  onFile,
-  onClear,
+  onFiles,
 }: {
-  preview: string | null;
+  files: File[];
   error?: string;
-  onFile: (file: File | null, error?: string) => void;
-  onClear: () => void;
+  onFiles: (files: File[], error?: string) => void;
 }) {
   const t = useTranslations('ReportFlow');
   const inputRef = useRef<HTMLInputElement>(null);
   const [dragging, setDragging] = useState(false);
+  const [previews, setPreviews] = useState<{ name: string; url: string }[]>([]);
 
-  const applyFile = useCallback(
-    (file: File | null) => {
-      if (!file) {
-        onFile(null);
+  useEffect(() => {
+    const next = files.map((file) => ({ name: file.name, url: URL.createObjectURL(file) }));
+    setPreviews(next);
+    return () => {
+      next.forEach((item) => URL.revokeObjectURL(item.url));
+    };
+  }, [files]);
+
+  const applyFiles = useCallback(
+    (incoming: FileList | File[] | null, replace = false) => {
+      const next = incoming ? Array.from(incoming) : [];
+      const merged = replace ? next : [...files, ...next];
+      if (merged.length === 0) {
+        onFiles([]);
         return;
       }
-      if (!ACCEPT.split(',').includes(file.type)) {
-        onFile(null, t('photoTypeError'));
+      if (merged.length > MAX_REPORT_PHOTOS) {
+        onFiles(files, t('photoMaxError'));
         return;
       }
-      if (file.size > MAX_BYTES) {
-        onFile(null, t('photoSizeError'));
-        return;
+      for (const file of next) {
+        if (!ACCEPT.split(',').includes(file.type)) {
+          onFiles(files, t('photoTypeError'));
+          return;
+        }
+        if (file.size > MAX_BYTES) {
+          onFiles(files, t('photoSizeError'));
+          return;
+        }
       }
-      onFile(file);
+      onFiles(merged);
     },
-    [onFile, t],
+    [files, onFiles, t],
   );
 
   function onInputChange(e: ChangeEvent<HTMLInputElement>) {
-    applyFile(e.target.files?.[0] ?? null);
+    applyFiles(e.target.files, files.length === 0);
+    e.target.value = '';
   }
 
   function onDrop(e: DragEvent) {
     e.preventDefault();
     setDragging(false);
-    applyFile(e.dataTransfer.files?.[0] ?? null);
+    applyFiles(e.dataTransfer.files, files.length === 0);
+  }
+
+  function removeAt(index: number) {
+    onFiles(files.filter((_, i) => i !== index));
   }
 
   return (
@@ -62,40 +83,38 @@ export function PhotoUploader({
         id="report-photo"
         type="file"
         accept={ACCEPT}
-        capture="environment"
+        multiple
         className="sr-only"
         onChange={onInputChange}
         aria-invalid={Boolean(error)}
         aria-describedby={error ? 'report-photo-error' : 'report-photo-hint'}
       />
 
-      {preview ? (
-        <div className="relative overflow-hidden rounded-lg border border-stone-200">
-          <RemoteImage
-            src={preview}
-            alt={t('photoPreviewAlt')}
-            className="max-h-72 w-full object-cover"
-          />
-          <div className="absolute right-2 top-2 flex gap-2">
-            <Button
-              type="button"
-              variant="secondary"
-              size="sm"
-              onClick={() => inputRef.current?.click()}
+      {files.length > 0 ? (
+        <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+          {previews.map((item, index) => (
+            <li
+              key={`${item.name}-${index}`}
+              className="relative overflow-hidden rounded-lg border border-border"
             >
-              {t('photoReplace')}
-            </Button>
-            <Button
-              type="button"
-              variant="icon"
-              size="sm"
-              onClick={onClear}
-              aria-label={t('photoRemove')}
-            >
-              <X className="h-4 w-4" aria-hidden />
-            </Button>
-          </div>
-        </div>
+              <RemoteImage
+                src={item.url}
+                alt={t('photoPreviewAlt')}
+                className="h-36 w-full object-cover"
+              />
+              <Button
+                type="button"
+                variant="icon"
+                size="sm"
+                className="absolute right-2 top-2"
+                onClick={() => removeAt(index)}
+                aria-label={t('photoRemove')}
+              >
+                <X className="h-4 w-4" aria-hidden />
+              </Button>
+            </li>
+          ))}
+        </ul>
       ) : (
         <div
           role="button"
@@ -133,7 +152,7 @@ export function PhotoUploader({
             <ImagePlus className="h-5 w-5" aria-hidden />
           </span>
           <div>
-            <p className="text-sm font-medium text-stone-900">{t('photoDropTitle')}</p>
+            <p className="text-sm font-medium text-foreground">{t('photoDropTitle')}</p>
             <p id="report-photo-hint" className="mt-1 text-xs text-muted-foreground">
               {t('photoHint')}
             </p>
@@ -144,6 +163,17 @@ export function PhotoUploader({
           </span>
         </div>
       )}
+
+      {files.length > 0 && files.length < MAX_REPORT_PHOTOS ? (
+        <Button
+          type="button"
+          variant="secondary"
+          size="sm"
+          onClick={() => inputRef.current?.click()}
+        >
+          {t('photoAdd')}
+        </Button>
+      ) : null}
 
       <FieldError id="report-photo-error" message={error} />
     </div>

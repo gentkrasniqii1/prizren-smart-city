@@ -9,6 +9,7 @@ import { AiClassificationService } from '../ai/ai-classification.service';
 import { RoutingService } from '../routing/routing.service';
 import { MailService } from '../mail/mail.service';
 import { ConfigService } from '../auth/config.service';
+import { AuditService } from '../audit/audit.service';
 
 describe('ReportsService.updateStatus', () => {
   let prisma: {
@@ -38,6 +39,7 @@ describe('ReportsService.updateStatus', () => {
       { routeByCategory: vi.fn() } as unknown as RoutingService,
       { sendReportReceivedEmail: vi.fn() } as unknown as MailService,
       { webOrigin: 'http://localhost:3000' } as unknown as ConfigService,
+      { log: vi.fn().mockResolvedValue({ id: 'audit-1' }) } as unknown as AuditService,
     );
   });
 
@@ -152,6 +154,73 @@ describe('ReportsService.updateStatus', () => {
     expect(dto.status).toBe(ReportStatus.RECEIVED);
     expect(events.emit).toHaveBeenCalled();
   });
+
+  it('audits resolve separately from other status updates', async () => {
+    const audit = { log: vi.fn().mockResolvedValue({ id: 'audit-1' }) };
+    const resolveService = new ReportsService(
+      prisma as unknown as PrismaService,
+      { uploadImage: vi.fn() } as unknown as CloudinaryService,
+      { classifyReportPhoto: vi.fn() } as unknown as AiClassificationService,
+      events as unknown as EventEmitter2,
+      { routeByCategory: vi.fn() } as unknown as RoutingService,
+      { sendReportReceivedEmail: vi.fn() } as unknown as MailService,
+      { webOrigin: 'http://localhost:3000' } as unknown as ConfigService,
+      audit as unknown as AuditService,
+    );
+    prisma.report.findUnique.mockResolvedValue({
+      id: 'r1',
+      status: ReportStatus.IN_PROGRESS,
+      photoAfterUrl: 'https://res.cloudinary.com/demo/after.jpg',
+      userId: 'owner-1',
+      priority: Priority.MEDIUM,
+      dueAt: null,
+    });
+    const updated = {
+      id: 'r1',
+      publicId: 'PRZ-2026-000001',
+      userId: 'owner-1',
+      categoryId: null,
+      subcategory: null,
+      departmentId: 'd1',
+      institutionId: 'i1',
+      description: 'x',
+      status: ReportStatus.RESOLVED,
+      priority: Priority.MEDIUM,
+      lat: 42.2,
+      lng: 20.7,
+      address: null,
+      photoUrl: null,
+      photoAfterUrl: 'https://res.cloudinary.com/demo/after.jpg',
+      aiClassification: null,
+      aiConfidence: null,
+      duplicateOfId: null,
+      isDuplicate: false,
+      assignedStaffId: null,
+      dueAt: new Date(),
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      category: null,
+      department: null,
+      institution: null,
+      _count: { votes: 0 },
+      statusHistory: [],
+    };
+    prisma.$transaction.mockImplementation(async (cb: (tx: unknown) => unknown) =>
+      cb({
+        report: { update: vi.fn().mockResolvedValue(updated) },
+        statusHistory: { create: vi.fn() },
+      }),
+    );
+
+    const dto = await resolveService.updateStatus('r1', staff as never, {
+      status: ReportStatus.RESOLVED,
+    });
+    expect(dto.status).toBe(ReportStatus.RESOLVED);
+    expect(audit.log).toHaveBeenCalledWith(
+      expect.objectContaining({ action: 'report.resolve' }),
+      expect.anything(),
+    );
+  });
 });
 
 describe('ReportsService.create', () => {
@@ -211,6 +280,7 @@ describe('ReportsService.create', () => {
       routeByCategory: vi.fn().mockResolvedValue(opts.routed),
     };
     const mail = { sendReportReceivedEmail: vi.fn().mockResolvedValue(undefined) };
+    const audit = { log: vi.fn().mockResolvedValue({ id: 'audit-1' }) };
 
     const service = new ReportsService(
       prisma as unknown as PrismaService,
@@ -220,13 +290,14 @@ describe('ReportsService.create', () => {
       routing as unknown as RoutingService,
       mail as unknown as MailService,
       { webOrigin: 'http://localhost:3000' } as unknown as ConfigService,
+      audit as unknown as AuditService,
     );
 
-    return { service, reportCreate, sequenceCounterUpsert, routing };
+    return { service, reportCreate, sequenceCounterUpsert, routing, audit };
   }
 
   it('generates a sequential publicId and persists the routed institutionId', async () => {
-    const { service, reportCreate, routing } = buildService({
+    const { service, reportCreate, routing, audit } = buildService({
       counterValue: 8,
       routed: {
         categoryId: 'cat-1',
@@ -260,6 +331,13 @@ describe('ReportsService.create', () => {
     expect(dto.publicId).toBe(expectedPublicId);
     expect(dto.institutionId).toBe('inst-1');
     expect(dto.status).toBe(ReportStatus.SUBMITTED);
+    expect(audit.log).toHaveBeenCalledWith(expect.objectContaining({ action: 'report.create' }));
+    expect(audit.log).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: 'report.route',
+        metadata: expect.objectContaining({ official: false, institutionId: 'inst-1' }),
+      }),
+    );
   });
 
   it('leaves institutionId unset when the category has no routing result', async () => {
@@ -347,6 +425,7 @@ describe('ReportsService.escalate', () => {
       { routeByCategory: vi.fn() } as unknown as RoutingService,
       { sendReportReceivedEmail: vi.fn() } as unknown as MailService,
       { webOrigin: 'http://localhost:3000' } as unknown as ConfigService,
+      { log: vi.fn().mockResolvedValue({ id: 'audit-1' }) } as unknown as AuditService,
     );
     return { service, reportUpdate, events };
   }
@@ -375,7 +454,7 @@ describe('ReportsService.escalate', () => {
 
 describe('ReportsService.addStaffNote', () => {
   it('stores an audit log note', async () => {
-    const auditCreate = vi.fn();
+    const audit = { log: vi.fn().mockResolvedValue({ id: 'audit-1' }) };
     const prisma = {
       report: {
         findUnique: vi.fn().mockResolvedValue({
@@ -408,7 +487,6 @@ describe('ReportsService.addStaffNote', () => {
           _count: { votes: 0 },
         }),
       },
-      auditLog: { create: auditCreate },
     };
     const service = new ReportsService(
       prisma as unknown as PrismaService,
@@ -418,6 +496,7 @@ describe('ReportsService.addStaffNote', () => {
       { routeByCategory: vi.fn() } as unknown as RoutingService,
       { sendReportReceivedEmail: vi.fn() } as unknown as MailService,
       { webOrigin: 'http://localhost:3000' } as unknown as ConfigService,
+      audit as unknown as AuditService,
     );
 
     await service.addStaffNote(
@@ -426,12 +505,10 @@ describe('ReportsService.addStaffNote', () => {
       { note: '  site visit  ' },
     );
 
-    expect(auditCreate).toHaveBeenCalledWith(
+    expect(audit.log).toHaveBeenCalledWith(
       expect.objectContaining({
-        data: expect.objectContaining({
-          action: 'report.note',
-          metadata: { note: 'site visit' },
-        }),
+        action: 'report.note',
+        metadata: { note: 'site visit' },
       }),
     );
   });
@@ -488,6 +565,7 @@ describe('ReportsService public visibility', () => {
       { route: vi.fn() } as unknown as RoutingService,
       { sendReportReceivedEmail: vi.fn() } as unknown as MailService,
       { webOrigin: 'http://localhost:3000' } as unknown as ConfigService,
+      { log: vi.fn().mockResolvedValue({ id: 'audit-1' }) } as unknown as AuditService,
     );
   }
 
@@ -558,6 +636,7 @@ describe('ReportsService.moderate', () => {
       { route: vi.fn() } as unknown as RoutingService,
       { sendReportReceivedEmail: vi.fn() } as unknown as MailService,
       { webOrigin: 'http://localhost:3000' } as unknown as ConfigService,
+      { log: vi.fn().mockResolvedValue({ id: 'audit-1' }) } as unknown as AuditService,
     );
     await expect(
       service.moderate('r1', citizen as never, { action: 'reject_spam', note: 'joke' }),
@@ -575,6 +654,7 @@ describe('ReportsService.moderate', () => {
       { route: vi.fn() } as unknown as RoutingService,
       { sendReportReceivedEmail: vi.fn() } as unknown as MailService,
       { webOrigin: 'http://localhost:3000' } as unknown as ConfigService,
+      { log: vi.fn().mockResolvedValue({ id: 'audit-1' }) } as unknown as AuditService,
     );
     await expect(
       service.moderate('r1', staff as never, { action: 'reject_spam' }),
@@ -594,6 +674,7 @@ describe('ReportsService.moderate', () => {
       ),
     };
     const events = { emit: vi.fn() };
+    const audit = { log: vi.fn().mockResolvedValue({ id: 'audit-1' }) };
     const service = new ReportsService(
       prisma as unknown as PrismaService,
       { uploadImage: vi.fn() } as unknown as CloudinaryService,
@@ -602,6 +683,7 @@ describe('ReportsService.moderate', () => {
       { route: vi.fn() } as unknown as RoutingService,
       { sendReportReceivedEmail: vi.fn() } as unknown as MailService,
       { webOrigin: 'http://localhost:3000' } as unknown as ConfigService,
+      audit as unknown as AuditService,
     );
 
     const dto = await service.moderate('r1', staff as never, {
@@ -610,6 +692,12 @@ describe('ReportsService.moderate', () => {
     });
     expect(dto.status).toBe(ReportStatus.REJECTED);
     expect(events.emit).toHaveBeenCalled();
+    expect(audit.log).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: 'report.moderate',
+        metadata: expect.objectContaining({ moderationAction: 'reject_spam' }),
+      }),
+    );
   });
 
   it('approves a report with a category into ASSIGNED using RoutingService.route()', async () => {
@@ -629,14 +717,13 @@ describe('ReportsService.moderate', () => {
     });
     const reportUpdate = vi.fn().mockResolvedValue(assigned);
     const historyCreate = vi.fn();
-    const auditCreate = vi.fn();
+    const audit = { log: vi.fn().mockResolvedValue({ id: 'audit-1' }) };
     const prisma = {
       report: { findUnique: vi.fn().mockResolvedValue(submitted) },
       $transaction: vi.fn().mockImplementation(async (cb: (tx: unknown) => unknown) =>
         cb({
           report: { update: reportUpdate },
           statusHistory: { create: historyCreate },
-          auditLog: { create: auditCreate },
         }),
       ),
     };
@@ -659,6 +746,7 @@ describe('ReportsService.moderate', () => {
       { route } as unknown as RoutingService,
       { sendReportReceivedEmail: vi.fn() } as unknown as MailService,
       { webOrigin: 'http://localhost:3000' } as unknown as ConfigService,
+      audit as unknown as AuditService,
     );
 
     const dto = await service.moderate('r1', staff as never, { action: 'approve' });
@@ -675,16 +763,23 @@ describe('ReportsService.moderate', () => {
         }),
       }),
     );
-    expect(auditCreate).toHaveBeenCalledWith(
+    expect(audit.log).toHaveBeenCalledWith(
       expect.objectContaining({
-        data: expect.objectContaining({
-          action: 'report.approve',
-          metadata: expect.objectContaining({
-            matchedRuleId: 'rule-1',
-            source: 'rule',
-          }),
+        action: 'report.approve',
+        metadata: expect.objectContaining({
+          matchedRuleId: 'rule-1',
+          source: 'rule',
         }),
       }),
+      expect.anything(),
+    );
+    expect(audit.log).toHaveBeenCalledWith(
+      expect.objectContaining({ action: 'report.route' }),
+      expect.anything(),
+    );
+    expect(audit.log).toHaveBeenCalledWith(
+      expect.objectContaining({ action: 'report.queue_enter' }),
+      expect.anything(),
     );
     expect(dto.status).toBe(ReportStatus.ASSIGNED);
     expect(events.emit).toHaveBeenCalled();
@@ -729,6 +824,7 @@ describe('ReportsService.moderate', () => {
       { route } as unknown as RoutingService,
       { sendReportReceivedEmail: vi.fn() } as unknown as MailService,
       { webOrigin: 'http://localhost:3000' } as unknown as ConfigService,
+      { log: vi.fn().mockResolvedValue({ id: 'audit-1' }) } as unknown as AuditService,
     ).moderate('r1', staff as never, { action: 'approve', categoryId: 'cat-1' });
 
     expect(dto.status).toBe(ReportStatus.ASSIGNED);
@@ -749,6 +845,7 @@ describe('ReportsService.moderate', () => {
       { route } as unknown as RoutingService,
       { sendReportReceivedEmail: vi.fn() } as unknown as MailService,
       { webOrigin: 'http://localhost:3000' } as unknown as ConfigService,
+      { log: vi.fn().mockResolvedValue({ id: 'audit-1' }) } as unknown as AuditService,
     );
 
     await expect(
@@ -781,6 +878,7 @@ describe('ReportsService.moderate', () => {
       { route } as unknown as RoutingService,
       { sendReportReceivedEmail: vi.fn() } as unknown as MailService,
       { webOrigin: 'http://localhost:3000' } as unknown as ConfigService,
+      { log: vi.fn().mockResolvedValue({ id: 'audit-1' }) } as unknown as AuditService,
     );
 
     await expect(
@@ -804,6 +902,7 @@ describe('ReportsService.moderate', () => {
       { route } as unknown as RoutingService,
       { sendReportReceivedEmail: vi.fn() } as unknown as MailService,
       { webOrigin: 'http://localhost:3000' } as unknown as ConfigService,
+      { log: vi.fn().mockResolvedValue({ id: 'audit-1' }) } as unknown as AuditService,
     );
 
     await expect(
@@ -826,6 +925,7 @@ describe('ReportsService.listQueue', () => {
       { route: vi.fn() } as unknown as RoutingService,
       { sendReportReceivedEmail: vi.fn() } as unknown as MailService,
       { webOrigin: 'http://localhost:3000' } as unknown as ConfigService,
+      { log: vi.fn().mockResolvedValue({ id: 'audit-1' }) } as unknown as AuditService,
     );
   }
 

@@ -3,18 +3,21 @@ import {
   Controller,
   Delete,
   Get,
+  Header,
   Param,
   ParseUUIDPipe,
   Patch,
   Post,
   Query,
   Req,
+  StreamableFile,
   UploadedFile,
+  UploadedFiles,
   UseGuards,
   UseInterceptors,
   Body,
 } from '@nestjs/common';
-import { FileInterceptor } from '@nestjs/platform-express';
+import { AnyFilesInterceptor, FileInterceptor } from '@nestjs/platform-express';
 import { Throttle } from '@nestjs/throttler';
 import { memoryStorage } from 'multer';
 import { Request } from 'express';
@@ -29,6 +32,7 @@ import { rejectIfHoneypotFilled } from '../common/honeypot';
 import {
   CreateReportFields,
   MAX_IMAGE_BYTES,
+  MAX_REPORT_PHOTOS,
   ParseCreateReportFieldsPipe,
 } from './dto/create-report.dto';
 import { AssignReportDto } from './dto/assign-report.dto';
@@ -47,33 +51,40 @@ import {
 import { WorkflowActionDto } from './dto/workflow-action.dto';
 import { ModerateReportDto } from './dto/moderate-report.dto';
 import { ReportsService } from './reports.service';
+import { ReportPdfService } from './report-pdf.service';
 
 @Controller('reports')
 export class ReportsController {
-  constructor(private readonly reportsService: ReportsService) {}
+  constructor(
+    private readonly reportsService: ReportsService,
+    private readonly reportPdf: ReportPdfService,
+  ) {}
 
   @Post()
   @UseGuards(JwtAuthGuard)
   @Throttle({ default: { limit: 10, ttl: 3_600_000 } })
   @UseInterceptors(
-    FileInterceptor('photo', {
+    AnyFilesInterceptor({
       storage: memoryStorage(),
-      limits: { fileSize: MAX_IMAGE_BYTES },
+      limits: { fileSize: MAX_IMAGE_BYTES, files: MAX_REPORT_PHOTOS },
     }),
   )
   create(
     @CurrentUser() user: AuthUser,
     @Body(ParseCreateReportFieldsPipe) fields: CreateReportFields,
-    @UploadedFile() file?: Express.Multer.File,
+    @UploadedFiles() files?: Express.Multer.File[],
   ) {
     if (!user) {
       throw new BadRequestException('Unauthorized');
     }
     rejectIfHoneypotFilled(fields.website);
-    if (!file) {
+    const photos = (files ?? []).filter(
+      (file) => file.fieldname === 'photo' || file.fieldname === 'photos',
+    );
+    if (photos.length === 0) {
       throw new BadRequestException('photo is required');
     }
-    return this.reportsService.create(user, fields, file);
+    return this.reportsService.create(user, fields, photos);
   }
 
   @Get()
@@ -112,6 +123,24 @@ export class ReportsController {
       throw new BadRequestException('Unauthorized');
     }
     return this.reportsService.listQueue(user, query);
+  }
+
+  @Get(':id/pdf')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.DEPARTMENT_STAFF, Role.DEPARTMENT_ADMIN, Role.SUPER_ADMIN)
+  @Header('Content-Type', 'application/pdf')
+  async downloadPdf(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() user: AuthUser,
+  ): Promise<StreamableFile> {
+    if (!user) {
+      throw new BadRequestException('Unauthorized');
+    }
+    const { buffer, filename } = await this.reportPdf.buildOfficialPdf(id, user);
+    return new StreamableFile(buffer, {
+      type: 'application/pdf',
+      disposition: `attachment; filename="${filename}"`,
+    });
   }
 
   @Get(':id')

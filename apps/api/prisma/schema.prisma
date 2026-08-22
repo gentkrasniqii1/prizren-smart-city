@@ -292,6 +292,7 @@ model Report {
   comments         Comment[]
   outboundEmails   OutboundEmail[]
   accessTokens     InstitutionAccessToken[]
+  media            ReportMedia[]
 
   @@index([status])
   @@index([categoryId])
@@ -414,6 +415,7 @@ model OutboundEmail {
 
 enum InstitutionAccessPurpose {
   INSTITUTION_NEW_CASE
+  INSTITUTION_CASE_PDF
 }
 
 /// Hashed, expiring, revocable link for institutional mail. Raw token is never stored.
@@ -435,6 +437,34 @@ model InstitutionAccessToken {
   @@index([reportId, purpose])
   @@index([institutionId])
   @@index([expiresAt])
+}
+
+enum ReportMediaRole {
+  INITIAL
+  AFTER
+  ATTACHMENT
+}
+
+enum ReportMediaVisibility {
+  PUBLIC
+  STAFF
+}
+
+/// Scalable photos/attachments. Report.photoUrl / photoAfterUrl stay the denormalized primary.
+model ReportMedia {
+  id           String                @id @default(uuid())
+  reportId     String
+  report       Report                @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  role         ReportMediaRole
+  sortOrder    Int                   @default(0)
+  url          String
+  cloudinaryId String?
+  mimeType     String?
+  byteSize     Int?
+  visibility   ReportMediaVisibility @default(PUBLIC)
+  createdAt    DateTime              @default(now())
+
+  @@index([reportId, role, sortOrder])
 }
 
 /// Immutable audit trail for administrative/state-changing actions across the

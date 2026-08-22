@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useCallback, useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useParams } from 'next/navigation';
-import { ArrowLeft, Bot, ExternalLink, MapPin, ThumbsUp } from 'lucide-react';
+import { ArrowLeft, Bot, ExternalLink, FileDown, MapPin, ThumbsUp } from 'lucide-react';
 import { useLocale, useTranslations } from 'next-intl';
 import type {
   AIClassification,
@@ -21,8 +21,12 @@ import type {
   WorkflowAction,
   WorkflowActionRequest,
 } from '@prizren/shared-types';
-import { PRE_APPROVAL_STATUSES, createCommentRequestSchema } from '@prizren/shared-types';
-import { apiFetch } from '@/lib/api';
+import {
+  PRE_APPROVAL_STATUSES,
+  PUBLIC_REPORT_STATUSES,
+  createCommentRequestSchema,
+} from '@prizren/shared-types';
+import { apiDownload, apiFetch } from '@/lib/api';
 import { issueMessage, zodResolver } from '@/lib/form-validation';
 import { useAuth } from '@/components/auth-provider';
 import { useRealtimeRefresh } from '@/components/realtime-provider';
@@ -76,6 +80,7 @@ export function ReportDetailView() {
   const [approveCategoryId, setApproveCategoryId] = useState('');
   const [routePreview, setRoutePreview] = useState<RoutePreview | null>(null);
   const [previewBusy, setPreviewBusy] = useState(false);
+  const [pdfBusy, setPdfBusy] = useState(false);
 
   const canManageAi = user?.role === 'DEPARTMENT_ADMIN' || user?.role === 'SUPER_ADMIN';
   const canStaff =
@@ -284,6 +289,24 @@ export function ReportDetailView() {
     }
   }
 
+  async function downloadPdf() {
+    if (!report) return;
+    setPdfBusy(true);
+    try {
+      const blob = await apiDownload(`/reports/${report.id}/pdf`);
+      const href = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = href;
+      a.download = `${report.publicId}.pdf`;
+      a.click();
+      URL.revokeObjectURL(href);
+    } catch (err) {
+      toast.push(errorMessage(err, t('pdfFailed')), 'error');
+    } finally {
+      setPdfBusy(false);
+    }
+  }
+
   async function runWorkflow(action: WorkflowAction, note?: string) {
     if (!report) return;
     setWorkflowBusy(true);
@@ -358,6 +381,19 @@ export function ReportDetailView() {
 
   const bucket = slaBucket(report.dueAt);
   const shortId = report.id.slice(0, 8);
+  const initialPhotos = (report.media ?? []).filter((item) => item.role === 'INITIAL');
+  const afterPhotos = (report.media ?? []).filter((item) => item.role === 'AFTER');
+  const beforeUrls = initialPhotos.length
+    ? initialPhotos.map((item) => item.url)
+    : report.photoUrl
+      ? [report.photoUrl]
+      : [];
+  const afterUrls = afterPhotos.length
+    ? afterPhotos.map((item) => item.url)
+    : report.photoAfterUrl
+      ? [report.photoAfterUrl]
+      : [];
+  const canPdf = canStaff && PUBLIC_REPORT_STATUSES.includes(report.status);
   const mapUrl = `https://www.openstreetmap.org/?mlat=${report.lat}&mlon=${report.lng}#map=17/${report.lat}/${report.lng}`;
   const canApprove =
     Boolean(approveCategoryId) &&
@@ -451,6 +487,18 @@ export function ReportDetailView() {
                   <ThumbsUp className="h-4 w-4" aria-hidden />
                   {report.votedByMe ? t('unvote') : t('vote')} · {report.voteCount ?? 0}
                 </Button>
+                {canPdf ? (
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="sm"
+                    disabled={pdfBusy}
+                    onClick={() => void downloadPdf()}
+                  >
+                    <FileDown className="h-4 w-4" aria-hidden />
+                    {pdfBusy ? t('pdfLoading') : t('downloadPdf')}
+                  </Button>
+                ) : null}
               </div>
             </section>
 
@@ -463,12 +511,23 @@ export function ReportDetailView() {
                   <figcaption className="text-caption uppercase tracking-wide text-muted-foreground">
                     {t('photoBefore')}
                   </figcaption>
-                  {report.photoUrl ? (
-                    <RemoteImage
-                      src={report.photoUrl}
-                      alt={t('photoBeforeAlt')}
-                      className="mt-2 max-h-80 w-full rounded-lg border border-border object-cover"
-                    />
+                  {beforeUrls.length > 0 ? (
+                    <ul className="mt-2 grid gap-2">
+                      {beforeUrls.map((url, index) => (
+                        <li key={url}>
+                          <RemoteImage
+                            src={url}
+                            alt={t('photoBeforeAlt')}
+                            className="max-h-80 w-full rounded-lg border border-border object-cover"
+                          />
+                          {beforeUrls.length > 1 ? (
+                            <p className="mt-1 text-caption text-muted-foreground">
+                              {index + 1}/{beforeUrls.length}
+                            </p>
+                          ) : null}
+                        </li>
+                      ))}
+                    </ul>
                   ) : (
                     <p className="mt-2 rounded-lg border border-dashed border-border bg-muted px-3 py-10 text-center text-sm text-muted-foreground">
                       {t('noPhoto')}
@@ -479,12 +538,18 @@ export function ReportDetailView() {
                   <figcaption className="text-caption uppercase tracking-wide text-muted-foreground">
                     {t('photoAfter')}
                   </figcaption>
-                  {report.photoAfterUrl ? (
-                    <RemoteImage
-                      src={report.photoAfterUrl}
-                      alt={t('photoAfterAlt')}
-                      className="mt-2 max-h-80 w-full rounded-lg border border-border object-cover"
-                    />
+                  {afterUrls.length > 0 ? (
+                    <ul className="mt-2 grid gap-2">
+                      {afterUrls.map((url) => (
+                        <li key={url}>
+                          <RemoteImage
+                            src={url}
+                            alt={t('photoAfterAlt')}
+                            className="max-h-80 w-full rounded-lg border border-border object-cover"
+                          />
+                        </li>
+                      ))}
+                    </ul>
                   ) : (
                     <p className="mt-2 rounded-lg border border-dashed border-border bg-muted px-3 py-10 text-center text-sm text-muted-foreground">
                       {t('noPhotoAfter')}

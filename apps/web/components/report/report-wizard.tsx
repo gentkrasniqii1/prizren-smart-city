@@ -20,7 +20,6 @@ import { PageContainer } from '@/components/layout/page-container';
 import { PhotoUploader } from '@/components/report/photo-uploader';
 import { AddressSearch } from '@/components/report/address-search';
 import { StepIndicator } from '@/components/report/step-indicator';
-import { RemoteImage } from '@/components/remote-image';
 import { useToast } from '@/components/toast-provider';
 import { Button } from '@/components/ui/button';
 import { StatusBadge } from '@/components/ui/badge';
@@ -51,7 +50,6 @@ export function ReportWizard() {
 
   const [step, setStep] = useState(0);
   const [categories, setCategories] = useState<CategoryDto[]>([]);
-  const [preview, setPreview] = useState<string | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [geoBusy, setGeoBusy] = useState(false);
@@ -70,7 +68,7 @@ export function ReportWizard() {
     resolver: zodResolver(createReportFormSchema),
     defaultValues: {
       description: '',
-      photo: null,
+      photos: [],
       address: '',
       categoryId: '',
       website: '',
@@ -82,7 +80,7 @@ export function ReportWizard() {
   const address = watch('address') ?? '';
   const lat = watch('lat');
   const lng = watch('lng');
-  const photo = watch('photo');
+  const photos = watch('photos') ?? [];
 
   const steps = useMemo(() => STEP_IDS.map((id) => ({ id, label: t(`steps.${id}`) })), [t]);
 
@@ -99,16 +97,6 @@ export function ReportWizard() {
       .then(setCategories)
       .catch(() => setCategories([]));
   }, []);
-
-  useEffect(() => {
-    if (!(photo instanceof File)) {
-      setPreview(null);
-      return;
-    }
-    const url = URL.createObjectURL(photo);
-    setPreview(url);
-    return () => URL.revokeObjectURL(url);
-  }, [photo]);
 
   function requestGeolocation() {
     if (!navigator.geolocation) {
@@ -135,7 +123,7 @@ export function ReportWizard() {
   async function goNext() {
     setFormError(null);
     if (step === 0 && !(await trigger('description'))) return;
-    if (step === 1 && !(await trigger('photo'))) return;
+    if (step === 1 && !(await trigger('photos'))) return;
     if (step === 2 && !(await trigger(['lat', 'lng']))) return;
     setStep((s) => Math.min(s + 1, STEP_IDS.length - 1));
   }
@@ -147,20 +135,22 @@ export function ReportWizard() {
 
   async function submit() {
     setFormError(null);
-    const ok = await trigger(['description', 'photo', 'lat', 'lng']);
+    const ok = await trigger(['description', 'photos', 'lat', 'lng']);
     if (!ok) {
       const current = getValues();
       if (!current.description || current.description.trim().length < 10) setStep(0);
-      else if (!(current.photo instanceof File)) setStep(1);
+      else if (!current.photos?.length) setStep(1);
       else setStep(2);
       return;
     }
 
     const values = getValues();
-    if (!(values.photo instanceof File) || values.lat == null || values.lng == null) return;
+    if (!values.photos?.length || values.lat == null || values.lng == null) return;
 
     const form = new FormData();
-    form.append('photo', values.photo);
+    for (const file of values.photos) {
+      form.append('photos', file);
+    }
     form.append('description', values.description.trim());
     form.append('lat', String(values.lat));
     form.append('lng', String(values.lng));
@@ -303,16 +293,15 @@ export function ReportWizard() {
                   <p className="mt-1 text-sm text-muted-foreground">{t('photoIntro')}</p>
                 </div>
                 <PhotoUploader
-                  preview={preview}
-                  error={issueMessage(errors.photo, t)}
-                  onFile={(file, err) => {
-                    setValue('photo', file, { shouldValidate: !err });
-                    if (err) setError('photo', { type: 'manual', message: err });
-                    else clearErrors('photo');
-                  }}
-                  onClear={() => {
-                    setValue('photo', null, { shouldValidate: true });
-                    clearErrors('photo');
+                  files={photos}
+                  error={issueMessage(
+                    Array.isArray(errors.photos) ? errors.photos[0] : errors.photos,
+                    t,
+                  )}
+                  onFiles={(next, err) => {
+                    setValue('photos', next, { shouldValidate: !err });
+                    if (err) setError('photos', { type: 'manual', message: err });
+                    else clearErrors('photos');
                   }}
                 />
               </div>
@@ -423,12 +412,14 @@ export function ReportWizard() {
                       {t('steps.photo')}
                     </dt>
                     <dd className="mt-2">
-                      {preview ? (
-                        <RemoteImage
-                          src={preview}
-                          alt={t('photoPreviewAlt')}
-                          className="max-h-40 w-full rounded-md border object-cover"
-                        />
+                      {photos.length > 0 ? (
+                        <ul className="grid grid-cols-2 gap-2">
+                          {photos.map((file) => (
+                            <li key={file.name} className="text-caption text-muted-foreground">
+                              {file.name}
+                            </li>
+                          ))}
+                        </ul>
                       ) : (
                         '—'
                       )}

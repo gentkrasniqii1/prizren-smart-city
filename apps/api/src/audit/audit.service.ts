@@ -1,6 +1,7 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { omitLogNotes, sanitizeLogValue } from './sanitize-log';
 
 export type AuditWriteInput = {
   userId: string;
@@ -20,11 +21,13 @@ export type AuditWriteInput = {
 
 @Injectable()
 export class AuditService {
+  private readonly logger = new Logger(AuditService.name);
+
   constructor(private readonly prisma: PrismaService) {}
 
   async log(input: AuditWriteInput, tx?: Prisma.TransactionClient) {
     const client = tx ?? this.prisma;
-    return client.auditLog.create({
+    const row = await client.auditLog.create({
       data: {
         userId: input.userId,
         actorType: input.actorType ?? undefined,
@@ -38,6 +41,18 @@ export class AuditService {
         userAgent: input.userAgent ?? undefined,
       },
     });
+    this.logger.log(
+      JSON.stringify(
+        sanitizeLogValue({
+          event: input.action,
+          entityType: input.entityType,
+          entityId: input.entityId,
+          actorType: input.actorType ?? 'USER',
+          metadata: omitLogNotes(input.metadata),
+        }),
+      ),
+    );
+    return row;
   }
 
   async list(opts: {

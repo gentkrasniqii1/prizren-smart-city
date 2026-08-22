@@ -197,3 +197,21 @@ export async function apiFetch<T>(path: string, options: RequestOptions = {}): P
 
   return (await response.json()) as T;
 }
+
+export async function apiDownload(path: string): Promise<Blob> {
+  let token = await ensureAccessToken();
+  const headers = new Headers();
+  if (token) headers.set('Authorization', `Bearer ${token}`);
+  let response = await rawFetch(path, { headers, credentials: 'include' });
+  if (response.status === 401 && hasSessionHint()) {
+    token = await refreshAccessToken();
+    if (token) {
+      headers.set('Authorization', `Bearer ${token}`);
+      response = await rawFetch(path, { headers, credentials: 'include' });
+    }
+  }
+  if (!response.ok) {
+    throw new ApiError(response.status, response.status === 401 ? 'SESSION_EXPIRED' : 'GENERIC');
+  }
+  return response.blob();
+}

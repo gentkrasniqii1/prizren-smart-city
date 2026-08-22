@@ -32,6 +32,7 @@ import {
 } from '@prizren/shared-types';
 import { AuthUser } from '../auth/decorators/current-user.decorator';
 import { ConfigService } from '../auth/config.service';
+import { AuditService } from '../audit/audit.service';
 import { MailService } from '../mail/mail.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { CloudinaryService } from '../uploads/cloudinary.service';
@@ -42,7 +43,8 @@ import {
   AI_SEVERITY_TO_PRIORITY,
   parseAIClassification,
 } from '../ai/ai-classification.schema';
-import { CreateReportFields } from './dto/create-report.dto';
+import { CreateReportFields, MAX_REPORT_PHOTOS } from './dto/create-report.dto';
+import { resolveReportMedia } from './report-media';
 import { ListReportsQueryDto } from './dto/list-reports-query.dto';
 import { UpdateAiClassificationDto } from './dto/update-ai-classification.dto';
 import { AssignReportDto } from './dto/assign-report.dto';
@@ -83,6 +85,7 @@ const REPORT_INCLUDE = {
   department: { select: { name: true } },
   institution: { select: { name: true } },
   _count: { select: { votes: true } },
+  media: { orderBy: [{ role: 'asc' as const }, { sortOrder: 'asc' as const }] },
 } satisfies Prisma.ReportInclude;
 
 const REPORT_DETAIL_INCLUDE = {
@@ -95,6 +98,15 @@ type ReportWithRelations = Report & {
   department?: { name: string } | null;
   institution?: { name: string } | null;
   _count?: { votes: number };
+  media?: Array<{
+    id: string;
+    role: string;
+    sortOrder: number;
+    url: string;
+    mimeType: string | null;
+    visibility: string;
+    createdAt: Date;
+  }>;
   statusHistory?: Array<{
     id: string;
     reportId: string;
@@ -118,19 +130,31 @@ export class ReportsService {
     private readonly routing: RoutingService,
     private readonly mail: MailService,
     private readonly config: ConfigService,
+    private readonly audit: AuditService,
   ) {}
 
   async create(
     user: AuthUser,
     fields: CreateReportFields,
-    file?: Express.Multer.File,
+    files: Express.Multer.File[] = [],
   ): Promise<ReportDto> {
-    let photoUrl: string | undefined;
-    if (file) {
-      await assertValidImageUpload(file);
-      const publicId = `report-${user.id}-${Date.now()}`;
-      photoUrl = await this.cloudinary.uploadImage(file.buffer, publicId);
+    if (files.length > MAX_REPORT_PHOTOS) {
+      throw new BadRequestException(`at most ${MAX_REPORT_PHOTOS} photos are allowed`);
     }
+
+    const uploaded: Array<{
+      url: string;
+      mimeType: string;
+      byteSize: number;
+      cloudinaryId: string;
+    }> = [];
+    for (const [index, file] of files.entries()) {
+      const mimeType = await assertValidImageUpload(file);
+      const cloudinaryId = `report-${user.id}-${Date.now()}-${index}`;
+      const url = await this.cloudinary.uploadImage(file.buffer, cloudinaryId);
+      uploaded.push({ url, mimeType, byteSize: file.size, cloudinaryId });
+    }
+    const photoUrl = uploaded[0]?.url;
 
     const routed = fields.categoryId
       ? await this.routing.route({ categoryId: fields.categoryId })
@@ -152,6 +176,21 @@ export class ReportsService {
           priority: routed?.defaultPriority ?? null,
           photoUrl,
           status: ReportStatus.SUBMITTED,
+          ...(uploaded.length
+            ? {
+                media: {
+                  create: uploaded.map((item, sortOrder) => ({
+                    role: 'INITIAL' as const,
+                    sortOrder,
+                    url: item.url,
+                    cloudinaryId: item.cloudinaryId,
+                    mimeType: item.mimeType,
+                    byteSize: item.byteSize,
+                    visibility: 'PUBLIC' as const,
+                  })),
+                },
+              }
+            : {}),
         },
         include: REPORT_INCLUDE,
       });
@@ -170,18 +209,35 @@ export class ReportsService {
 
     const result = classified ?? report;
 
-    await this.prisma.auditLog.create({
-      data: {
+    if (routed) {
+      await this.audit.log({
         userId: user.id,
-        action: 'report.create',
+        action: 'report.route',
         entityType: 'Report',
         entityId: result.id,
         metadata: {
-          publicId: result.publicId,
-          categoryId: result.categoryId,
-          status: result.status,
-          duplicateOfId: result.duplicateOfId,
+          source: routed.source,
+          official: false,
+          categoryId: routed.categoryId,
+          departmentId: routed.departmentId,
+          institutionId: routed.institutionId,
+          matchedRuleId: routed.matchedRuleId,
+          slaHours: routed.slaHours,
         },
+      });
+    }
+
+    await this.audit.log({
+      userId: user.id,
+      action: 'report.create',
+      entityType: 'Report',
+      entityId: result.id,
+      metadata: {
+        publicId: result.publicId,
+        categoryId: result.categoryId,
+        status: result.status,
+        duplicateOfId: result.duplicateOfId,
+        photoCount: uploaded.length,
       },
     });
 
@@ -193,11 +249,9 @@ export class ReportsService {
         description: fields.description,
         reportUrl: `${this.config.webOrigin}/reports/${report.id}`,
       });
-    } catch (err) {
+    } catch {
       this.logger.error(
-        `Failed to send report-received email for report ${report.id}: ${
-          err instanceof Error ? err.message : err
-        }`,
+        JSON.stringify({ event: 'mail.report_received_failed', reportId: report.id }),
       );
     }
 
@@ -506,12 +560,14 @@ export class ReportsService {
         },
       });
 
-      await tx.auditLog.create({
-        data: {
+      await this.audit.log(
+        {
           userId: user.id,
-          action: 'report.status_update',
+          action: dto.status === ReportStatus.RESOLVED ? 'report.resolve' : 'report.status_update',
           entityType: 'Report',
           entityId: id,
+          oldValue: { status: existing.status },
+          newValue: { status: dto.status },
           ipAddress: ipAddress ?? undefined,
           metadata: {
             oldStatus: existing.status,
@@ -520,7 +576,8 @@ export class ReportsService {
             dueAt: report.dueAt?.toISOString() ?? null,
           },
         },
-      });
+        tx,
+      );
 
       return report;
     });
@@ -595,14 +652,21 @@ export class ReportsService {
     }
 
     if (dto.action === 'start_review') {
-      return this.updateStatus(id, user, { status: ReportStatus.UNDER_REVIEW, note }, ipAddress);
+      return this.moderateStatusChange(
+        id,
+        user,
+        dto.action,
+        { status: ReportStatus.UNDER_REVIEW, note },
+        ipAddress,
+      );
     }
 
     if (dto.action === 'request_information') {
       const labelled = `Kërkesë për informacion: ${note}`;
-      return this.updateStatus(
+      return this.moderateStatusChange(
         id,
         user,
+        dto.action,
         { status: ReportStatus.UNDER_REVIEW, note: labelled },
         ipAddress,
       );
@@ -628,9 +692,10 @@ export class ReportsService {
         data: { duplicateOfId: original.id, isDuplicate: true },
       });
 
-      return this.updateStatus(
+      return this.moderateStatusChange(
         id,
         user,
+        dto.action,
         {
           status: ReportStatus.DUPLICATE,
           note: note
@@ -638,16 +703,42 @@ export class ReportsService {
             : `Origjinali: ${original.publicId}`,
         },
         ipAddress,
+        { duplicateOfId: original.id },
       );
     }
 
     const reason = dto.action === 'reject_spam' ? 'spam' : 'invalid';
-    return this.updateStatus(
+    return this.moderateStatusChange(
       id,
       user,
+      dto.action,
       { status: ReportStatus.REJECTED, note: `[${reason}] ${note}` },
       ipAddress,
     );
+  }
+
+  private async moderateStatusChange(
+    id: string,
+    user: AuthUser,
+    moderationAction: ModerateReportDto['action'],
+    statusDto: UpdateReportStatusDto,
+    ipAddress?: string | null,
+    extra?: { duplicateOfId?: string },
+  ): Promise<ReportDto> {
+    const result = await this.updateStatus(id, user, statusDto, ipAddress);
+    await this.audit.log({
+      userId: user.id,
+      action: 'report.moderate',
+      entityType: 'Report',
+      entityId: id,
+      ipAddress: ipAddress ?? undefined,
+      metadata: {
+        moderationAction,
+        newStatus: result.status,
+        duplicateOfId: extra?.duplicateOfId ?? null,
+      },
+    });
+    return result;
   }
 
   async listQueue(user: AuthUser, query: ListReportsQueryDto): Promise<PaginatedReports> {
@@ -773,8 +864,8 @@ export class ReportsService {
         include: REPORT_INCLUDE,
       });
 
-      await tx.auditLog.create({
-        data: {
+      await this.audit.log(
+        {
           userId: user.id,
           action: 'report.assign',
           entityType: 'Report',
@@ -790,7 +881,8 @@ export class ReportsService {
             }),
           ) as Prisma.InputJsonValue,
         },
-      });
+        tx,
+      );
 
       return report;
     });
@@ -824,8 +916,8 @@ export class ReportsService {
         include: REPORT_INCLUDE,
       });
 
-      await tx.auditLog.create({
-        data: {
+      await this.audit.log(
+        {
           userId: user.id,
           action: 'report.priority_update',
           entityType: 'Report',
@@ -838,7 +930,8 @@ export class ReportsService {
             dueAt: report.dueAt?.toISOString() ?? null,
           },
         },
-      });
+        tx,
+      );
 
       return report;
     });
@@ -888,8 +981,8 @@ export class ReportsService {
         });
       }
 
-      await tx.auditLog.create({
-        data: {
+      await this.audit.log(
+        {
           userId: user.id,
           action: 'report.escalate',
           entityType: 'Report',
@@ -903,7 +996,8 @@ export class ReportsService {
             note: dto.note ?? null,
           },
         },
-      });
+        tx,
+      );
 
       return report;
     });
@@ -948,15 +1042,13 @@ export class ReportsService {
       throw new NotFoundException('Report not found');
     }
 
-    await this.prisma.auditLog.create({
-      data: {
-        userId: user.id,
-        action: 'report.note',
-        entityType: 'Report',
-        entityId: id,
-        ipAddress: ipAddress ?? undefined,
-        metadata: { note },
-      },
+    await this.audit.log({
+      userId: user.id,
+      action: 'report.note',
+      entityType: 'Report',
+      entityId: id,
+      ipAddress: ipAddress ?? undefined,
+      metadata: { note },
     });
 
     return this.toDto(existing, { includeUserId: true });
@@ -978,26 +1070,43 @@ export class ReportsService {
     }
 
     await assertValidImageUpload(file);
-    const publicId = `report-${id}-after-${Date.now()}`;
-    const photoAfterUrl = await this.cloudinary.uploadImage(file.buffer, publicId);
+    const cloudinaryId = `report-${id}-after-${Date.now()}`;
+    const photoAfterUrl = await this.cloudinary.uploadImage(file.buffer, cloudinaryId);
+    const afterCount = await this.prisma.reportMedia.count({
+      where: { reportId: id, role: 'AFTER' },
+    });
 
     const updated = await this.prisma.$transaction(async (tx) => {
       const report = await tx.report.update({
         where: { id },
-        data: { photoAfterUrl },
+        data: {
+          photoAfterUrl,
+          media: {
+            create: {
+              role: 'AFTER',
+              sortOrder: afterCount,
+              url: photoAfterUrl,
+              cloudinaryId,
+              mimeType: file.mimetype,
+              byteSize: file.size,
+              visibility: 'PUBLIC',
+            },
+          },
+        },
         include: REPORT_INCLUDE,
       });
 
-      await tx.auditLog.create({
-        data: {
+      await this.audit.log(
+        {
           userId: user.id,
           action: 'report.photo_after_upload',
           entityType: 'Report',
           entityId: id,
           ipAddress: ipAddress ?? undefined,
-          metadata: { photoAfterUrl },
+          metadata: { cloudinaryId, mimeType: file.mimetype, byteSize: file.size },
         },
-      });
+        tx,
+      );
 
       return report;
     });
@@ -1175,8 +1284,8 @@ export class ReportsService {
         });
       }
 
-      await tx.auditLog.create({
-        data: {
+      await this.audit.log(
+        {
           userId: user.id,
           action:
             dto.action === 'accept'
@@ -1185,9 +1294,16 @@ export class ReportsService {
           entityType: 'Report',
           entityId: id,
           ipAddress: ipAddress ?? undefined,
-          metadata: JSON.parse(JSON.stringify({ classification })) as Prisma.InputJsonValue,
+          metadata: JSON.parse(
+            JSON.stringify({
+              category: classification.category,
+              severity: classification.severity,
+              confidence: classification.confidence,
+            }),
+          ) as Prisma.InputJsonValue,
         },
-      });
+        tx,
+      );
 
       return report;
     });
@@ -1268,8 +1384,8 @@ export class ReportsService {
         });
       }
 
-      await tx.auditLog.create({
-        data: {
+      await this.audit.log(
+        {
           userId: report.userId,
           actorType: 'SYSTEM',
           action: 'report.ai_classification',
@@ -1283,7 +1399,8 @@ export class ReportsService {
             }),
           ) as Prisma.InputJsonValue,
         },
-      });
+        tx,
+      );
 
       return report;
     });
@@ -1428,8 +1545,8 @@ export class ReportsService {
           note,
         },
       });
-      await tx.auditLog.create({
-        data: {
+      await this.audit.log(
+        {
           userId: user.id,
           action: 'report.approve',
           entityType: 'Report',
@@ -1448,7 +1565,43 @@ export class ReportsService {
             defaultPriority: routed.defaultPriority,
           },
         },
-      });
+        tx,
+      );
+      await this.audit.log(
+        {
+          userId: user.id,
+          action: 'report.route',
+          entityType: 'Report',
+          entityId: existing.id,
+          ipAddress: ipAddress ?? undefined,
+          metadata: {
+            official: true,
+            source: routed.source,
+            categoryId: routed.categoryId,
+            departmentId: routed.departmentId,
+            institutionId: routed.institutionId,
+            matchedRuleId: routed.matchedRuleId,
+            slaHours: routed.slaHours,
+          },
+        },
+        tx,
+      );
+      await this.audit.log(
+        {
+          userId: user.id,
+          action: 'report.queue_enter',
+          entityType: 'Report',
+          entityId: existing.id,
+          ipAddress: ipAddress ?? undefined,
+          metadata: {
+            publicId: report.publicId,
+            status: ReportStatus.ASSIGNED,
+            departmentId: routed.departmentId,
+            institutionId: routed.institutionId,
+          },
+        },
+        tx,
+      );
       return report;
     });
 
@@ -1586,6 +1739,12 @@ export class ReportsService {
       address: report.address,
       photoUrl: report.photoUrl,
       photoAfterUrl: report.photoAfterUrl,
+      media: resolveReportMedia({
+        media: report.media,
+        photoUrl: report.photoUrl,
+        photoAfterUrl: report.photoAfterUrl,
+        staff,
+      }),
       aiClassification: staff
         ? ((report.aiClassification as ReportDto['aiClassification']) ?? null)
         : null,
