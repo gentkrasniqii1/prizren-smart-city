@@ -87,4 +87,28 @@ describe('MailService — status-changed outcome templates', () => {
     expect(logged).toContain('Në pritje të informacionit');
     expect(logged).toContain('Kopje e një raporti ekzistues');
   });
+
+  it('builds an institutional notice without citizen identity', async () => {
+    await mail.sendInstitutionalNewCase({
+      to: 'info@keds-energy.com',
+      publicId: 'PRZ-2026-000042',
+      description: 'Broken lamp',
+      categoryName: 'Ndriçim publik i prishur',
+      priority: 'HIGH',
+      address: 'Shadërvan',
+      lat: 42.21,
+      lng: 20.74,
+      createdAt: new Date('2026-08-22T10:00:00.000Z'),
+      dueAt: null,
+      photoUrl: null,
+      reportUrl: 'https://app.local/reports/uuid',
+      institutionName: 'KEDS',
+    });
+    const logged = lastWarnText();
+    expect(logged).toContain('Raport i ri PRZ-2026-000042');
+    expect(logged).toContain('info@keds-energy.com');
+    expect(logged).toContain('Ndriçim publik i prishur');
+    expect(logged).not.toContain('citizen@');
+    expect(logged).not.toContain('qytetar@');
+  });
 });

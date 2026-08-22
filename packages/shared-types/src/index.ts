@@ -3,7 +3,7 @@ export type Role = 'CITIZEN' | 'DEPARTMENT_STAFF' | 'DEPARTMENT_ADMIN' | 'SUPER_
 export type { ReportStatus } from './report-status';
 export { REPORT_STATUSES } from './report-status';
 import type { ReportStatus } from './report-status';
-import type { ModerationAction, WorkflowAction } from './workflow';
+import type { ModerationAction, QueueLane, WorkflowAction } from './workflow';
 
 export type Priority = 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
 
@@ -209,6 +209,8 @@ export interface PaginatedReports {
     limit: number;
     total: number;
     totalPages: number;
+    /** Present on GET /reports/queue — unfiltered backlog per lane. */
+    laneCounts?: Record<QueueLane, number>;
   };
 }
 
@@ -411,6 +413,7 @@ export {
   notificationTypeForStatus,
   PRE_APPROVAL_STATUSES,
   PUBLIC_REPORT_STATUSES,
+  QUEUE_LANES,
   QUEUE_LANE_STATUSES,
   WORKFLOW_ACTION_TARGET,
   WORKFLOW_ACTIONS,
@@ -478,3 +481,15 @@ export type {
   UpsertSlaPolicyRequest,
 } from './admin-data';
 export { ADMIN_DATA_BLOCKED_RESOURCES, ADMIN_DATA_RESOURCES } from './admin-data';
+export type {
+  OutboundEmailDto,
+  OutboundEmailPurpose,
+  OutboundEmailSkipReason,
+  OutboundEmailStatus,
+  PaginatedOutboundEmails,
+} from './outbound-email';
+export {
+  OUTBOUND_EMAIL_PURPOSES,
+  OUTBOUND_EMAIL_SKIP_REASONS,
+  OUTBOUND_EMAIL_STATUSES,
+} from './outbound-email';

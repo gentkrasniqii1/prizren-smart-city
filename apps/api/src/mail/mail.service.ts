@@ -17,6 +17,11 @@ type MailPayload = {
   html: string;
 };
 
+type SendResult = {
+  provider: 'resend' | 'smtp' | 'console';
+  messageId?: string;
+};
+
 const STATUS_LABELS_SQ: Record<string, string> = {
   SUBMITTED: 'Dërguar',
   RECEIVED: 'I pranuar nga institucioni',
@@ -257,6 +262,80 @@ export class MailService {
     });
   }
 
+  /**
+   * Operational notice to Institution.contact. No citizen name or email.
+   * Callers must already have passed the institutional mail policy.
+   */
+  async sendInstitutionalNewCase(params: {
+    to: string;
+    publicId: string;
+    description: string;
+    categoryName: string | null;
+    priority: string | null;
+    address: string | null;
+    lat: number;
+    lng: number;
+    createdAt: Date;
+    dueAt: Date | null;
+    photoUrl: string | null;
+    reportUrl: string;
+    institutionName: string | null;
+  }): Promise<SendResult> {
+    const excerpt =
+      params.description.length > 400 ? `${params.description.slice(0, 400)}…` : params.description;
+    const location = params.address?.trim()
+      ? params.address.trim()
+      : `${params.lat.toFixed(5)}, ${params.lng.toFixed(5)}`;
+    const due = params.dueAt ? params.dueAt.toISOString() : '—';
+    const created = params.createdAt.toISOString();
+    const photoLine = params.photoUrl ? `\nFoto: ${params.photoUrl}` : '';
+    const photoHtml = params.photoUrl
+      ? `<p><a href="${this.escapeHtml(params.photoUrl)}">Hap foton e raportit</a></p>`
+      : '';
+
+    return this.send({
+      to: params.to,
+      subject: `Raport i ri ${params.publicId} — Prizren Smart City`,
+      text: `Një rast i ri hyri në radhën e institucionit.
+
+Rasti: ${params.publicId}
+Institucioni: ${params.institutionName ?? '—'}
+Kategoria: ${params.categoryName ?? '—'}
+Prioriteti: ${params.priority ?? '—'}
+Lokacioni: ${location}
+Krijuar: ${created}
+Afati SLA: ${due}
+
+${excerpt}
+${photoLine}
+
+Hap rastin (kërkon hyrje stafi):
+${params.reportUrl}
+
+Mos përfshini të dhëna personale të qytetarit në përgjigje.`,
+      html: this.layout(
+        `Raport i ri ${this.escapeHtml(params.publicId)}`,
+        `<p>Një rast i ri hyri në radhën e institucionit${
+          params.institutionName
+            ? ` <strong>${this.escapeHtml(params.institutionName)}</strong>`
+            : ''
+        }.</p>
+         <p style="padding:12px 16px;background:#f5f0e8;border-radius:8px;color:#4a3f33">
+           Rasti: <strong>${this.escapeHtml(params.publicId)}</strong><br/>
+           Kategoria: ${this.escapeHtml(params.categoryName ?? '—')}<br/>
+           Prioriteti: ${this.escapeHtml(params.priority ?? '—')}<br/>
+           Lokacioni: ${this.escapeHtml(location)}<br/>
+           Krijuar: ${this.escapeHtml(created)}<br/>
+           Afati SLA: ${this.escapeHtml(due)}
+         </p>
+         <p style="padding:12px 16px;background:#f5f0e8;border-radius:8px;color:#4a3f33">${this.escapeHtml(excerpt)}</p>
+         ${photoHtml}
+         <p><a href="${this.escapeHtml(params.reportUrl)}" style="display:inline-block;padding:12px 20px;background:#335f9b;color:#faf8f5;border-radius:8px;text-decoration:none;font-weight:600">Hap rastin</a></p>
+         <p style="color:#7d6a55;font-size:13px">Lidhja kërkon hyrje stafi. Mos përfshini të dhëna personale të qytetarit në përgjigje.</p>`,
+      ),
+    });
+  }
+
   private escapeHtml(value: string): string {
     return value
       .replace(/&/g, '&amp;')
@@ -276,16 +355,15 @@ export class MailService {
 </body></html>`;
   }
 
-  // Outbound mail is citizen-facing only (verify, reset, report received/status).
-  // TODO: kërkon konfirmim email nga Komuna përpara aktivizimit — do not send to
-  // Institution.contact / Department.contact. No such sender exists today.
-  private async send(payload: MailPayload): Promise<void> {
+  // Citizen mail uses this path. Institutional mail goes through OutboundEmailService
+  // and sendInstitutionalNewCase() only after policy allows it.
+  private async send(payload: MailPayload): Promise<SendResult> {
     if (isOauthPlaceholderEmail(payload.to)) {
       this.logger.warn(`[mail-skip] Placeholder OAuth address, not sending: ${payload.subject}`);
-      return;
+      return { provider: 'console' };
     }
     if (this.resend) {
-      const { error } = await this.resend.emails.send({
+      const { data, error } = await this.resend.emails.send({
         from: this.config.mailFrom,
         to: payload.to,
         subject: payload.subject,
@@ -296,20 +374,21 @@ export class MailService {
         this.logger.error(`Resend failed to send to ${payload.to}: ${error.message}`);
         throw new Error(`Failed to send email via Resend: ${error.message}`);
       }
-      return;
+      return { provider: 'resend', messageId: data?.id };
     }
 
     if (!this.transporter) {
       this.logger.warn(`[mail-dev] To ${payload.to} | ${payload.subject}\n${payload.text}`);
-      return;
+      return { provider: 'console' };
     }
 
-    await this.transporter.sendMail({
+    const info = await this.transporter.sendMail({
       from: this.config.mailFrom,
       to: payload.to,
       subject: payload.subject,
       text: payload.text,
       html: payload.html,
     });
+    return { provider: 'smtp', messageId: info.messageId };
   }
 }
