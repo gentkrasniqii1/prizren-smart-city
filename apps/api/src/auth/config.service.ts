@@ -96,6 +96,11 @@ export class ConfigService {
     return process.env.SMTP_PASS ?? '';
   }
 
+  /** Must be the string 'true'. Any other value (including unset) keeps institutional send off. */
+  get institutionalMailEnabled(): boolean {
+    return process.env.INSTITUTIONAL_MAIL_ENABLED === 'true';
+  }
+
   get mailFrom(): string {
     const name = process.env.MAIL_FROM_NAME ?? 'Prizren Smart City';
     // Resend's shared sender until a custom domain is verified.
