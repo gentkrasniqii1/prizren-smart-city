@@ -147,6 +147,7 @@ model Institution {
   departments       Department[]
   reports           Report[]
   routingRules      RoutingRule[]
+  outboundEmails    OutboundEmail[]
 }
 
 model Department {
@@ -288,6 +289,7 @@ model Report {
   statusHistory    StatusHistory[]
   votes            Vote[]
   comments         Comment[]
+  outboundEmails   OutboundEmail[]
 
   @@index([status])
   @@index([categoryId])
@@ -357,6 +359,53 @@ model Notification {
   channel   String
   read      Boolean  @default(false)
   createdAt DateTime @default(now())
+}
+
+enum OutboundEmailStatus {
+  NOT_CONFIGURED
+  QUEUED
+  SENDING
+  SENT
+  ACCEPTED
+  FAILED
+  RETRYING
+  PERMANENTLY_FAILED
+}
+
+enum OutboundEmailPurpose {
+  INSTITUTION_NEW_CASE
+}
+
+/// Institutional outbound mail ledger. Citizen mail does not use this table.
+/// Send is off unless INSTITUTIONAL_MAIL_ENABLED=true and institution policy allows it.
+model OutboundEmail {
+  id                String               @id @default(uuid())
+  reportId          String
+  report            Report               @relation(fields: [reportId], references: [id])
+  institutionId     String?
+  institution       Institution?         @relation(fields: [institutionId], references: [id])
+  purpose           OutboundEmailPurpose
+  recipient         String?
+  subject           String
+  provider          String?
+  providerMessageId String?
+  status            OutboundEmailStatus
+  skipReason        String?
+  attemptCount      Int                  @default(0)
+  maxAttempts       Int                  @default(3)
+  lastError         String?
+  queuedAt          DateTime             @default(now())
+  sentAt            DateTime?
+  acceptedAt        DateTime?
+  failedAt          DateTime?
+  nextRetryAt       DateTime?
+  createdAt         DateTime             @default(now())
+  updatedAt         DateTime             @updatedAt
+
+  @@unique([reportId, purpose])
+  @@index([status])
+  @@index([institutionId])
+  @@index([nextRetryAt])
 }
 
 /// Immutable audit trail for administrative/state-changing actions across the

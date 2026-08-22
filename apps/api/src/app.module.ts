@@ -18,6 +18,7 @@ import { TransparencyModule } from './transparency/transparency.module';
 import { AuditModule } from './audit/audit.module';
 import { RoutingModule } from './routing/routing.module';
 import { RealtimeModule } from './realtime/realtime.module';
+import { OutboundEmailModule } from './outbound-email/outbound-email.module';
 
 @Module({
   imports: [
@@ -46,6 +47,7 @@ import { RealtimeModule } from './realtime/realtime.module';
     AuditModule,
     RoutingModule,
     RealtimeModule,
+    OutboundEmailModule,
   ],
   controllers: [HealthController],
   providers: [

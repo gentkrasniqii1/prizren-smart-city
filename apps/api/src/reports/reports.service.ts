@@ -25,6 +25,7 @@ import {
   isPublicReportStatus,
   MODERATION_ACTIONS_REQUIRING_NOTE,
   PUBLIC_REPORT_STATUSES,
+  QUEUE_LANES,
   QUEUE_LANE_STATUSES,
   WORKFLOW_ACTION_TARGET,
   WORKFLOW_ACTIONS_REQUIRING_NOTE,
@@ -655,7 +656,8 @@ export class ReportsService {
     }
 
     const lane: QueueLane = query.lane ?? 'pending';
-    const scope = lane === 'pending' ? {} : await this.staffQueueScope(user);
+    const deskScope = await this.staffQueueScope(user);
+    const scope = lane === 'pending' ? {} : deskScope;
     const laneStatuses = QUEUE_LANE_STATUSES[lane] as ReportStatus[];
 
     const page = query.page ?? 1;
@@ -666,16 +668,33 @@ export class ReportsService {
       status: query.status ?? { in: laneStatuses },
     };
 
-    const [total, rows] = await this.prisma.$transaction([
+    const orderBy: Prisma.ReportOrderByWithRelationInput[] =
+      lane === 'pending'
+        ? [{ priority: 'desc' }, { createdAt: 'asc' }]
+        : [{ priority: 'desc' }, { dueAt: { sort: 'asc', nulls: 'last' } }, { createdAt: 'asc' }];
+
+    const laneCountWheres = QUEUE_LANES.map((item) => ({
+      ...(item === 'pending' ? {} : deskScope),
+      status: { in: QUEUE_LANE_STATUSES[item] as ReportStatus[] },
+    }));
+
+    const [total, rows, laneTotals] = await Promise.all([
       this.prisma.report.count({ where }),
       this.prisma.report.findMany({
         where,
         include: REPORT_INCLUDE,
-        orderBy: [{ priority: 'desc' }, { createdAt: 'asc' }],
+        orderBy,
         skip: (page - 1) * limit,
         take: limit,
       }),
+      Promise.all(
+        laneCountWheres.map((laneWhere) => this.prisma.report.count({ where: laneWhere })),
+      ),
     ]);
+
+    const laneCounts = Object.fromEntries(
+      QUEUE_LANES.map((item, index) => [item, laneTotals[index] ?? 0]),
+    ) as Record<QueueLane, number>;
 
     return {
       data: rows.map((row) => this.toDto(row, { includeUserId: true, staff: true })),
@@ -684,6 +703,7 @@ export class ReportsService {
         limit,
         total,
         totalPages: Math.max(1, Math.ceil(total / limit)),
+        laneCounts,
       },
     };
   }

@@ -123,6 +123,8 @@ export function allowedWorkflowActions(status: ReportStatus): WorkflowAction[] {
 
 export type QueueLane = 'pending' | 'incoming' | 'active' | 'waiting' | 'done';
 
+export const QUEUE_LANES: QueueLane[] = ['pending', 'incoming', 'active', 'waiting', 'done'];
+
 export const QUEUE_LANE_STATUSES: Record<QueueLane, ReportStatus[]> = {
   pending: ['SUBMITTED', 'UNDER_REVIEW'],
   incoming: ['ASSIGNED'],

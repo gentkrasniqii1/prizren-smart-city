@@ -326,6 +326,9 @@ export function AdminDataPanel() {
             <Button asChild variant="secondary" size="sm">
               <Link href="/admin/routing">{tAdmin('routingLink')}</Link>
             </Button>
+            <Button asChild variant="secondary" size="sm">
+              <Link href="/admin/mail">{tAdmin('mailLink')}</Link>
+            </Button>
             {resource === 'sla-policies' ? (
               <Button type="button" size="sm" onClick={() => setSlaDialog('new')}>
                 {t('addSla')}

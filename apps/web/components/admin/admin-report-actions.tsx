@@ -4,16 +4,18 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { MoreHorizontal } from 'lucide-react';
 import { useLocale, useTranslations } from 'next-intl';
-import type {
-  AssignReportRequest,
-  DepartmentDto,
-  InstitutionDto,
-  Priority,
-  PublicUser,
-  ReportDto,
-  ReportStatus,
-  UpdateReportPriorityRequest,
-  UpdateReportStatusRequest,
+import {
+  canTransitionStatus,
+  PRE_APPROVAL_STATUSES,
+  type AssignReportRequest,
+  type DepartmentDto,
+  type InstitutionDto,
+  type Priority,
+  type PublicUser,
+  type ReportDto,
+  type ReportStatus,
+  type UpdateReportPriorityRequest,
+  type UpdateReportStatusRequest,
 } from '@prizren/shared-types';
 import { Button } from '@/components/ui/button';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
@@ -88,6 +90,12 @@ export function AdminReportActions({
   const closed =
     report.status === 'RESOLVED' || report.status === 'REJECTED' || report.status === 'DUPLICATE';
   const needsAfterPhoto = !report.photoAfterUrl;
+  const preApproval = PRE_APPROVAL_STATUSES.includes(report.status);
+  const statusChoices = REPORT_STATUSES.filter((value) => {
+    if (value === report.status) return true;
+    if (preApproval && value === 'ASSIGNED') return false;
+    return canTransitionStatus(report.status, value);
+  });
 
   return (
     <>
@@ -105,10 +113,12 @@ export function AdminReportActions({
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="min-w-[12rem]">
           <DropdownMenuItem asChild>
-            <Link href={`/reports/${report.id}`}>{t('actionView')}</Link>
+            <Link href={`/reports/${report.id}`}>
+              {preApproval ? t('actionReview') : t('actionView')}
+            </Link>
           </DropdownMenuItem>
           <DropdownMenuSeparator />
-          {canAssign ? (
+          {canAssign && !preApproval ? (
             <DropdownMenuItem onSelect={() => open('assign')}>{t('actionAssign')}</DropdownMenuItem>
           ) : null}
           <DropdownMenuItem onSelect={() => open('status')}>{t('actionStatus')}</DropdownMenuItem>
@@ -119,10 +129,14 @@ export function AdminReportActions({
           <DropdownMenuItem onSelect={() => open('escalate')} disabled={closed}>
             {t('actionEscalate')}
           </DropdownMenuItem>
-          <DropdownMenuSeparator />
-          <DropdownMenuItem onSelect={() => open('resolve')} disabled={closed}>
-            {t('actionResolve')}
-          </DropdownMenuItem>
+          {!preApproval ? (
+            <>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onSelect={() => open('resolve')} disabled={closed}>
+                {t('actionResolve')}
+              </DropdownMenuItem>
+            </>
+          ) : null}
         </DropdownMenuContent>
       </DropdownMenu>
 
@@ -210,7 +224,11 @@ export function AdminReportActions({
         <DialogContent>
           <DialogHeader>
             <DialogTitle>{t('statusTitle')}</DialogTitle>
-            <DialogDescription>{t('statusBody', { id: report.publicId })}</DialogDescription>
+            <DialogDescription>
+              {preApproval
+                ? t('statusReviewHint', { id: report.publicId })
+                : t('statusBody', { id: report.publicId })}
+            </DialogDescription>
           </DialogHeader>
           <div className="space-y-3">
             <div>
@@ -220,7 +238,7 @@ export function AdminReportActions({
                 value={status}
                 onChange={(e) => setStatus(e.target.value as ReportStatus)}
               >
-                {REPORT_STATUSES.map((value) => (
+                {statusChoices.map((value) => (
                   <option key={value} value={value}>
                     {getStatusLabel(value, locale)}
                   </option>

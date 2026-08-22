@@ -6,6 +6,8 @@ import { Button } from '@/components/ui/button';
 export type FilterTabOption<T extends string> = {
   id: T;
   label: string;
+  count?: number;
+  dividerBefore?: boolean;
 };
 
 export function FilterTabs<T extends string>({
@@ -67,23 +69,33 @@ export function FilterTabs<T extends string>({
         {options.map((opt, i) => {
           const selected = value === opt.id;
           return (
-            <Button
-              key={opt.id}
-              ref={(el) => {
-                refs.current[i] = el;
-              }}
-              type="button"
-              role="tab"
-              id={`${uid}-tab-${opt.id}`}
-              aria-controls={panelId}
-              aria-selected={selected}
-              tabIndex={selected ? 0 : -1}
-              size="sm"
-              variant={selected ? 'secondary' : 'ghost'}
-              onClick={() => onChange(opt.id)}
-            >
-              {opt.label}
-            </Button>
+            <span key={opt.id} className="contents">
+              {opt.dividerBefore ? (
+                <span aria-hidden className="mx-1 hidden w-px self-stretch bg-border sm:block" />
+              ) : null}
+              <Button
+                ref={(el) => {
+                  refs.current[i] = el;
+                }}
+                type="button"
+                role="tab"
+                id={`${uid}-tab-${opt.id}`}
+                aria-controls={panelId}
+                aria-selected={selected}
+                tabIndex={selected ? 0 : -1}
+                size="sm"
+                variant={selected ? 'secondary' : 'ghost'}
+                className="gap-1.5"
+                onClick={() => onChange(opt.id)}
+              >
+                {opt.label}
+                {typeof opt.count === 'number' ? (
+                  <span className="text-caption tabular-nums text-muted-foreground">
+                    {opt.count}
+                  </span>
+                ) : null}
+              </Button>
+            </span>
           );
         })}
       </div>

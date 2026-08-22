@@ -12,6 +12,7 @@ import {
   Inbox,
   LayoutDashboard,
   LogOut,
+  Mail,
   Map,
 } from 'lucide-react';
 import { useLocale, useTranslations } from 'next-intl';
@@ -253,6 +254,7 @@ export function AccountDashboard() {
               <QuickLink href="/queue" icon={Inbox} label={t('quickQueue')} />
               <QuickLink href="/admin" icon={LayoutDashboard} label={t('quickAdmin')} />
               <QuickLink href="/admin/routing" icon={GitBranch} label={t('quickRouting')} />
+              <QuickLink href="/admin/mail" icon={Mail} label={t('quickMail')} />
               {user.role === 'SUPER_ADMIN' ? (
                 <QuickLink href="/admin/data" icon={Database} label={t('quickData')} />
               ) : null}

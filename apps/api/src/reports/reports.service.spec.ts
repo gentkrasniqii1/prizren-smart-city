@@ -812,3 +812,87 @@ describe('ReportsService.moderate', () => {
     expect(prisma.$transaction).not.toHaveBeenCalled();
   });
 });
+
+describe('ReportsService.listQueue', () => {
+  const staff = { id: 's1', email: 's@t.local', role: Role.DEPARTMENT_STAFF };
+  const citizen = { id: 'c1', email: 'c@t.local', role: Role.CITIZEN };
+
+  function serviceWith(prisma: object) {
+    return new ReportsService(
+      prisma as unknown as PrismaService,
+      { uploadImage: vi.fn() } as unknown as CloudinaryService,
+      { classifyReportPhoto: vi.fn() } as unknown as AiClassificationService,
+      { emit: vi.fn() } as unknown as EventEmitter2,
+      { route: vi.fn() } as unknown as RoutingService,
+      { sendReportReceivedEmail: vi.fn() } as unknown as MailService,
+      { webOrigin: 'http://localhost:3000' } as unknown as ConfigService,
+    );
+  }
+
+  it('forbids citizens', async () => {
+    await expect(
+      serviceWith({ report: { count: vi.fn(), findMany: vi.fn() } }).listQueue(citizen as never, {
+        lane: 'pending',
+      }),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+  });
+
+  it('does not department-scope the pending review lane', async () => {
+    const count = vi.fn().mockResolvedValue(0);
+    const findMany = vi.fn().mockResolvedValue([]);
+    const findUnique = vi.fn().mockResolvedValue({ departments: [] });
+    await serviceWith({
+      report: { count, findMany },
+      user: { findUnique },
+    }).listQueue(staff as never, { lane: 'pending', page: 1, limit: 20 });
+    expect(findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          status: { in: [ReportStatus.SUBMITTED, ReportStatus.UNDER_REVIEW] },
+        }),
+      }),
+    );
+    expect(findMany.mock.calls[0][0].where.OR).toBeUndefined();
+    expect(findMany.mock.calls[0][0].where.departmentId).toBeUndefined();
+  });
+
+  it('scopes incoming to the staff desk and returns lane counts', async () => {
+    const count = vi
+      .fn()
+      .mockResolvedValueOnce(1)
+      .mockResolvedValueOnce(4)
+      .mockResolvedValueOnce(1)
+      .mockResolvedValueOnce(0)
+      .mockResolvedValueOnce(0)
+      .mockResolvedValueOnce(2);
+    const findMany = vi.fn().mockResolvedValue([]);
+    const findUnique = vi.fn().mockResolvedValue({
+      departments: [{ id: 'd1', institutionId: 'i1' }],
+    });
+    const result = await serviceWith({
+      report: { count, findMany },
+      user: { findUnique },
+    }).listQueue(staff as never, { lane: 'incoming', page: 1, limit: 20 });
+
+    expect(findUnique).toHaveBeenCalled();
+    expect(findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          status: { in: [ReportStatus.ASSIGNED] },
+          OR: expect.any(Array),
+        }),
+        orderBy: expect.arrayContaining([
+          { priority: 'desc' },
+          { dueAt: { sort: 'asc', nulls: 'last' } },
+        ]),
+      }),
+    );
+    expect(result.meta.laneCounts).toEqual({
+      pending: 4,
+      incoming: 1,
+      active: 0,
+      waiting: 0,
+      done: 2,
+    });
+  });
+});

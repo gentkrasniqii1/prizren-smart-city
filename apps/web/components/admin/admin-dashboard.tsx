@@ -404,6 +404,9 @@ export function AdminDashboard() {
             <Button asChild variant="secondary" size="sm">
               <Link href="/admin/routing">{t('routingLink')}</Link>
             </Button>
+            <Button asChild variant="secondary" size="sm">
+              <Link href="/admin/mail">{t('mailLink')}</Link>
+            </Button>
             <Button
               type="button"
               variant="secondary"
