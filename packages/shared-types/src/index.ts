@@ -493,3 +493,9 @@ export {
   OUTBOUND_EMAIL_SKIP_REASONS,
   OUTBOUND_EMAIL_STATUSES,
 } from './outbound-email';
+export type {
+  InstitutionAccessPurpose,
+  InstitutionAccessResolveDto,
+  InstitutionAccessRevokeDto,
+} from './institution-access';
+export { INSTITUTION_ACCESS_PURPOSES } from './institution-access';

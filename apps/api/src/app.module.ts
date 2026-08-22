@@ -19,6 +19,7 @@ import { AuditModule } from './audit/audit.module';
 import { RoutingModule } from './routing/routing.module';
 import { RealtimeModule } from './realtime/realtime.module';
 import { OutboundEmailModule } from './outbound-email/outbound-email.module';
+import { InstitutionAccessModule } from './institution-access/institution-access.module';
 
 @Module({
   imports: [
@@ -48,6 +49,7 @@ import { OutboundEmailModule } from './outbound-email/outbound-email.module';
     RoutingModule,
     RealtimeModule,
     OutboundEmailModule,
+    InstitutionAccessModule,
   ],
   controllers: [HealthController],
   providers: [

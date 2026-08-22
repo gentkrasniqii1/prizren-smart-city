@@ -847,6 +847,14 @@
     "retryBody": "Try sending the institutional notice for {id} again. This will not invent a mailbox.",
     "retryDone": "Retry recorded.",
     "retryFailed": "Retry failed.",
+    "revoke": "Revoke link",
+    "revokeTitle": "Revoke institutional link",
+    "revokeBody": "The mailed link for {id} will stop working. Staff who already have the case open can still use the normal report page.",
+    "revokeDone": "Link revoked.",
+    "revokeFailed": "Could not revoke the link.",
+    "linkActive": "Secure link active",
+    "linkRevoked": "Link revoked",
+    "linkExpired": "Link expired",
     "statuses": {
       "NOT_CONFIGURED": "Not configured",
       "QUEUED": "Queued",
@@ -865,6 +873,14 @@
       "INTEGRATION_STATUS": "Integration is not TEST or ACTIVE",
       "NO_PROVIDER": "No Resend/SMTP provider configured"
     }
+  },
+  "InstitutionAccess": {
+    "loading": "Opening institutional case…",
+    "invalidTitle": "This link is not valid",
+    "invalidBody": "The institutional link is missing, expired, or has been revoked. Ask municipal staff to send a new notice.",
+    "forbiddenTitle": "You cannot open this case",
+    "forbiddenBody": "This link is for staff of the responsible institution. Sign in with that institution’s staff account.",
+    "genericBody": "The institutional case could not be opened."
   },
   "Routing": {
     "kicker": "Staff console",

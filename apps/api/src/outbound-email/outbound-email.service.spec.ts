@@ -56,6 +56,8 @@ function ledgerRow(overrides: Record<string, unknown> = {}) {
     updatedAt: new Date(),
     report: { publicId: 'PRZ-2026-000001' },
     institution: { name: 'KEDS' },
+    accessTokenId: null,
+    accessToken: null,
     ...overrides,
   };
 }
@@ -76,6 +78,7 @@ describe('OutboundEmailService', () => {
   let mail: { configured: boolean; sendInstitutionalNewCase: ReturnType<typeof vi.fn> };
   let config: { institutionalMailEnabled: boolean; webOrigin: string };
   let audit: { log: ReturnType<typeof vi.fn> };
+  let access: { issue: ReturnType<typeof vi.fn>; revokeQuiet: ReturnType<typeof vi.fn> };
   let service: OutboundEmailService;
 
   beforeEach(() => {
@@ -93,11 +96,20 @@ describe('OutboundEmailService', () => {
     mail = { configured: true, sendInstitutionalNewCase: vi.fn() };
     config = { institutionalMailEnabled: false, webOrigin: 'http://localhost:3000' };
     audit = { log: vi.fn().mockResolvedValue({}) };
+    access = {
+      issue: vi.fn().mockResolvedValue({
+        id: 'tok-1',
+        raw: 'secureRawTokenValue_aaaaaaaaaaaa',
+        expiresAt: new Date(),
+      }),
+      revokeQuiet: vi.fn().mockResolvedValue(undefined),
+    };
     service = new OutboundEmailService(
       prisma as unknown as PrismaService,
       mail as unknown as MailService,
       config as unknown as ConfigService,
       audit as unknown as AuditService,
+      access as never,
     );
   });
 
@@ -119,6 +131,7 @@ describe('OutboundEmailService', () => {
     );
     expect(dto.status).toBe(OutboundEmailStatus.NOT_CONFIGURED);
     expect(audit.log).toHaveBeenCalled();
+    expect(access.issue).not.toHaveBeenCalled();
   });
 
   it('is idempotent for the same report and purpose', async () => {
@@ -166,8 +179,11 @@ describe('OutboundEmailService', () => {
       expect.objectContaining({
         to: 'info@keds-energy.com',
         publicId: 'PRZ-2026-000001',
+        reportUrl: 'http://localhost:3000/institution/reports/secureRawTokenValue_aaaaaaaaaaaa',
       }),
     );
+    expect(mail.sendInstitutionalNewCase.mock.calls[0][0].reportUrl).not.toContain('r1');
+    expect(access.issue).toHaveBeenCalled();
     expect(mail.sendInstitutionalNewCase.mock.calls[0][0]).not.toHaveProperty('citizenEmail');
     expect(dto.status).toBe(OutboundEmailStatus.SENT);
   });

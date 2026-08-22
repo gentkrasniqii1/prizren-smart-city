@@ -12,6 +12,7 @@ import { Checkbox, FieldError } from '@/components/ui';
 import { Button, type ButtonStatus } from '@/components/ui/button';
 import { Input, Label } from '@/components/ui/field';
 import { useErrorMessage } from '@/lib/use-error-message';
+import { consumeLoginNext } from '@/lib/login-next';
 
 type TwoFactorFormValues = {
   code: string;
@@ -57,7 +58,7 @@ export default function TwoFactorPage() {
       await completeTwoFactor(challenge, values.code, values.trustDevice);
       sessionStorage.removeItem('psc.2fa');
       setSubmitStatus('success');
-      router.push('/account');
+      router.push(consumeLoginNext() ?? '/account');
     } catch (err) {
       setError('code', { type: 'server', message: errorMessage(err, t('twoFactorInvalid')) });
       setSubmitStatus('error');

@@ -45,6 +45,19 @@ function canRetryRole(role?: string) {
   return role === 'DEPARTMENT_ADMIN' || role === 'SUPER_ADMIN';
 }
 
+function linkStatus(row: OutboundEmailDto): 'active' | 'revoked' | 'expired' | null {
+  if (!row.accessTokenId) return null;
+  if (row.accessTokenRevokedAt) return 'revoked';
+  if (row.accessTokenExpiresAt && Date.parse(row.accessTokenExpiresAt) <= Date.now()) {
+    return 'expired';
+  }
+  return 'active';
+}
+
+function canRevokeLink(row: OutboundEmailDto) {
+  return linkStatus(row) === 'active';
+}
+
 function statusTone(
   status: OutboundEmailStatus,
 ): 'neutral' | 'success' | 'warning' | 'danger' | 'info' {
@@ -69,6 +82,7 @@ export function OutboundMailLedger() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [retryTarget, setRetryTarget] = useState<OutboundEmailDto | null>(null);
+  const [revokeTarget, setRevokeTarget] = useState<OutboundEmailDto | null>(null);
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
@@ -111,6 +125,24 @@ export function OutboundMailLedger() {
       await load();
     } catch (err) {
       toast.push(errorMessage(err, t('retryFailed')), 'error');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function revoke() {
+    if (!revokeTarget?.accessTokenId) return;
+    setBusy(true);
+    try {
+      await apiFetch(`/institution-access/${revokeTarget.accessTokenId}/revoke`, {
+        method: 'POST',
+        auth: true,
+      });
+      toast.push(t('revokeDone'), 'success');
+      setRevokeTarget(null);
+      await load();
+    } catch (err) {
+      toast.push(errorMessage(err, t('revokeFailed')), 'error');
     } finally {
       setBusy(false);
     }
@@ -191,41 +223,67 @@ export function OutboundMailLedger() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {rows.map((row) => (
-                  <TableRow key={row.id}>
-                    <TableCell>
-                      <Link
-                        href={`/reports/${row.reportId}`}
-                        className="font-medium text-foreground"
-                      >
-                        {row.publicId}
-                      </Link>
-                    </TableCell>
-                    <TableCell>{row.institutionName ?? '—'}</TableCell>
-                    <TableCell className="text-muted-foreground">{row.recipient ?? '—'}</TableCell>
-                    <TableCell>
-                      <Badge tone={statusTone(row.status)}>{t(`statuses.${row.status}`)}</Badge>
-                    </TableCell>
-                    <TableCell>
-                      {row.attemptCount}/{row.maxAttempts}
-                    </TableCell>
-                    <TableCell className="max-w-[16rem] truncate text-muted-foreground">
-                      {row.skipReason ? t(`skipReasons.${row.skipReason}`) : (row.lastError ?? '—')}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      {canRetryRole(user?.role) && RETRYABLE.includes(row.status) ? (
-                        <Button
-                          type="button"
-                          size="sm"
-                          variant="secondary"
-                          onClick={() => setRetryTarget(row)}
+                {rows.map((row) => {
+                  const link = linkStatus(row);
+                  const reason = row.skipReason
+                    ? t(`skipReasons.${row.skipReason}`)
+                    : link === 'revoked'
+                      ? t('linkRevoked')
+                      : link === 'expired'
+                        ? t('linkExpired')
+                        : link === 'active'
+                          ? t('linkActive')
+                          : (row.lastError ?? '—');
+                  return (
+                    <TableRow key={row.id}>
+                      <TableCell>
+                        <Link
+                          href={`/reports/${row.reportId}`}
+                          className="font-medium text-foreground"
                         >
-                          {t('retry')}
-                        </Button>
-                      ) : null}
-                    </TableCell>
-                  </TableRow>
-                ))}
+                          {row.publicId}
+                        </Link>
+                      </TableCell>
+                      <TableCell>{row.institutionName ?? '—'}</TableCell>
+                      <TableCell className="text-muted-foreground">
+                        {row.recipient ?? '—'}
+                      </TableCell>
+                      <TableCell>
+                        <Badge tone={statusTone(row.status)}>{t(`statuses.${row.status}`)}</Badge>
+                      </TableCell>
+                      <TableCell>
+                        {row.attemptCount}/{row.maxAttempts}
+                      </TableCell>
+                      <TableCell className="max-w-[16rem] truncate text-muted-foreground">
+                        {reason}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex justify-end gap-2">
+                          {canRetryRole(user?.role) && RETRYABLE.includes(row.status) ? (
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="secondary"
+                              onClick={() => setRetryTarget(row)}
+                            >
+                              {t('retry')}
+                            </Button>
+                          ) : null}
+                          {canRetryRole(user?.role) && canRevokeLink(row) ? (
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="secondary"
+                              onClick={() => setRevokeTarget(row)}
+                            >
+                              {t('revoke')}
+                            </Button>
+                          ) : null}
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
               </TableBody>
             </Table>
           )}
@@ -244,6 +302,15 @@ export function OutboundMailLedger() {
         confirmLabel={t('retry')}
         loading={busy}
         onConfirm={() => void retry()}
+      />
+      <ConfirmDialog
+        open={Boolean(revokeTarget)}
+        onOpenChange={(open) => !open && setRevokeTarget(null)}
+        title={t('revokeTitle')}
+        description={t('revokeBody', { id: revokeTarget?.publicId ?? '' })}
+        confirmLabel={t('revoke')}
+        loading={busy}
+        onConfirm={() => void revoke()}
       />
     </main>
   );
