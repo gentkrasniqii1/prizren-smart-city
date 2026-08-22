@@ -4,6 +4,7 @@ import { zodIssueToApiMessage } from '../../common/zod-validation.pipe';
 
 export const ALLOWED_IMAGE_MIME = new Set(['image/jpeg', 'image/png', 'image/webp']);
 export const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
+export const MAX_REPORT_PHOTOS = 5;
 
 @Injectable()
 export class ParseCreateReportFieldsPipe implements PipeTransform {

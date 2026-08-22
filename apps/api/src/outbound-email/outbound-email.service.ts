@@ -64,11 +64,7 @@ export class OutboundEmailService {
     try {
       await this.enqueueInstitutionNewCase(event.reportId, event.changedByUserId);
     } catch (err) {
-      this.logger.error(
-        `Failed to enqueue institutional mail for report ${event.reportId}: ${
-          err instanceof Error ? err.message : err
-        }`,
-      );
+      this.logger.error(`Failed to enqueue institutional mail for report ${event.reportId}`);
     }
   }
 
@@ -287,7 +283,25 @@ export class OutboundEmailService {
         },
         include: OUTBOUND_INCLUDE,
       });
-      this.logger.error(`Institutional mail ${id} failed (attempt ${attemptCount}): ${message}`);
+      this.logger.error(
+        JSON.stringify({
+          event: 'outbound_email.failed',
+          outboundEmailId: id,
+          attemptCount,
+          permanent,
+        }),
+      );
+      await this.audit.log({
+        userId: actorUserId,
+        action: 'outbound_email.failed',
+        entityType: 'OutboundEmail',
+        entityId: id,
+        metadata: {
+          status: failed.status,
+          attemptCount,
+          permanent,
+        },
+      });
       return this.toDto(failed);
     }
   }

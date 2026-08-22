@@ -69,11 +69,9 @@ export class NotificationsService {
           reportUrl: `${this.config.webOrigin}/reports/${event.reportId}`,
           note: event.note,
         });
-      } catch (err) {
+      } catch {
         this.logger.error(
-          `Failed to send status-changed email for report ${event.reportId}: ${
-            err instanceof Error ? err.message : err
-          }`,
+          JSON.stringify({ event: 'mail.status_changed_failed', reportId: event.reportId }),
         );
       }
     }

@@ -27,9 +27,11 @@ export class InstitutionAccessService {
     reportId: string;
     institutionId: string;
     actorUserId: string;
+    purpose?: InstitutionAccessPurpose;
   }): Promise<{ id: string; raw: string; expiresAt: Date }> {
+    const purpose = params.purpose ?? PURPOSE;
     await this.prisma.institutionAccessToken.updateMany({
-      where: { reportId: params.reportId, purpose: PURPOSE, revokedAt: null },
+      where: { reportId: params.reportId, purpose, revokedAt: null },
       data: { revokedAt: new Date() },
     });
 
@@ -42,7 +44,7 @@ export class InstitutionAccessService {
         tokenHash: sha256Hex(raw),
         reportId: params.reportId,
         institutionId: params.institutionId,
-        purpose: PURPOSE,
+        purpose,
         expiresAt,
       },
     });
@@ -55,6 +57,7 @@ export class InstitutionAccessService {
       metadata: {
         reportId: params.reportId,
         institutionId: params.institutionId,
+        purpose,
         expiresAt: expiresAt.toISOString(),
       },
     });
