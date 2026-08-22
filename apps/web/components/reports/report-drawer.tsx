@@ -9,6 +9,7 @@ import { RemoteImage } from '@/components/remote-image';
 import { Button } from '@/components/ui/button';
 import { PriorityBadge, StatusBadge } from '@/components/ui/badge';
 import type { AppLocale } from '@/i18n/request';
+import { reportPublicPath } from '@/lib/report-path';
 import { cn } from '@/lib/utils';
 
 export function ReportDrawer({
@@ -48,7 +49,7 @@ export function ReportDrawer({
       <div className="flex items-start justify-between gap-3 border-b border-border px-4 py-3">
         <div className="min-w-0">
           <p className="text-caption font-semibold uppercase tracking-wide text-mosque-700">
-            {t('drawerTitle')}
+            {report.publicId}
           </p>
           <div className="mt-2 flex flex-wrap gap-1.5">
             <StatusBadge status={report.status} />
@@ -125,7 +126,7 @@ export function ReportDrawer({
       </div>
 
       <div className="border-t border-border p-3">
-        <Link href={`/reports/${report.id}`} className="block">
+        <Link href={reportPublicPath(report)} className="block">
           <Button className="w-full" size="sm">
             {t('openDetails')}
             <ExternalLink className="h-4 w-4" aria-hidden />

@@ -7,6 +7,7 @@ import type { ReportDto } from '@prizren/shared-types';
 import { RemoteImage } from '@/components/remote-image';
 import { PriorityBadge, StatusBadge } from '@/components/ui/badge';
 import { colorForCategory } from '@/components/reports-map';
+import { reportPublicPath } from '@/lib/report-path';
 import { cn } from '@/lib/utils';
 import type { AppLocale } from '@/i18n/request';
 
@@ -62,6 +63,9 @@ export function ReportCard({
           <StatusBadge status={report.status} />
           {report.priority ? <PriorityBadge priority={report.priority} /> : null}
         </div>
+        <p className={cn('mt-1 font-mono text-xs text-mosque-800', compact && 'truncate')}>
+          {report.publicId}
+        </p>
         <p
           className={cn(
             'mt-1.5 font-medium text-foreground',
@@ -110,7 +114,7 @@ export function ReportCard({
   }
 
   return (
-    <Link href={`/reports/${report.id}`} className={cn(className, 'block')}>
+    <Link href={reportPublicPath(report)} className={cn(className, 'block')}>
       {compact ? <div className="flex gap-3">{body}</div> : body}
     </Link>
   );
