@@ -1,5 +1,5 @@
 import { Controller, Get } from '@nestjs/common';
-import { PUBLIC_REPORT_STATUSES, type TransparencyStats } from '@prizren/shared-types';
+import { isPublicReportStatus, type TransparencyStats } from '@prizren/shared-types';
 import { AnalyticsService } from '../analytics/analytics.service';
 
 @Controller('transparency')
@@ -15,9 +15,9 @@ export class TransparencyController {
       this.analytics.byCategory(publicOnly),
     ]);
 
-    const publicOpen = new Set(PUBLIC_REPORT_STATUSES.filter((status) => status !== 'RESOLVED'));
+    // Official cases still in the civic pipeline (RESOLVED is public, but not "open").
     const pendingOpen = byStatus
-      .filter((row) => publicOpen.has(row.status))
+      .filter((row) => isPublicReportStatus(row.status) && row.status !== 'RESOLVED')
       .reduce((sum, row) => sum + row.count, 0);
     const resolutionRate =
       summary.total > 0 ? Math.round((summary.resolved / summary.total) * 1000) / 10 : null;
@@ -28,7 +28,7 @@ export class TransparencyController {
       pendingOpen,
       rejected: 0,
       resolutionRate,
-      byStatus: byStatus.filter((row) => (PUBLIC_REPORT_STATUSES as string[]).includes(row.status)),
+      byStatus: byStatus.filter((row) => isPublicReportStatus(row.status)),
       byCategory,
       avgResolutionHours: summary.avgResolutionHours,
     };
