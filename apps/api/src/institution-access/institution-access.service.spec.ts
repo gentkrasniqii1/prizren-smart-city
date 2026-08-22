@@ -107,6 +107,13 @@ describe('InstitutionAccessService', () => {
     await expect(
       service.resolve('raw-token-value-aaaaaaaaaaaa', admin as never),
     ).rejects.toBeInstanceOf(NotFoundException);
+    try {
+      await service.resolve('raw-token-value-aaaaaaaaaaaa', admin as never);
+    } catch (err) {
+      const payload = JSON.stringify(err);
+      expect(payload).not.toContain('secret-report');
+      expect(payload).not.toContain('reportId');
+    }
 
     prisma.institutionAccessToken.findUnique.mockResolvedValue(
       tokenRow({ expiresAt: new Date(Date.now() - 1000) }),
@@ -143,5 +150,25 @@ describe('InstitutionAccessService', () => {
     await expect(service.revoke('tok-1', staffOther as never)).rejects.toBeInstanceOf(
       ForbiddenException,
     );
+  });
+
+  it('forbids an admin of another institution from revoking without leaking the report', async () => {
+    const otherAdmin = { id: 'a2', email: 'a2@t.local', role: Role.DEPARTMENT_ADMIN };
+    prisma.institutionAccessToken.findUnique.mockResolvedValue(
+      tokenRow({ reportId: 'secret-report' }),
+    );
+    prisma.user.findUnique.mockResolvedValue({ departments: [{ institutionId: 'other' }] });
+
+    await expect(service.revoke('tok-1', otherAdmin as never)).rejects.toBeInstanceOf(
+      ForbiddenException,
+    );
+    expect(prisma.institutionAccessToken.update).not.toHaveBeenCalled();
+    try {
+      await service.revoke('tok-1', otherAdmin as never);
+    } catch (err) {
+      const payload = JSON.stringify(err);
+      expect(payload).not.toContain('secret-report');
+      expect(payload).not.toContain('reportId');
+    }
   });
 });

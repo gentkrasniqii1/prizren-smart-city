@@ -55,7 +55,7 @@ import {
   UpdateReportPriorityDto,
 } from './dto/update-report-priority.dto';
 import { computeDueAt, computeDueAtFromHours } from './sla';
-import { nextReportPublicId } from './public-id';
+import { nextReportPublicId, reportWhereByRef } from './public-id';
 import { WorkflowActionDto } from './dto/workflow-action.dto';
 import { ModerateReportDto } from './dto/moderate-report.dto';
 import {
@@ -66,7 +66,13 @@ import {
 } from '../events/status-changed.event';
 import { assertValidImageUpload } from '../uploads/image-validation';
 import { RoutingService } from '../routing/routing.service';
-import { isStaffUser, STAFF_ROLES, viewerCanAccessReport } from './visibility';
+import {
+  isStaffUser,
+  STAFF_ROLES,
+  viewerCanAccessReport,
+  publicStatusHistory,
+  canCommentOnReport,
+} from './visibility';
 
 const AI_ADMIN_ROLES: Role[] = [Role.DEPARTMENT_ADMIN, Role.SUPER_ADMIN];
 const OPEN_STATUSES: ReportStatus[] = [
@@ -424,7 +430,7 @@ export class ReportsService {
 
   async findOne(id: string, viewer: AuthUser | null): Promise<ReportDto> {
     const report = await this.prisma.report.findUnique({
-      where: { id },
+      where: reportWhereByRef(id),
       include: REPORT_DETAIL_INCLUDE,
     });
     if (!report) {
@@ -438,7 +444,7 @@ export class ReportsService {
     if (viewer) {
       const vote = await this.prisma.vote.findUnique({
         where: {
-          reportId_userId: { reportId: id, userId: viewer.id },
+          reportId_userId: { reportId: report.id, userId: viewer.id },
         },
       });
       votedByMe = Boolean(vote);
@@ -1115,7 +1121,7 @@ export class ReportsService {
   }
 
   async addVote(id: string, user: AuthUser): Promise<VoteCountResponse> {
-    const report = await this.prisma.report.findUnique({ where: { id } });
+    const report = await this.prisma.report.findUnique({ where: reportWhereByRef(id) });
     if (!report) {
       throw new NotFoundException('Report not found');
     }
@@ -1123,7 +1129,7 @@ export class ReportsService {
 
     try {
       await this.prisma.vote.create({
-        data: { reportId: id, userId: user.id },
+        data: { reportId: report.id, userId: user.id },
       });
     } catch (err) {
       if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002') {
@@ -1133,22 +1139,22 @@ export class ReportsService {
       }
     }
 
-    const voteCount = await this.prisma.vote.count({ where: { reportId: id } });
+    const voteCount = await this.prisma.vote.count({ where: { reportId: report.id } });
     return { voteCount, votedByMe: true };
   }
 
   async removeVote(id: string, user: AuthUser): Promise<VoteCountResponse> {
-    const report = await this.prisma.report.findUnique({ where: { id } });
+    const report = await this.prisma.report.findUnique({ where: reportWhereByRef(id) });
     if (!report) {
       throw new NotFoundException('Report not found');
     }
     this.assertCanInteract(report, user);
 
     await this.prisma.vote.deleteMany({
-      where: { reportId: id, userId: user.id },
+      where: { reportId: report.id, userId: user.id },
     });
 
-    const voteCount = await this.prisma.vote.count({ where: { reportId: id } });
+    const voteCount = await this.prisma.vote.count({ where: { reportId: report.id } });
     return { voteCount, votedByMe: false };
   }
 
@@ -1158,7 +1164,7 @@ export class ReportsService {
     limit = 20,
     viewer: AuthUser | null = null,
   ): Promise<PaginatedComments> {
-    const report = await this.prisma.report.findUnique({ where: { id } });
+    const report = await this.prisma.report.findUnique({ where: reportWhereByRef(id) });
     if (!report) {
       throw new NotFoundException('Report not found');
     }
@@ -1170,9 +1176,9 @@ export class ReportsService {
     const safeLimit = limit > 0 ? Math.min(limit, 50) : 20;
 
     const [total, rows] = await this.prisma.$transaction([
-      this.prisma.comment.count({ where: { reportId: id } }),
+      this.prisma.comment.count({ where: { reportId: report.id } }),
       this.prisma.comment.findMany({
-        where: { reportId: id },
+        where: { reportId: report.id },
         include: { user: { select: { name: true } } },
         orderBy: { createdAt: 'asc' },
         skip: (safePage - 1) * safeLimit,
@@ -1197,15 +1203,17 @@ export class ReportsService {
       throw new BadRequestException('text is required');
     }
 
-    const report = await this.prisma.report.findUnique({ where: { id } });
+    const report = await this.prisma.report.findUnique({ where: reportWhereByRef(id) });
     if (!report) {
       throw new NotFoundException('Report not found');
     }
-    this.assertCanInteract(report, user);
+    if (!canCommentOnReport(report, user)) {
+      throw new NotFoundException('Report not found');
+    }
 
     const created = await this.prisma.comment.create({
       data: {
-        reportId: id,
+        reportId: report.id,
         userId: user.id,
         text: trimmed,
       },
@@ -1716,13 +1724,13 @@ export class ReportsService {
       changedAt: row.changedAt.toISOString(),
       note: row.note,
     }));
+    const staff = Boolean(opts.staff);
+    const showInternalNotes = staff || (opts.includeUserId && !isPublicReportStatus(report.status));
     const latestNote =
       history
         ?.slice()
         .reverse()
         .find((row) => row.note)?.note ?? null;
-    const staff = Boolean(opts.staff);
-    const privilegedNotes = staff || opts.includeUserId;
 
     const dto: ReportDto = {
       id: report.id,
@@ -1769,13 +1777,14 @@ export class ReportsService {
       departmentName: report.department?.name ?? null,
       institutionName: report.institution?.name ?? null,
       voteCount: report._count?.votes ?? 0,
-      latestNote: privilegedNotes ? latestNote : null,
+      latestNote: showInternalNotes ? latestNote : null,
     };
 
     if (history) {
-      dto.history = privilegedNotes
-        ? history
-        : history.map((row) => ({
+      const visible = staff ? history : publicStatusHistory(history, report.status);
+      dto.history = showInternalNotes
+        ? visible
+        : visible.map((row) => ({
             ...row,
             changedBy: undefined,
             note: null,

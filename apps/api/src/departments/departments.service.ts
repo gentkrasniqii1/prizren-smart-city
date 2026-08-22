@@ -12,12 +12,12 @@ export class DepartmentsService {
     private readonly audit: AuditService,
   ) {}
 
-  async list(): Promise<DepartmentDto[]> {
+  async list(includeContact = false): Promise<DepartmentDto[]> {
     const rows = await this.prisma.department.findMany({
       orderBy: { name: 'asc' },
       include: { institution: { select: { name: true } } },
     });
-    return rows.map((row) => this.toDto(row));
+    return rows.map((row) => this.toDto(row, includeContact));
   }
 
   async create(
@@ -41,9 +41,9 @@ export class DepartmentsService {
       entityType: 'Department',
       entityId: created.id,
       ipAddress: ip,
-      newValue: this.toDto(created) as never,
+      newValue: this.toDto(created, true) as never,
     });
-    return this.toDto(created);
+    return this.toDto(created, true);
   }
 
   async update(
@@ -73,7 +73,7 @@ export class DepartmentsService {
       entityId: id,
       ipAddress: ip,
     });
-    return this.toDto(updated);
+    return this.toDto(updated, true);
   }
 
   async remove(id: string, user: AuthUser, ip?: string | null): Promise<{ ok: true }> {
@@ -108,18 +108,21 @@ export class DepartmentsService {
     if (!found) throw new NotFoundException('Institution not found');
   }
 
-  private toDto(row: {
-    id: string;
-    name: string;
-    contact: string | null;
-    slaHours: number;
-    institutionId: string | null;
-    institution?: { name: string } | null;
-  }): DepartmentDto {
+  private toDto(
+    row: {
+      id: string;
+      name: string;
+      contact: string | null;
+      slaHours: number;
+      institutionId: string | null;
+      institution?: { name: string } | null;
+    },
+    includeContact = false,
+  ): DepartmentDto {
     return {
       id: row.id,
       name: row.name,
-      contact: row.contact,
+      contact: includeContact ? row.contact : null,
       slaHours: row.slaHours,
       institutionId: row.institutionId,
       institutionName: row.institution?.name ?? null,

@@ -40,6 +40,10 @@ export class CloudinaryService {
     }
 
     return new Promise((resolve, reject) => {
+      // Keep unsigned public `secure_url` delivery. Official case pages (Phase 8)
+      // must fetch INITIAL/AFTER photos without a signed cookie. STAFF/ATTACHMENT
+      // rows are omitted from the public DTO, but a leaked URL stays fetchable —
+      // switching to private/signed delivery would break public evidence.
       const upload = cloudinary.uploader.upload_stream(
         {
           folder: process.env.CLOUDINARY_FOLDER ?? 'prizren-reports',

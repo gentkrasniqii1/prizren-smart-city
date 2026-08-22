@@ -13,12 +13,12 @@ export class InstitutionsService {
     private readonly audit: AuditService,
   ) {}
 
-  async list(includeInactive = false): Promise<InstitutionDto[]> {
+  async list(includeInactive = false, includeContact = false): Promise<InstitutionDto[]> {
     const rows = await this.prisma.institution.findMany({
       where: includeInactive ? undefined : { active: true },
       orderBy: { name: 'asc' },
     });
-    return rows.map((row) => this.toDto(row));
+    return rows.map((row) => this.toDto(row, includeContact));
   }
 
   async create(
@@ -43,9 +43,9 @@ export class InstitutionsService {
       entityType: 'Institution',
       entityId: created.id,
       ipAddress: ip,
-      newValue: this.toDto(created) as never,
+      newValue: this.toDto(created, true) as never,
     });
-    return this.toDto(created);
+    return this.toDto(created, true);
   }
 
   async update(
@@ -79,10 +79,10 @@ export class InstitutionsService {
       entityType: 'Institution',
       entityId: id,
       ipAddress: ip,
-      oldValue: this.toDto(existing) as never,
-      newValue: this.toDto(updated) as never,
+      oldValue: this.toDto(existing, true) as never,
+      newValue: this.toDto(updated, true) as never,
     });
-    return this.toDto(updated);
+    return this.toDto(updated, true);
   }
 
   async remove(id: string, user: AuthUser, ip?: string | null): Promise<{ ok: true }> {
@@ -107,7 +107,7 @@ export class InstitutionsService {
       entityType: 'Institution',
       entityId: id,
       ipAddress: ip,
-      oldValue: this.toDto(existing) as never,
+      oldValue: this.toDto(existing, true) as never,
     });
     return { ok: true };
   }
@@ -126,25 +126,28 @@ export class InstitutionsService {
     return candidate;
   }
 
-  private toDto(row: {
-    id: string;
-    name: string;
-    slug: string;
-    type: string;
-    phone: string | null;
-    contact: string | null;
-    active: boolean;
-    integrationType: InstitutionDto['integrationType'];
-    integrationStatus: InstitutionDto['integrationStatus'];
-    createdAt: Date;
-  }): InstitutionDto {
+  private toDto(
+    row: {
+      id: string;
+      name: string;
+      slug: string;
+      type: string;
+      phone: string | null;
+      contact: string | null;
+      active: boolean;
+      integrationType: InstitutionDto['integrationType'];
+      integrationStatus: InstitutionDto['integrationStatus'];
+      createdAt: Date;
+    },
+    includeContact = false,
+  ): InstitutionDto {
     return {
       id: row.id,
       name: row.name,
       slug: row.slug,
       type: row.type,
       phone: row.phone,
-      contact: row.contact,
+      contact: includeContact ? row.contact : null,
       active: row.active,
       integrationType: row.integrationType,
       integrationStatus: row.integrationStatus,

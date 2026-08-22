@@ -621,6 +621,101 @@ describe('ReportsService public visibility', () => {
     expect(dto.status).toBe(ReportStatus.SUBMITTED);
     expect(dto.aiClassification).toBeNull();
   });
+
+  it('exposes publicId and a note-free official timeline on the public case DTO', async () => {
+    const prisma = {
+      report: {
+        findUnique: vi.fn().mockResolvedValue(
+          reportRow({
+            status: ReportStatus.ASSIGNED,
+            category: { name: 'Ndriçimi' },
+            statusHistory: [
+              {
+                id: 'h1',
+                reportId: 'r1',
+                oldStatus: ReportStatus.SUBMITTED,
+                newStatus: ReportStatus.UNDER_REVIEW,
+                changedBy: 'staff-1',
+                changedAt: new Date('2026-08-22T10:00:00.000Z'),
+                note: 'internal review',
+              },
+              {
+                id: 'h2',
+                reportId: 'r1',
+                oldStatus: ReportStatus.UNDER_REVIEW,
+                newStatus: ReportStatus.ASSIGNED,
+                changedBy: 'staff-1',
+                changedAt: new Date('2026-08-22T11:00:00.000Z'),
+                note: 'approved and routed',
+              },
+            ],
+          }),
+        ),
+      },
+      vote: { findUnique: vi.fn().mockResolvedValue(null) },
+    };
+    const dto = await serviceWith(prisma).findOne('r1', null);
+    expect(dto.publicId).toBe('PRZ-2026-000001');
+    expect(dto.categoryName).toBe('Ndriçimi');
+    expect(dto.userId).toBeUndefined();
+    expect(dto.latestNote).toBeNull();
+    expect(dto.aiClassification).toBeNull();
+    expect(dto.history).toHaveLength(1);
+    expect(dto.history?.[0]).toMatchObject({
+      newStatus: ReportStatus.ASSIGNED,
+      note: null,
+      changedBy: undefined,
+    });
+  });
+
+  it('looks up official cases by publicId', async () => {
+    const findUnique = vi.fn().mockResolvedValue(reportRow({ status: ReportStatus.ASSIGNED }));
+    const prisma = {
+      report: { findUnique },
+      vote: { findUnique: vi.fn().mockResolvedValue(null) },
+    };
+    await serviceWith(prisma).findOne('PRZ-2026-000001', null);
+    expect(findUnique).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { publicId: 'PRZ-2026-000001' } }),
+    );
+  });
+
+  it('does not let a stranger comment on an unapproved report', async () => {
+    const prisma = {
+      report: { findUnique: vi.fn().mockResolvedValue(reportRow()) },
+      comment: { create: vi.fn() },
+    };
+    await expect(
+      serviceWith(prisma).addComment('r1', stranger as never, 'hello'),
+    ).rejects.toBeInstanceOf(NotFoundException);
+    expect(prisma.comment.create).not.toHaveBeenCalled();
+  });
+
+  it('lets a stranger comment on an official case and stores the UUID foreign key', async () => {
+    const create = vi.fn().mockResolvedValue({
+      id: 'cmt-1',
+      reportId: 'r1',
+      text: 'hello',
+      createdAt: new Date('2026-08-22T12:00:00.000Z'),
+      user: { name: 'Citizen' },
+    });
+    const prisma = {
+      report: {
+        findUnique: vi.fn().mockResolvedValue(reportRow({ status: ReportStatus.ASSIGNED })),
+      },
+      comment: { create },
+    };
+    const dto = await serviceWith(prisma).addComment('PRZ-2026-000001', stranger as never, 'hello');
+    expect(prisma.report.findUnique).toHaveBeenCalledWith({
+      where: { publicId: 'PRZ-2026-000001' },
+    });
+    expect(create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ reportId: 'r1', userId: stranger.id, text: 'hello' }),
+      }),
+    );
+    expect(dto.text).toBe('hello');
+  });
 });
 
 describe('ReportsService.moderate', () => {
