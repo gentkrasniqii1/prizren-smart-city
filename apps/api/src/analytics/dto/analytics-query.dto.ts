@@ -16,4 +16,7 @@ export class AnalyticsQueryDto {
   @IsOptional()
   @IsUUID()
   institutionId?: string;
+
+  /** Service-only. Not accepted from HTTP (no validator = stripped by whitelist). */
+  publicOnly?: boolean;
 }

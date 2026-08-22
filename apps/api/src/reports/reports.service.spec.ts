@@ -86,6 +86,21 @@ describe('ReportsService.updateStatus', () => {
     ).rejects.toBeInstanceOf(BadRequestException);
   });
 
+  it('rejects PATCH to ASSIGNED before moderation approve', async () => {
+    prisma.report.findUnique.mockResolvedValue({
+      id: 'r1',
+      status: ReportStatus.UNDER_REVIEW,
+      photoAfterUrl: null,
+      userId: 'owner-1',
+      priority: null,
+      dueAt: null,
+    });
+    await expect(
+      service.updateStatus('r1', staff as never, { status: ReportStatus.ASSIGNED }),
+    ).rejects.toBeInstanceOf(BadRequestException);
+    expect(prisma.$transaction).not.toHaveBeenCalled();
+  });
+
   it('allows institution accept from the queue', async () => {
     prisma.report.findUnique.mockResolvedValue({
       id: 'r1',
@@ -174,9 +189,11 @@ describe('ReportsService.create', () => {
           sequenceCounter: { upsert: sequenceCounterUpsert },
           report: { create: reportCreate, update: reportUpdate },
           statusHistory: { create: vi.fn() },
+          auditLog: { create: vi.fn() },
         }),
       ),
       $executeRaw: vi.fn().mockResolvedValue(undefined),
+      auditLog: { create: vi.fn() },
       report: {
         findUnique: vi.fn().mockImplementation(async () => {
           const last = reportCreate.mock.results.at(-1)?.value as
@@ -242,7 +259,7 @@ describe('ReportsService.create', () => {
     );
     expect(dto.publicId).toBe(expectedPublicId);
     expect(dto.institutionId).toBe('inst-1');
-    expect(dto.status).toBe(ReportStatus.ASSIGNED);
+    expect(dto.status).toBe(ReportStatus.SUBMITTED);
   });
 
   it('leaves institutionId unset when the category has no routing result', async () => {
@@ -417,5 +434,381 @@ describe('ReportsService.addStaffNote', () => {
         }),
       }),
     );
+  });
+});
+
+function reportRow(overrides: Record<string, unknown> = {}) {
+  return {
+    id: 'r1',
+    publicId: 'PRZ-2026-000001',
+    userId: 'owner-1',
+    categoryId: null,
+    subcategory: null,
+    departmentId: null,
+    institutionId: null,
+    description: 'x',
+    status: ReportStatus.SUBMITTED,
+    priority: null,
+    lat: 42.2,
+    lng: 20.7,
+    address: null,
+    photoUrl: null,
+    photoAfterUrl: null,
+    aiClassification: null,
+    aiConfidence: null,
+    duplicateOfId: null,
+    isDuplicate: false,
+    assignedStaffId: null,
+    source: 'WEB',
+    anonymous: false,
+    language: 'sq',
+    dueAt: null,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    category: null,
+    department: null,
+    institution: null,
+    _count: { votes: 0 },
+    statusHistory: [],
+    ...overrides,
+  };
+}
+
+describe('ReportsService public visibility', () => {
+  const owner = { id: 'owner-1', email: 'o@t.local', role: Role.CITIZEN };
+  const stranger = { id: 'c2', email: 'c@t.local', role: Role.CITIZEN };
+  const staff = { id: 's1', email: 's@t.local', role: Role.DEPARTMENT_STAFF };
+
+  function serviceWith(prisma: object) {
+    return new ReportsService(
+      prisma as unknown as PrismaService,
+      { uploadImage: vi.fn() } as unknown as CloudinaryService,
+      { classifyReportPhoto: vi.fn() } as unknown as AiClassificationService,
+      { emit: vi.fn() } as unknown as EventEmitter2,
+      { route: vi.fn() } as unknown as RoutingService,
+      { sendReportReceivedEmail: vi.fn() } as unknown as MailService,
+      { webOrigin: 'http://localhost:3000' } as unknown as ConfigService,
+    );
+  }
+
+  it('scopes anonymous list queries to public statuses', async () => {
+    const count = vi.fn().mockResolvedValue(0);
+    const findMany = vi.fn().mockResolvedValue([]);
+    const prisma = {
+      $transaction: vi.fn((ops: Promise<unknown>[]) => Promise.all(ops)),
+      report: { count, findMany },
+    };
+    await serviceWith(prisma).list({ page: 1, limit: 20 }, null);
+    expect(count).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          status: { in: expect.arrayContaining([ReportStatus.ASSIGNED, ReportStatus.RESOLVED]) },
+        }),
+      }),
+    );
+  });
+
+  it('does not hide reports from staff lists', async () => {
+    const count = vi.fn().mockResolvedValue(0);
+    const findMany = vi.fn().mockResolvedValue([]);
+    const prisma = {
+      $transaction: vi.fn((ops: Promise<unknown>[]) => Promise.all(ops)),
+      report: { count, findMany },
+    };
+    await serviceWith(prisma).list({ page: 1, limit: 20 }, staff as never);
+    expect(count).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.not.objectContaining({
+          status: { in: expect.anything() },
+        }),
+      }),
+    );
+  });
+
+  it('returns 404 when a stranger opens an unapproved report', async () => {
+    const prisma = {
+      report: { findUnique: vi.fn().mockResolvedValue(reportRow()) },
+    };
+    await expect(serviceWith(prisma).findOne('r1', stranger as never)).rejects.toBeInstanceOf(
+      NotFoundException,
+    );
+  });
+
+  it('lets the owner open their own unapproved report', async () => {
+    const prisma = {
+      report: { findUnique: vi.fn().mockResolvedValue(reportRow()) },
+      vote: { findUnique: vi.fn().mockResolvedValue(null) },
+    };
+    const dto = await serviceWith(prisma).findOne('r1', owner as never);
+    expect(dto.status).toBe(ReportStatus.SUBMITTED);
+    expect(dto.aiClassification).toBeNull();
+  });
+});
+
+describe('ReportsService.moderate', () => {
+  const staff = { id: 's1', email: 's@t.local', role: Role.DEPARTMENT_STAFF };
+  const citizen = { id: 'c1', email: 'c@t.local', role: Role.CITIZEN };
+
+  it('forbids citizens', async () => {
+    const service = new ReportsService(
+      { report: { findUnique: vi.fn() } } as unknown as PrismaService,
+      { uploadImage: vi.fn() } as unknown as CloudinaryService,
+      { classifyReportPhoto: vi.fn() } as unknown as AiClassificationService,
+      { emit: vi.fn() } as unknown as EventEmitter2,
+      { route: vi.fn() } as unknown as RoutingService,
+      { sendReportReceivedEmail: vi.fn() } as unknown as MailService,
+      { webOrigin: 'http://localhost:3000' } as unknown as ConfigService,
+    );
+    await expect(
+      service.moderate('r1', citizen as never, { action: 'reject_spam', note: 'joke' }),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+  });
+
+  it('requires a note for spam rejection', async () => {
+    const service = new ReportsService(
+      {
+        report: { findUnique: vi.fn().mockResolvedValue(reportRow()) },
+      } as unknown as PrismaService,
+      { uploadImage: vi.fn() } as unknown as CloudinaryService,
+      { classifyReportPhoto: vi.fn() } as unknown as AiClassificationService,
+      { emit: vi.fn() } as unknown as EventEmitter2,
+      { route: vi.fn() } as unknown as RoutingService,
+      { sendReportReceivedEmail: vi.fn() } as unknown as MailService,
+      { webOrigin: 'http://localhost:3000' } as unknown as ConfigService,
+    );
+    await expect(
+      service.moderate('r1', staff as never, { action: 'reject_spam' }),
+    ).rejects.toBeInstanceOf(BadRequestException);
+  });
+
+  it('rejects spam with a note and does not enter the institution queue', async () => {
+    const updated = reportRow({ status: ReportStatus.REJECTED });
+    const prisma = {
+      report: { findUnique: vi.fn().mockResolvedValue(reportRow()) },
+      $transaction: vi.fn().mockImplementation(async (cb: (tx: unknown) => unknown) =>
+        cb({
+          report: { update: vi.fn().mockResolvedValue(updated) },
+          statusHistory: { create: vi.fn() },
+          auditLog: { create: vi.fn() },
+        }),
+      ),
+    };
+    const events = { emit: vi.fn() };
+    const service = new ReportsService(
+      prisma as unknown as PrismaService,
+      { uploadImage: vi.fn() } as unknown as CloudinaryService,
+      { classifyReportPhoto: vi.fn() } as unknown as AiClassificationService,
+      events as unknown as EventEmitter2,
+      { route: vi.fn() } as unknown as RoutingService,
+      { sendReportReceivedEmail: vi.fn() } as unknown as MailService,
+      { webOrigin: 'http://localhost:3000' } as unknown as ConfigService,
+    );
+
+    const dto = await service.moderate('r1', staff as never, {
+      action: 'reject_spam',
+      note: 'meme photo',
+    });
+    expect(dto.status).toBe(ReportStatus.REJECTED);
+    expect(events.emit).toHaveBeenCalled();
+  });
+
+  it('approves a report with a category into ASSIGNED using RoutingService.route()', async () => {
+    const submitted = reportRow({
+      categoryId: 'cat-1',
+      priority: Priority.HIGH,
+    });
+    const assigned = reportRow({
+      status: ReportStatus.ASSIGNED,
+      categoryId: 'cat-1',
+      departmentId: 'dept-1',
+      institutionId: 'inst-1',
+      priority: Priority.HIGH,
+      category: { name: 'Ndriçimi' },
+      department: { name: 'Shërbimet publike' },
+      institution: { name: 'Komuna e Prizrenit' },
+    });
+    const reportUpdate = vi.fn().mockResolvedValue(assigned);
+    const historyCreate = vi.fn();
+    const auditCreate = vi.fn();
+    const prisma = {
+      report: { findUnique: vi.fn().mockResolvedValue(submitted) },
+      $transaction: vi.fn().mockImplementation(async (cb: (tx: unknown) => unknown) =>
+        cb({
+          report: { update: reportUpdate },
+          statusHistory: { create: historyCreate },
+          auditLog: { create: auditCreate },
+        }),
+      ),
+    };
+    const events = { emit: vi.fn() };
+    const route = vi.fn().mockResolvedValue({
+      categoryId: 'cat-1',
+      departmentId: 'dept-1',
+      institutionId: 'inst-1',
+      slaHours: 48,
+      defaultPriority: Priority.HIGH,
+      matchedRuleId: 'rule-1',
+      matchedRuleName: 'Ndriçimi',
+      source: 'rule',
+    });
+    const service = new ReportsService(
+      prisma as unknown as PrismaService,
+      { uploadImage: vi.fn() } as unknown as CloudinaryService,
+      { classifyReportPhoto: vi.fn() } as unknown as AiClassificationService,
+      events as unknown as EventEmitter2,
+      { route } as unknown as RoutingService,
+      { sendReportReceivedEmail: vi.fn() } as unknown as MailService,
+      { webOrigin: 'http://localhost:3000' } as unknown as ConfigService,
+    );
+
+    const dto = await service.moderate('r1', staff as never, { action: 'approve' });
+
+    expect(route).toHaveBeenCalledWith({ categoryId: 'cat-1', severity: Priority.HIGH });
+    expect(reportUpdate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          status: ReportStatus.ASSIGNED,
+          departmentId: 'dept-1',
+          institutionId: 'inst-1',
+          categoryId: 'cat-1',
+          priority: Priority.HIGH,
+        }),
+      }),
+    );
+    expect(auditCreate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          action: 'report.approve',
+          metadata: expect.objectContaining({
+            matchedRuleId: 'rule-1',
+            source: 'rule',
+          }),
+        }),
+      }),
+    );
+    expect(dto.status).toBe(ReportStatus.ASSIGNED);
+    expect(events.emit).toHaveBeenCalled();
+  });
+
+  it('approves UNDER_REVIEW reports into the institution queue', async () => {
+    const reviewing = reportRow({
+      status: ReportStatus.UNDER_REVIEW,
+      categoryId: 'cat-1',
+    });
+    const assigned = reportRow({
+      status: ReportStatus.ASSIGNED,
+      categoryId: 'cat-1',
+      departmentId: 'dept-1',
+      institutionId: 'inst-1',
+    });
+    const prisma = {
+      report: { findUnique: vi.fn().mockResolvedValue(reviewing) },
+      $transaction: vi.fn().mockImplementation(async (cb: (tx: unknown) => unknown) =>
+        cb({
+          report: { update: vi.fn().mockResolvedValue(assigned) },
+          statusHistory: { create: vi.fn() },
+          auditLog: { create: vi.fn() },
+        }),
+      ),
+    };
+    const route = vi.fn().mockResolvedValue({
+      categoryId: 'cat-1',
+      departmentId: 'dept-1',
+      institutionId: 'inst-1',
+      slaHours: 24,
+      defaultPriority: Priority.MEDIUM,
+      matchedRuleId: null,
+      matchedRuleName: null,
+      source: 'category_fallback',
+    });
+    const dto = await new ReportsService(
+      prisma as unknown as PrismaService,
+      { uploadImage: vi.fn() } as unknown as CloudinaryService,
+      { classifyReportPhoto: vi.fn() } as unknown as AiClassificationService,
+      { emit: vi.fn() } as unknown as EventEmitter2,
+      { route } as unknown as RoutingService,
+      { sendReportReceivedEmail: vi.fn() } as unknown as MailService,
+      { webOrigin: 'http://localhost:3000' } as unknown as ConfigService,
+    ).moderate('r1', staff as never, { action: 'approve', categoryId: 'cat-1' });
+
+    expect(dto.status).toBe(ReportStatus.ASSIGNED);
+    expect(prisma.$transaction).toHaveBeenCalled();
+  });
+
+  it('fails closed when there is no category', async () => {
+    const prisma = {
+      report: { findUnique: vi.fn().mockResolvedValue(reportRow()) },
+      $transaction: vi.fn(),
+    };
+    const route = vi.fn();
+    const service = new ReportsService(
+      prisma as unknown as PrismaService,
+      { uploadImage: vi.fn() } as unknown as CloudinaryService,
+      { classifyReportPhoto: vi.fn() } as unknown as AiClassificationService,
+      { emit: vi.fn() } as unknown as EventEmitter2,
+      { route } as unknown as RoutingService,
+      { sendReportReceivedEmail: vi.fn() } as unknown as MailService,
+      { webOrigin: 'http://localhost:3000' } as unknown as ConfigService,
+    );
+
+    await expect(
+      service.moderate('r1', staff as never, { action: 'approve' }),
+    ).rejects.toBeInstanceOf(BadRequestException);
+    expect(route).not.toHaveBeenCalled();
+    expect(prisma.$transaction).not.toHaveBeenCalled();
+  });
+
+  it('fails closed when routing cannot resolve a destination', async () => {
+    const prisma = {
+      report: { findUnique: vi.fn().mockResolvedValue(reportRow({ categoryId: 'cat-1' })) },
+      $transaction: vi.fn(),
+    };
+    const route = vi.fn().mockResolvedValue({
+      categoryId: 'cat-1',
+      departmentId: null,
+      institutionId: null,
+      slaHours: 72,
+      defaultPriority: Priority.MEDIUM,
+      matchedRuleId: null,
+      matchedRuleName: null,
+      source: 'unrouted',
+    });
+    const service = new ReportsService(
+      prisma as unknown as PrismaService,
+      { uploadImage: vi.fn() } as unknown as CloudinaryService,
+      { classifyReportPhoto: vi.fn() } as unknown as AiClassificationService,
+      { emit: vi.fn() } as unknown as EventEmitter2,
+      { route } as unknown as RoutingService,
+      { sendReportReceivedEmail: vi.fn() } as unknown as MailService,
+      { webOrigin: 'http://localhost:3000' } as unknown as ConfigService,
+    );
+
+    await expect(
+      service.moderate('r1', staff as never, { action: 'approve' }),
+    ).rejects.toBeInstanceOf(BadRequestException);
+    expect(route).toHaveBeenCalled();
+    expect(prisma.$transaction).not.toHaveBeenCalled();
+  });
+
+  it('fails closed when the category is invalid', async () => {
+    const prisma = {
+      report: { findUnique: vi.fn().mockResolvedValue(reportRow({ categoryId: 'missing' })) },
+      $transaction: vi.fn(),
+    };
+    const route = vi.fn().mockRejectedValue(new BadRequestException('Invalid categoryId'));
+    const service = new ReportsService(
+      prisma as unknown as PrismaService,
+      { uploadImage: vi.fn() } as unknown as CloudinaryService,
+      { classifyReportPhoto: vi.fn() } as unknown as AiClassificationService,
+      { emit: vi.fn() } as unknown as EventEmitter2,
+      { route } as unknown as RoutingService,
+      { sendReportReceivedEmail: vi.fn() } as unknown as MailService,
+      { webOrigin: 'http://localhost:3000' } as unknown as ConfigService,
+    );
+
+    await expect(
+      service.moderate('r1', staff as never, { action: 'approve' }),
+    ).rejects.toBeInstanceOf(BadRequestException);
+    expect(prisma.$transaction).not.toHaveBeenCalled();
   });
 });

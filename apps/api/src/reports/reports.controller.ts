@@ -45,6 +45,7 @@ import {
   UpdateReportPriorityDto,
 } from './dto/update-report-priority.dto';
 import { WorkflowActionDto } from './dto/workflow-action.dto';
+import { ModerateReportDto } from './dto/moderate-report.dto';
 import { ReportsService } from './reports.service';
 
 @Controller('reports')
@@ -140,8 +141,10 @@ export class ReportsController {
   }
 
   @Get(':id/comments')
+  @UseGuards(OptionalJwtAuthGuard)
   listComments(
     @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() user: AuthUser | null,
     @Query('page') page?: string,
     @Query('limit') limit?: string,
   ) {
@@ -149,6 +152,7 @@ export class ReportsController {
       id,
       page ? Number(page) : 1,
       limit ? Number(limit) : 20,
+      user ?? null,
     );
   }
 
@@ -199,6 +203,24 @@ export class ReportsController {
       throw new BadRequestException('action is required');
     }
     return this.reportsService.applyWorkflowAction(id, user, dto, getClientIp(req));
+  }
+
+  @Post(':id/moderate')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.DEPARTMENT_STAFF, Role.DEPARTMENT_ADMIN, Role.SUPER_ADMIN)
+  moderate(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() user: AuthUser,
+    @Body() dto: ModerateReportDto,
+    @Req() req: Request,
+  ) {
+    if (!user) {
+      throw new BadRequestException('Unauthorized');
+    }
+    if (!dto?.action) {
+      throw new BadRequestException('action is required');
+    }
+    return this.reportsService.moderate(id, user, dto, getClientIp(req));
   }
 
   @Patch(':id/assign')

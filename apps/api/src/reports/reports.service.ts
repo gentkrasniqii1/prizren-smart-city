@@ -19,8 +19,12 @@ import type {
   VoteCountResponse,
 } from '@prizren/shared-types';
 import {
+  allowedModerationActions,
   allowedWorkflowActions,
   canTransitionStatus,
+  isPublicReportStatus,
+  MODERATION_ACTIONS_REQUIRING_NOTE,
+  PUBLIC_REPORT_STATUSES,
   QUEUE_LANE_STATUSES,
   WORKFLOW_ACTION_TARGET,
   WORKFLOW_ACTIONS_REQUIRING_NOTE,
@@ -50,6 +54,7 @@ import {
 import { computeDueAt, computeDueAtFromHours } from './sla';
 import { nextReportPublicId } from './public-id';
 import { WorkflowActionDto } from './dto/workflow-action.dto';
+import { ModerateReportDto } from './dto/moderate-report.dto';
 import {
   REPORT_CREATED_EVENT,
   REPORT_STATUS_CHANGED_EVENT,
@@ -58,8 +63,8 @@ import {
 } from '../events/status-changed.event';
 import { assertValidImageUpload } from '../uploads/image-validation';
 import { RoutingService } from '../routing/routing.service';
+import { isStaffUser, STAFF_ROLES, viewerCanAccessReport } from './visibility';
 
-const STAFF_ROLES: Role[] = [Role.DEPARTMENT_STAFF, Role.DEPARTMENT_ADMIN, Role.SUPER_ADMIN];
 const AI_ADMIN_ROLES: Role[] = [Role.DEPARTMENT_ADMIN, Role.SUPER_ADMIN];
 const OPEN_STATUSES: ReportStatus[] = [
   ReportStatus.SUBMITTED,
@@ -162,11 +167,22 @@ export class ReportsService {
       currentStatus: report.status,
     });
 
-    let result = classified ?? report;
-    const slaHours = routed?.slaHours;
-    if (result.status === ReportStatus.SUBMITTED && (result.departmentId || result.institutionId)) {
-      result = await this.enterInstitutionQueue(result.id, SYSTEM_ACTOR, slaHours);
-    }
+    const result = classified ?? report;
+
+    await this.prisma.auditLog.create({
+      data: {
+        userId: user.id,
+        action: 'report.create',
+        entityType: 'Report',
+        entityId: result.id,
+        metadata: {
+          publicId: result.publicId,
+          categoryId: result.categoryId,
+          status: result.status,
+          duplicateOfId: result.duplicateOfId,
+        },
+      },
+    });
 
     this.events.emit(REPORT_CREATED_EVENT, new ReportCreatedEvent(result.id, user.id));
 
@@ -273,6 +289,11 @@ export class ReportsService {
         GROUP BY "reportId"
       ) v ON v."reportId" = r.id
       WHERE r.location IS NOT NULL
+        ${
+          isStaffUser(viewer)
+            ? Prisma.empty
+            : Prisma.sql`AND r.status IN ('ASSIGNED'::"ReportStatus", 'RECEIVED'::"ReportStatus", 'IN_PROGRESS'::"ReportStatus", 'WAITING_FOR_INFORMATION'::"ReportStatus", 'RESOLVED'::"ReportStatus")`
+        }
         AND ST_DWithin(
           r.location,
           ST_SetSRID(ST_MakePoint(${lng}, ${lat}), 4326)::geography,
@@ -294,7 +315,10 @@ export class ReportsService {
           institution: row.institutionName ? { name: row.institutionName } : null,
           _count: { votes: row.voteCount },
         },
-        { includeUserId: this.canSeeUserId(viewer, row.userId) },
+        {
+          includeUserId: this.canSeeUserId(viewer, row.userId),
+          staff: isStaffUser(viewer),
+        },
       ),
     );
   }
@@ -310,7 +334,11 @@ export class ReportsService {
   async list(query: ListReportsQueryDto, viewer: AuthUser | null): Promise<PaginatedReports> {
     const page = query.page ?? 1;
     const limit = query.limit ?? 20;
-    const where = this.buildWhere(query);
+    const staff = isStaffUser(viewer);
+    const where: Prisma.ReportWhereInput = {
+      ...this.buildWhere(query),
+      ...this.publicListConstraint(viewer, query.status),
+    };
 
     const [total, rows] = await this.prisma.$transaction([
       this.prisma.report.count({ where }),
@@ -327,7 +355,7 @@ export class ReportsService {
       data: rows.map((row) =>
         this.toDto(row, {
           includeUserId: this.canSeeUserId(viewer, row.userId),
-          staff: Boolean(viewer && STAFF_ROLES.includes(viewer.role as Role)),
+          staff,
         }),
       ),
       meta: {
@@ -347,6 +375,9 @@ export class ReportsService {
     if (!report) {
       throw new NotFoundException('Report not found');
     }
+    if (!viewerCanAccessReport(report, viewer)) {
+      throw new NotFoundException('Report not found');
+    }
 
     let votedByMe: boolean | undefined;
     if (viewer) {
@@ -361,7 +392,7 @@ export class ReportsService {
     return this.toDto(report, {
       includeUserId: this.canSeeUserId(viewer, report.userId),
       votedByMe,
-      staff: Boolean(viewer && STAFF_ROLES.includes(viewer.role as Role)),
+      staff: isStaffUser(viewer),
     });
   }
 
@@ -421,11 +452,23 @@ export class ReportsService {
     if (!existing) {
       throw new NotFoundException('Report not found');
     }
-    if (existing.status === dto.status) {
+    if (existing.status === dto.status && !dto.note?.trim()) {
       throw new BadRequestException('Status is already set to this value');
     }
 
-    this.assertStatusTransition(existing.status, dto.status, user.role as Role);
+    if (
+      (existing.status === ReportStatus.SUBMITTED ||
+        existing.status === ReportStatus.UNDER_REVIEW) &&
+      dto.status === ReportStatus.ASSIGNED
+    ) {
+      throw new BadRequestException(
+        'Use POST /reports/:id/moderate with action approve to enter the institution queue',
+      );
+    }
+
+    if (existing.status !== dto.status) {
+      this.assertStatusTransition(existing.status, dto.status, user.role as Role);
+    }
 
     if (dto.status === ReportStatus.RESOLVED && !existing.photoAfterUrl) {
       throw new BadRequestException(
@@ -445,6 +488,9 @@ export class ReportsService {
         data: {
           status: dto.status,
           ...(nextDueAt ? { dueAt: nextDueAt } : {}),
+          ...(dto.status === ReportStatus.DUPLICATE && existing.duplicateOfId
+            ? { isDuplicate: true }
+            : {}),
         },
         include: REPORT_DETAIL_INCLUDE,
       });
@@ -516,13 +562,100 @@ export class ReportsService {
     );
   }
 
+  async moderate(
+    id: string,
+    user: AuthUser,
+    dto: ModerateReportDto,
+    ipAddress?: string | null,
+  ): Promise<ReportDto> {
+    if (!STAFF_ROLES.includes(user.role as Role)) {
+      throw new ForbiddenException('Only staff/admin can moderate reports');
+    }
+
+    const existing = await this.prisma.report.findUnique({ where: { id } });
+    if (!existing) {
+      throw new NotFoundException('Report not found');
+    }
+
+    const allowed = allowedModerationActions(existing.status);
+    if (!allowed.includes(dto.action)) {
+      throw new BadRequestException(
+        `Cannot apply ${dto.action} while the report is ${existing.status}`,
+      );
+    }
+
+    const note = dto.note?.trim();
+    if (MODERATION_ACTIONS_REQUIRING_NOTE.includes(dto.action) && !note) {
+      throw new BadRequestException('note is required for this action');
+    }
+
+    if (dto.action === 'approve') {
+      return this.approveOfficialCase(existing, user, dto, ipAddress);
+    }
+
+    if (dto.action === 'start_review') {
+      return this.updateStatus(id, user, { status: ReportStatus.UNDER_REVIEW, note }, ipAddress);
+    }
+
+    if (dto.action === 'request_information') {
+      const labelled = `Kërkesë për informacion: ${note}`;
+      return this.updateStatus(
+        id,
+        user,
+        { status: ReportStatus.UNDER_REVIEW, note: labelled },
+        ipAddress,
+      );
+    }
+
+    if (dto.action === 'mark_duplicate') {
+      if (!dto.duplicateOfId) {
+        throw new BadRequestException('duplicateOfId is a required field');
+      }
+      if (dto.duplicateOfId === id) {
+        throw new BadRequestException('A report cannot be a duplicate of itself');
+      }
+      const original = await this.prisma.report.findUnique({
+        where: { id: dto.duplicateOfId },
+        select: { id: true, publicId: true },
+      });
+      if (!original) {
+        throw new BadRequestException('Original report not found');
+      }
+
+      await this.prisma.report.update({
+        where: { id },
+        data: { duplicateOfId: original.id, isDuplicate: true },
+      });
+
+      return this.updateStatus(
+        id,
+        user,
+        {
+          status: ReportStatus.DUPLICATE,
+          note: note
+            ? `${note} (origjinali: ${original.publicId})`
+            : `Origjinali: ${original.publicId}`,
+        },
+        ipAddress,
+      );
+    }
+
+    const reason = dto.action === 'reject_spam' ? 'spam' : 'invalid';
+    return this.updateStatus(
+      id,
+      user,
+      { status: ReportStatus.REJECTED, note: `[${reason}] ${note}` },
+      ipAddress,
+    );
+  }
+
   async listQueue(user: AuthUser, query: ListReportsQueryDto): Promise<PaginatedReports> {
     if (!STAFF_ROLES.includes(user.role as Role)) {
       throw new ForbiddenException('Only staff/admin can open the institution queue');
     }
 
-    const scope = await this.staffQueueScope(user);
-    const lane: QueueLane = query.lane ?? 'incoming';
+    const lane: QueueLane = query.lane ?? 'pending';
+    const scope = lane === 'pending' ? {} : await this.staffQueueScope(user);
     const laneStatuses = QUEUE_LANE_STATUSES[lane] as ReportStatus[];
 
     const page = query.page ?? 1;
@@ -570,6 +703,15 @@ export class ReportsService {
       throw new NotFoundException('Report not found');
     }
 
+    if (
+      existing.status === ReportStatus.SUBMITTED ||
+      existing.status === ReportStatus.UNDER_REVIEW
+    ) {
+      throw new BadRequestException(
+        'Approve the report before assigning staff or changing the institution desk',
+      );
+    }
+
     let departmentId = dto.departmentId === undefined ? existing.departmentId : dto.departmentId;
     if (dto.departmentId) {
       const dept = await this.prisma.department.findUnique({ where: { id: dto.departmentId } });
@@ -596,11 +738,6 @@ export class ReportsService {
       }
     }
 
-    const nextStatus =
-      existing.status === ReportStatus.SUBMITTED || existing.status === ReportStatus.UNDER_REVIEW
-        ? ReportStatus.ASSIGNED
-        : existing.status;
-
     const dueAt = existing.dueAt ?? computeDueAt(existing.priority);
 
     const updated = await this.prisma.$transaction(async (tx) => {
@@ -611,22 +748,10 @@ export class ReportsService {
           institutionId: institutionId ?? null,
           assignedStaffId:
             dto.assignedStaffId === undefined ? existing.assignedStaffId : dto.assignedStaffId,
-          status: nextStatus,
           dueAt,
         },
         include: REPORT_INCLUDE,
       });
-
-      if (nextStatus !== existing.status) {
-        await tx.statusHistory.create({
-          data: {
-            reportId: id,
-            oldStatus: existing.status,
-            newStatus: nextStatus,
-            changedBy: user.id,
-          },
-        });
-      }
 
       await tx.auditLog.create({
         data: {
@@ -649,13 +774,6 @@ export class ReportsService {
 
       return report;
     });
-
-    if (nextStatus !== existing.status) {
-      this.events.emit(
-        REPORT_STATUS_CHANGED_EVENT,
-        new StatusChangedEvent(updated.id, existing.userId, existing.status, nextStatus, user.id),
-      );
-    }
 
     return this.toDto(updated, { includeUserId: true });
   }
@@ -872,6 +990,7 @@ export class ReportsService {
     if (!report) {
       throw new NotFoundException('Report not found');
     }
+    this.assertCanInteract(report, user);
 
     try {
       await this.prisma.vote.create({
@@ -894,6 +1013,7 @@ export class ReportsService {
     if (!report) {
       throw new NotFoundException('Report not found');
     }
+    this.assertCanInteract(report, user);
 
     await this.prisma.vote.deleteMany({
       where: { reportId: id, userId: user.id },
@@ -903,9 +1023,17 @@ export class ReportsService {
     return { voteCount, votedByMe: false };
   }
 
-  async listComments(id: string, page = 1, limit = 20): Promise<PaginatedComments> {
+  async listComments(
+    id: string,
+    page = 1,
+    limit = 20,
+    viewer: AuthUser | null = null,
+  ): Promise<PaginatedComments> {
     const report = await this.prisma.report.findUnique({ where: { id } });
     if (!report) {
+      throw new NotFoundException('Report not found');
+    }
+    if (!viewerCanAccessReport(report, viewer)) {
       throw new NotFoundException('Report not found');
     }
 
@@ -944,6 +1072,7 @@ export class ReportsService {
     if (!report) {
       throw new NotFoundException('Report not found');
     }
+    this.assertCanInteract(report, user);
 
     const created = await this.prisma.comment.create({
       data: {
@@ -995,18 +1124,8 @@ export class ReportsService {
     }
 
     const routed = await this.routeFromClassification(classification);
-    const nextStatus =
-      existing.status === ReportStatus.SUBMITTED || existing.status === ReportStatus.UNDER_REVIEW
-        ? routed?.departmentId || routed?.institutionId
-          ? ReportStatus.ASSIGNED
-          : ReportStatus.UNDER_REVIEW
-        : existing.status;
-    const dueAt =
-      nextStatus === ReportStatus.ASSIGNED && !existing.dueAt
-        ? routed
-          ? computeDueAtFromHours(routed.slaHours)
-          : computeDueAt(existing.priority)
-        : existing.dueAt;
+    const dueAt = existing.dueAt;
+    const nextStatus = existing.status;
 
     const updated = await this.prisma.$transaction(async (tx) => {
       const report = await tx.report.update({
@@ -1103,8 +1222,6 @@ export class ReportsService {
 
     const needsReview = classification.confidence < AI_CONFIDENCE_THRESHOLD;
     const nextStatus = needsReview ? ReportStatus.UNDER_REVIEW : input.currentStatus;
-    const routed =
-      !needsReview && !input.categoryId ? await this.routeFromClassification(classification) : null;
 
     const updated = await this.prisma.$transaction(async (tx) => {
       const report = await tx.report.update({
@@ -1115,14 +1232,6 @@ export class ReportsService {
           duplicateOfId: duplicateOfId ?? undefined,
           isDuplicate: duplicateOfId ? true : undefined,
           status: nextStatus,
-          ...(routed
-            ? {
-                categoryId: routed.categoryId,
-                departmentId: routed.departmentId,
-                institutionId: routed.institutionId,
-                priority: routed.defaultPriority,
-              }
-            : {}),
         },
         include: REPORT_INCLUDE,
       });
@@ -1134,12 +1243,27 @@ export class ReportsService {
             oldStatus: input.currentStatus,
             newStatus: nextStatus,
             changedBy: SYSTEM_ACTOR,
-            note: needsReview
-              ? 'Besueshmëria e AI është e ulët — kategoria kërkon shqyrtim para radhës'
-              : 'Kategoria u konfirmua — raporti hyri në radhën e institucionit',
+            note: 'Besueshmëria e AI është e ulët — kërkon shqyrtim njerëzor. AI nuk e bën rastin zyrtar.',
           },
         });
       }
+
+      await tx.auditLog.create({
+        data: {
+          userId: report.userId,
+          actorType: 'SYSTEM',
+          action: 'report.ai_classification',
+          entityType: 'Report',
+          entityId: reportId,
+          metadata: JSON.parse(
+            JSON.stringify({
+              confidence: classification.confidence,
+              needsReview,
+              category: classification.category,
+            }),
+          ) as Prisma.InputJsonValue,
+        },
+      });
 
       return report;
     });
@@ -1227,43 +1351,82 @@ export class ReportsService {
     }
   }
 
-  private async enterInstitutionQueue(
-    reportId: string,
-    changedBy: string,
-    slaHours?: number,
-  ): Promise<ReportWithRelations> {
-    const existing = await this.prisma.report.findUnique({
-      where: { id: reportId },
-      include: REPORT_INCLUDE,
-    });
-    if (!existing) {
-      throw new NotFoundException('Report not found');
-    }
-    if (existing.status !== ReportStatus.SUBMITTED) {
-      return existing;
-    }
-    if (!existing.departmentId && !existing.institutionId) {
-      return existing;
+  /**
+   * Human approval is the only path into the institution queue.
+   * RoutingService.route() must resolve a department or institution first.
+   */
+  private async approveOfficialCase(
+    existing: Report,
+    user: AuthUser,
+    dto: ModerateReportDto,
+    ipAddress?: string | null,
+  ): Promise<ReportDto> {
+    const categoryId = dto.categoryId ?? existing.categoryId;
+    if (!categoryId) {
+      throw new BadRequestException(
+        'categoryId is required before approving a report into the institution queue',
+      );
     }
 
-    const dueAt =
-      existing.dueAt ??
-      (slaHours ? computeDueAtFromHours(slaHours) : computeDueAt(existing.priority));
+    const routed = await this.routing.route({
+      categoryId,
+      severity: existing.priority,
+    });
+
+    if (!routed.departmentId && !routed.institutionId) {
+      throw new BadRequestException(
+        'Cannot approve: routing did not resolve a department or institution',
+      );
+    }
+
+    const dueAt = existing.dueAt ?? computeDueAtFromHours(routed.slaHours);
+    const note =
+      dto.note?.trim() ||
+      (routed.institutionId
+        ? 'U miratua dhe u rrugëzua te radha e institucionit përgjegjës'
+        : 'U miratua dhe u rrugëzua te radha e departamentit përgjegjës');
+
     const updated = await this.prisma.$transaction(async (tx) => {
       const report = await tx.report.update({
-        where: { id: reportId },
-        data: { status: ReportStatus.ASSIGNED, dueAt },
-        include: REPORT_INCLUDE,
+        where: { id: existing.id },
+        data: {
+          categoryId: routed.categoryId,
+          departmentId: routed.departmentId,
+          institutionId: routed.institutionId,
+          priority: routed.defaultPriority,
+          status: ReportStatus.ASSIGNED,
+          dueAt,
+        },
+        include: REPORT_DETAIL_INCLUDE,
       });
       await tx.statusHistory.create({
         data: {
-          reportId,
-          oldStatus: ReportStatus.SUBMITTED,
+          reportId: existing.id,
+          oldStatus: existing.status,
           newStatus: ReportStatus.ASSIGNED,
-          changedBy,
-          note: existing.institutionId
-            ? 'U rrugëzua te radha e institucionit përgjegjës'
-            : 'U rrugëzua te radha e departamentit përgjegjës',
+          changedBy: user.id,
+          note,
+        },
+      });
+      await tx.auditLog.create({
+        data: {
+          userId: user.id,
+          action: 'report.approve',
+          entityType: 'Report',
+          entityId: existing.id,
+          ipAddress: ipAddress ?? undefined,
+          metadata: {
+            oldStatus: existing.status,
+            newStatus: ReportStatus.ASSIGNED,
+            categoryId: routed.categoryId,
+            departmentId: routed.departmentId,
+            institutionId: routed.institutionId,
+            matchedRuleId: routed.matchedRuleId,
+            matchedRuleName: routed.matchedRuleName,
+            source: routed.source,
+            slaHours: routed.slaHours,
+            defaultPriority: routed.defaultPriority,
+          },
         },
       });
       return report;
@@ -1274,13 +1437,14 @@ export class ReportsService {
       new StatusChangedEvent(
         updated.id,
         existing.userId,
-        ReportStatus.SUBMITTED,
+        existing.status,
         ReportStatus.ASSIGNED,
-        changedBy,
+        user.id,
+        note,
       ),
     );
 
-    return updated;
+    return this.toDto(updated, { includeUserId: true, staff: true });
   }
 
   private async staffQueueScope(user: AuthUser): Promise<Prisma.ReportWhereInput> {
@@ -1340,6 +1504,26 @@ export class ReportsService {
     return where;
   }
 
+  /** Non-staff lists never include unapproved, rejected, or duplicate cases. */
+  private publicListConstraint(
+    viewer: AuthUser | null,
+    requestedStatus?: ReportStatus,
+  ): Prisma.ReportWhereInput {
+    if (isStaffUser(viewer)) {
+      return {};
+    }
+    if (requestedStatus) {
+      return isPublicReportStatus(requestedStatus) ? {} : { id: { in: [] } };
+    }
+    return { status: { in: PUBLIC_REPORT_STATUSES as ReportStatus[] } };
+  }
+
+  private assertCanInteract(report: { status: ReportStatus; userId: string }, viewer: AuthUser) {
+    if (!viewerCanAccessReport(report, viewer)) {
+      throw new NotFoundException('Report not found');
+    }
+  }
+
   private canSeeUserId(viewer: AuthUser | null, ownerId: string): boolean {
     if (!viewer) return false;
     if (viewer.id === ownerId) return true;
@@ -1364,6 +1548,8 @@ export class ReportsService {
         ?.slice()
         .reverse()
         .find((row) => row.note)?.note ?? null;
+    const staff = Boolean(opts.staff);
+    const privilegedNotes = staff || opts.includeUserId;
 
     const dto: ReportDto = {
       id: report.id,
@@ -1380,18 +1566,21 @@ export class ReportsService {
       address: report.address,
       photoUrl: report.photoUrl,
       photoAfterUrl: report.photoAfterUrl,
-      aiClassification: (report.aiClassification as ReportDto['aiClassification']) ?? null,
-      aiConfidence: report.aiConfidence,
-      aiNeedsReview:
-        report.aiConfidence !== null && report.aiConfidence < AI_CONFIDENCE_THRESHOLD
+      aiClassification: staff
+        ? ((report.aiClassification as ReportDto['aiClassification']) ?? null)
+        : null,
+      aiConfidence: staff ? report.aiConfidence : null,
+      aiNeedsReview: staff
+        ? report.aiConfidence !== null && report.aiConfidence < AI_CONFIDENCE_THRESHOLD
           ? true
           : report.aiConfidence !== null
             ? false
-            : null,
-      duplicateOfId: report.duplicateOfId ?? null,
+            : null
+        : null,
+      duplicateOfId: staff ? (report.duplicateOfId ?? null) : null,
       isDuplicate: report.isDuplicate ?? false,
-      assignedStaffId: report.assignedStaffId ?? null,
-      source: report.source,
+      assignedStaffId: staff ? (report.assignedStaffId ?? null) : null,
+      source: staff ? report.source : undefined,
       anonymous: report.anonymous,
       language: report.language,
       dueAt: report.dueAt?.toISOString() ?? null,
@@ -1401,14 +1590,21 @@ export class ReportsService {
       departmentName: report.department?.name ?? null,
       institutionName: report.institution?.name ?? null,
       voteCount: report._count?.votes ?? 0,
-      latestNote,
+      latestNote: privilegedNotes ? latestNote : null,
     };
 
     if (history) {
-      dto.history = history;
+      dto.history = privilegedNotes
+        ? history
+        : history.map((row) => ({
+            ...row,
+            changedBy: undefined,
+            note: null,
+          }));
     }
-    if (opts.staff) {
+    if (staff) {
       dto.allowedActions = allowedWorkflowActions(report.status);
+      dto.allowedModerationActions = allowedModerationActions(report.status);
     }
 
     if (opts.includeUserId) {

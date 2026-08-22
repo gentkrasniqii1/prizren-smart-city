@@ -8,16 +8,16 @@ export class TransparencyController {
 
   @Get()
   async getStats(): Promise<TransparencyStats> {
-    const emptyQuery = {};
+    const publicOnly = { publicOnly: true };
     const [summary, byStatus, byCategory] = await Promise.all([
-      this.analytics.summary(emptyQuery),
-      this.analytics.byStatus(emptyQuery),
-      this.analytics.byCategory(emptyQuery),
+      this.analytics.summary(publicOnly),
+      this.analytics.byStatus(publicOnly),
+      this.analytics.byCategory(publicOnly),
     ]);
 
-    const closed = new Set(['RESOLVED', 'REJECTED', 'DUPLICATE']);
+    const publicOpen = new Set(['ASSIGNED', 'RECEIVED', 'IN_PROGRESS', 'WAITING_FOR_INFORMATION']);
     const pendingOpen = byStatus
-      .filter((row) => !closed.has(row.status))
+      .filter((row) => publicOpen.has(row.status))
       .reduce((sum, row) => sum + row.count, 0);
     const resolutionRate =
       summary.total > 0 ? Math.round((summary.resolved / summary.total) * 1000) / 10 : null;
