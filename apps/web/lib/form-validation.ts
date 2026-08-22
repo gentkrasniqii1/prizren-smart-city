@@ -1,7 +1,12 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import type { FieldError } from 'react-hook-form';
 import { z } from 'zod';
-import { DESCRIPTION_MAX, DESCRIPTION_MIN, HONEYPOT_MAX } from '@prizren/shared-types';
+import {
+  DESCRIPTION_MAX,
+  DESCRIPTION_MIN,
+  HONEYPOT_MAX,
+  MAX_REPORT_PHOTOS,
+} from '@prizren/shared-types';
 
 export { zodResolver };
 
@@ -24,7 +29,10 @@ export function issueMessage(
 
 export const createReportFormSchema = z.object({
   description: z.string().trim().min(DESCRIPTION_MIN, 'descriptionError').max(DESCRIPTION_MAX),
-  photo: z.custom<File | null>((value) => value instanceof File, { message: 'photoRequired' }),
+  photos: z
+    .array(z.custom<File>((value) => value instanceof File))
+    .min(1, 'photoRequired')
+    .max(MAX_REPORT_PHOTOS, 'photoMaxError'),
   lat: z.number({ error: 'locationRequired' }).gte(-90).lte(90),
   lng: z.number({ error: 'locationRequired' }).gte(-180).lte(180),
   address: z.string().optional(),
