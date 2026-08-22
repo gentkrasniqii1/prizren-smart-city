@@ -847,6 +847,14 @@
     "retryBody": "Provo ta dërgosh njoftimin institucional për {id} sërish. Kjo nuk sajon një kuti postare.",
     "retryDone": "Riprovimi u regjistrua.",
     "retryFailed": "Riprovimi dështoi.",
+    "revoke": "Revoko lidhjen",
+    "revokeTitle": "Revoko lidhjen institucionale",
+    "revokeBody": "Lidhja e dërguar për {id} nuk do të funksionojë më. Stafi që e ka hapur rastin mund ta përdorë faqen normale të raportit.",
+    "revokeDone": "Lidhja u revokua.",
+    "revokeFailed": "Lidhja nuk u revokua.",
+    "linkActive": "Lidhja e sigurt është aktive",
+    "linkRevoked": "Lidhja u revokua",
+    "linkExpired": "Lidhja ka skaduar",
     "statuses": {
       "NOT_CONFIGURED": "I pakonfiguruar",
       "QUEUED": "Në radhë",
@@ -865,6 +873,14 @@
       "INTEGRATION_STATUS": "Integrimi nuk është TEST ose ACTIVE",
       "NO_PROVIDER": "Nuk ka ofrues Resend/SMTP"
     }
+  },
+  "InstitutionAccess": {
+    "loading": "Duke hapur rastin institucional…",
+    "invalidTitle": "Kjo lidhje nuk është e vlefshme",
+    "invalidBody": "Lidhja institucionale mungon, ka skaduar, ose është revokuar. Kërkoni stafit komunal të dërgojë një njoftim të ri.",
+    "forbiddenTitle": "Nuk mund ta hapni këtë rast",
+    "forbiddenBody": "Kjo lidhje është për stafin e institucionit përgjegjës. Hyni me llogarinë e stafit të atij institucioni.",
+    "genericBody": "Rasti institucional nuk u hap."
   },
   "Routing": {
     "kicker": "Konsola e stafit",

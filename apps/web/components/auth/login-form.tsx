@@ -15,6 +15,7 @@ import { FieldError, Checkbox, FormError, PasswordInput } from '@/components/ui'
 import { Button, type ButtonStatus } from '@/components/ui/button';
 import { Input, Label } from '@/components/ui/field';
 import { ApiError } from '@/lib/api';
+import { consumeLoginNext } from '@/lib/login-next';
 import { issueMessage, zodResolver } from '@/lib/form-validation';
 import { useErrorMessage } from '@/lib/use-error-message';
 
@@ -63,7 +64,7 @@ export function LoginForm() {
         router.push('/auth/two-factor');
         return;
       }
-      router.push('/account');
+      router.push(consumeLoginNext() ?? '/account');
     } catch (err) {
       if (err instanceof ApiError && err.message === 'EMAIL_NOT_VERIFIED') {
         setSubmitStatus('success');

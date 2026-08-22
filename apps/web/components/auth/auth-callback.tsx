@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { toast } from 'sonner';
 import { useAuth } from '@/components/auth-provider';
+import { consumeLoginNext } from '@/lib/login-next';
 import { AuthSessionSkeleton } from '@/components/ui/skeletons';
 
 /** Landing after Google OAuth cookie set — refresh session then go to account. */
@@ -21,7 +22,7 @@ export function AuthCallback() {
         const provider = linked === 'facebook' ? 'Facebook' : 'Google';
         toast.success(t('oauthLinked', { provider }));
       }
-      router.replace(ok ? '/account' : '/login');
+      router.replace(ok ? (consumeLoginNext() ?? '/account') : '/login');
     })();
   }, [refreshSession, router, t]);
 
