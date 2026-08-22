@@ -1,13 +1,14 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma, Priority, ReportStatus } from '@prisma/client';
-import type {
-  AnalyticsByCategoryItem,
-  AnalyticsByDepartmentItem,
-  AnalyticsByInstitutionItem,
-  AnalyticsByStatusItem,
-  AnalyticsOverTimeItem,
-  AnalyticsSla,
-  AnalyticsSummary,
+import {
+  PUBLIC_REPORT_STATUSES,
+  type AnalyticsByCategoryItem,
+  type AnalyticsByDepartmentItem,
+  type AnalyticsByInstitutionItem,
+  type AnalyticsByStatusItem,
+  type AnalyticsOverTimeItem,
+  type AnalyticsSla,
+  type AnalyticsSummary,
 } from '@prizren/shared-types';
 import { PrismaService } from '../prisma/prisma.service';
 import { DUE_SOON_MS, OPEN_REPORT_STATUSES } from '../reports/sla';
@@ -252,15 +253,7 @@ export class AnalyticsService {
   private buildWhere(query: AnalyticsQueryDto & { publicOnly?: boolean }): Prisma.ReportWhereInput {
     const where: Prisma.ReportWhereInput = {};
     if (query.publicOnly) {
-      where.status = {
-        in: [
-          ReportStatus.ASSIGNED,
-          ReportStatus.RECEIVED,
-          ReportStatus.IN_PROGRESS,
-          ReportStatus.WAITING_FOR_INFORMATION,
-          ReportStatus.RESOLVED,
-        ],
-      };
+      where.status = { in: PUBLIC_REPORT_STATUSES as ReportStatus[] };
     }
     if (query.departmentId) where.departmentId = query.departmentId;
     if (query.institutionId) where.institutionId = query.institutionId;
