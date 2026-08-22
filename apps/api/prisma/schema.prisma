@@ -148,6 +148,7 @@ model Institution {
   reports           Report[]
   routingRules      RoutingRule[]
   outboundEmails    OutboundEmail[]
+  accessTokens      InstitutionAccessToken[]
 }
 
 model Department {
@@ -290,6 +291,7 @@ model Report {
   votes            Vote[]
   comments         Comment[]
   outboundEmails   OutboundEmail[]
+  accessTokens     InstitutionAccessToken[]
 
   @@index([status])
   @@index([categoryId])
@@ -401,11 +403,38 @@ model OutboundEmail {
   nextRetryAt       DateTime?
   createdAt         DateTime             @default(now())
   updatedAt         DateTime             @updatedAt
+  accessTokenId     String?
+  accessToken       InstitutionAccessToken? @relation(fields: [accessTokenId], references: [id])
 
   @@unique([reportId, purpose])
   @@index([status])
   @@index([institutionId])
   @@index([nextRetryAt])
+}
+
+enum InstitutionAccessPurpose {
+  INSTITUTION_NEW_CASE
+}
+
+/// Hashed, expiring, revocable link for institutional mail. Raw token is never stored.
+/// Opening the link still requires staff login and membership in the bound institution.
+model InstitutionAccessToken {
+  id             String                    @id @default(uuid())
+  tokenHash      String                    @unique
+  reportId       String
+  report         Report                    @relation(fields: [reportId], references: [id])
+  institutionId  String
+  institution    Institution               @relation(fields: [institutionId], references: [id])
+  purpose        InstitutionAccessPurpose
+  expiresAt      DateTime
+  revokedAt      DateTime?
+  lastUsedAt     DateTime?
+  createdAt      DateTime                  @default(now())
+  outboundEmails OutboundEmail[]
+
+  @@index([reportId, purpose])
+  @@index([institutionId])
+  @@index([expiresAt])
 }
 
 /// Immutable audit trail for administrative/state-changing actions across the

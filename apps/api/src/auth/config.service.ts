@@ -101,6 +101,13 @@ export class ConfigService {
     return process.env.INSTITUTIONAL_MAIL_ENABLED === 'true';
   }
 
+  /** Lifetime of hashed institution mail links. Clamped to 1–365 days; default 30. */
+  get institutionAccessTtlDays(): number {
+    const parsed = Number.parseInt(process.env.INSTITUTION_ACCESS_TTL_DAYS ?? '30', 10);
+    if (!Number.isFinite(parsed) || parsed < 1) return 30;
+    return Math.min(parsed, 365);
+  }
+
   get mailFrom(): string {
     const name = process.env.MAIL_FROM_NAME ?? 'Prizren Smart City';
     // Resend's shared sender until a custom domain is verified.
