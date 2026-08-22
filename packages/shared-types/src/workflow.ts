@@ -3,6 +3,63 @@ import type { ReportStatus } from './report-status';
 export type WorkflowAction =
   'accept' | 'investigate' | 'request_info' | 'resolve' | 'reject' | 'mark_duplicate';
 
+/** Staff decisions before a report becomes an official civic case. */
+export type ModerationAction =
+  | 'approve'
+  | 'start_review'
+  | 'reject_spam'
+  | 'reject_invalid'
+  | 'mark_duplicate'
+  | 'request_information';
+
+export const MODERATION_ACTIONS = [
+  'approve',
+  'start_review',
+  'reject_spam',
+  'reject_invalid',
+  'mark_duplicate',
+  'request_information',
+] as const satisfies readonly ModerationAction[];
+
+export const MODERATION_ACTIONS_REQUIRING_NOTE: ModerationAction[] = [
+  'reject_spam',
+  'reject_invalid',
+  'mark_duplicate',
+  'request_information',
+];
+
+/** Visible on public lists, maps, nearby, and transparency. Owner + staff still see the rest. */
+export const PUBLIC_REPORT_STATUSES: ReportStatus[] = [
+  'ASSIGNED',
+  'RECEIVED',
+  'IN_PROGRESS',
+  'WAITING_FOR_INFORMATION',
+  'RESOLVED',
+];
+
+export const PRE_APPROVAL_STATUSES: ReportStatus[] = ['SUBMITTED', 'UNDER_REVIEW'];
+
+export function isPublicReportStatus(status: ReportStatus): boolean {
+  return PUBLIC_REPORT_STATUSES.includes(status);
+}
+
+export function allowedModerationActions(status: ReportStatus): ModerationAction[] {
+  if (status === 'SUBMITTED') {
+    return [
+      'approve',
+      'start_review',
+      'reject_spam',
+      'reject_invalid',
+      'mark_duplicate',
+      'request_information',
+    ];
+  }
+  if (status === 'UNDER_REVIEW') {
+    return ['approve', 'reject_spam', 'reject_invalid', 'mark_duplicate', 'request_information'];
+  }
+  return [];
+}
+
 export const WORKFLOW_ACTIONS = [
   'accept',
   'investigate',
@@ -64,9 +121,10 @@ export function allowedWorkflowActions(status: ReportStatus): WorkflowAction[] {
   );
 }
 
-export type QueueLane = 'incoming' | 'active' | 'waiting' | 'done';
+export type QueueLane = 'pending' | 'incoming' | 'active' | 'waiting' | 'done';
 
 export const QUEUE_LANE_STATUSES: Record<QueueLane, ReportStatus[]> = {
+  pending: ['SUBMITTED', 'UNDER_REVIEW'],
   incoming: ['ASSIGNED'],
   active: ['RECEIVED', 'IN_PROGRESS'],
   waiting: ['WAITING_FOR_INFORMATION'],

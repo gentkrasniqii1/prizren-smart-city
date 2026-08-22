@@ -23,20 +23,36 @@ export class AnalyticsService {
     const [total, pending, resolved, rejected, inReview, assigned, inProgress, newToday, critical] =
       await Promise.all([
         this.prisma.report.count({ where }),
-        this.prisma.report.count({ where: { ...where, status: ReportStatus.SUBMITTED } }),
-        this.prisma.report.count({ where: { ...where, status: ReportStatus.RESOLVED } }),
-        this.prisma.report.count({ where: { ...where, status: ReportStatus.REJECTED } }),
-        this.prisma.report.count({ where: { ...where, status: ReportStatus.UNDER_REVIEW } }),
-        this.prisma.report.count({ where: { ...where, status: ReportStatus.ASSIGNED } }),
-        this.prisma.report.count({ where: { ...where, status: ReportStatus.IN_PROGRESS } }),
+        this.prisma.report.count({
+          where: { AND: [where, { status: ReportStatus.SUBMITTED }] },
+        }),
+        this.prisma.report.count({
+          where: { AND: [where, { status: ReportStatus.RESOLVED }] },
+        }),
+        this.prisma.report.count({
+          where: { AND: [where, { status: ReportStatus.REJECTED }] },
+        }),
+        this.prisma.report.count({
+          where: { AND: [where, { status: ReportStatus.UNDER_REVIEW }] },
+        }),
+        this.prisma.report.count({
+          where: { AND: [where, { status: ReportStatus.ASSIGNED }] },
+        }),
+        this.prisma.report.count({
+          where: { AND: [where, { status: ReportStatus.IN_PROGRESS }] },
+        }),
         this.prisma.report.count({
           where: withCreatedSince(where, startOfToday()),
         }),
         this.prisma.report.count({
           where: {
-            ...where,
-            priority: Priority.CRITICAL,
-            status: { in: OPEN_REPORT_STATUSES },
+            AND: [
+              where,
+              {
+                priority: Priority.CRITICAL,
+                status: { in: OPEN_REPORT_STATUSES },
+              },
+            ],
           },
         }),
       ]);
@@ -233,8 +249,19 @@ export class AnalyticsService {
     return { overdue, dueSoon, onTime };
   }
 
-  private buildWhere(query: AnalyticsQueryDto): Prisma.ReportWhereInput {
+  private buildWhere(query: AnalyticsQueryDto & { publicOnly?: boolean }): Prisma.ReportWhereInput {
     const where: Prisma.ReportWhereInput = {};
+    if (query.publicOnly) {
+      where.status = {
+        in: [
+          ReportStatus.ASSIGNED,
+          ReportStatus.RECEIVED,
+          ReportStatus.IN_PROGRESS,
+          ReportStatus.WAITING_FOR_INFORMATION,
+          ReportStatus.RESOLVED,
+        ],
+      };
+    }
     if (query.departmentId) where.departmentId = query.departmentId;
     if (query.institutionId) where.institutionId = query.institutionId;
     if (query.from || query.to) {
@@ -247,7 +274,7 @@ export class AnalyticsService {
 
   private async avgResolutionHours(where: Prisma.ReportWhereInput): Promise<number | null> {
     const resolved = await this.prisma.report.findMany({
-      where: { ...where, status: ReportStatus.RESOLVED },
+      where: { AND: [where, { status: ReportStatus.RESOLVED }] },
       select: { id: true, createdAt: true },
     });
     if (resolved.length === 0) return null;

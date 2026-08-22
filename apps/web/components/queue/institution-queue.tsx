@@ -31,7 +31,7 @@ import { slaBucket, slaClass, slaLabel } from '@/lib/sla';
 import { cn } from '@/lib/utils';
 import type { AppLocale } from '@/i18n/request';
 
-const LANES: QueueLane[] = ['incoming', 'active', 'waiting', 'done'];
+const LANES: QueueLane[] = ['pending', 'incoming', 'active', 'waiting', 'done'];
 
 function isStaff(role?: string) {
   return role === 'DEPARTMENT_STAFF' || role === 'DEPARTMENT_ADMIN' || role === 'SUPER_ADMIN';
@@ -45,7 +45,7 @@ export function InstitutionQueue() {
   const toast = useToast();
   const errorMessage = useErrorMessage();
 
-  const [lane, setLane] = useState<QueueLane>('incoming');
+  const [lane, setLane] = useState<QueueLane>('pending');
   const [reports, setReports] = useState<ReportDto[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -156,10 +156,13 @@ export function InstitutionQueue() {
             <ul className="divide-y divide-border overflow-hidden rounded-xl border border-border bg-card">
               {reports.map((report) => {
                 const bucket = slaBucket(report.dueAt);
-                const primary = report.allowedActions?.find(
-                  (action) =>
-                    action === 'accept' || action === 'investigate' || action === 'resolve',
-                );
+                const primary =
+                  lane === 'pending'
+                    ? undefined
+                    : report.allowedActions?.find(
+                        (action) =>
+                          action === 'accept' || action === 'investigate' || action === 'resolve',
+                      );
                 return (
                   <li
                     key={report.id}

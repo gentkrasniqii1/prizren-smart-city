@@ -25,8 +25,8 @@ export class ListReportsQueryDto {
 
   /** Institution desk lane — used by GET /reports/queue */
   @IsOptional()
-  @IsIn(['incoming', 'active', 'waiting', 'done'])
-  lane?: 'incoming' | 'active' | 'waiting' | 'done';
+  @IsIn(['pending', 'incoming', 'active', 'waiting', 'done'])
+  lane?: 'pending' | 'incoming' | 'active' | 'waiting' | 'done';
 
   /** Format: minLng,minLat,maxLng,maxLat */
   @IsOptional()

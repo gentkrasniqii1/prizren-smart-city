@@ -3,7 +3,7 @@ export type Role = 'CITIZEN' | 'DEPARTMENT_STAFF' | 'DEPARTMENT_ADMIN' | 'SUPER_
 export type { ReportStatus } from './report-status';
 export { REPORT_STATUSES } from './report-status';
 import type { ReportStatus } from './report-status';
-import type { WorkflowAction } from './workflow';
+import type { ModerationAction, WorkflowAction } from './workflow';
 
 export type Priority = 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
 
@@ -196,7 +196,9 @@ export interface ReportDto {
   history?: StatusHistoryDto[];
   /** Next institution-desk actions for staff viewers */
   allowedActions?: WorkflowAction[];
-  /** Last staff note recorded with a status change */
+  /** Pre-approval moderation actions for staff viewers */
+  allowedModerationActions?: ModerationAction[];
+  /** Last staff note recorded with a status change — staff only */
   latestNote?: string | null;
 }
 
@@ -239,6 +241,14 @@ export interface UpdateReportStatusRequest {
 export interface WorkflowActionRequest {
   action: WorkflowAction;
   note?: string;
+}
+
+export interface ModerateReportRequest {
+  action: ModerationAction;
+  note?: string;
+  duplicateOfId?: string;
+  /** Optional category to apply at approve-time before RoutingService.route(). */
+  categoryId?: string;
 }
 
 export interface UpdateReportPriorityRequest {
@@ -388,13 +398,19 @@ export interface TransparencyStats {
 
 export type { RealtimeEvent, RealtimeEventType } from './realtime';
 export { REALTIME_EVENT_TYPES } from './realtime';
-export type { QueueLane, WorkflowAction } from './workflow';
+export type { ModerationAction, QueueLane, WorkflowAction } from './workflow';
 export {
   ALLOWED_STATUS_TRANSITIONS,
+  allowedModerationActions,
   allowedWorkflowActions,
   canTransitionStatus,
   CITIZEN_PIPELINE,
+  isPublicReportStatus,
+  MODERATION_ACTIONS,
+  MODERATION_ACTIONS_REQUIRING_NOTE,
   notificationTypeForStatus,
+  PRE_APPROVAL_STATUSES,
+  PUBLIC_REPORT_STATUSES,
   QUEUE_LANE_STATUSES,
   WORKFLOW_ACTION_TARGET,
   WORKFLOW_ACTIONS,

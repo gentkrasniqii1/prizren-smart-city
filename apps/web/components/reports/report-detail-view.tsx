@@ -9,15 +9,19 @@ import { ArrowLeft, Bot, ExternalLink, MapPin, ThumbsUp } from 'lucide-react';
 import { useLocale, useTranslations } from 'next-intl';
 import type {
   AIClassification,
+  CategoryDto,
   CommentDto,
+  ModerateReportRequest,
+  ModerationAction,
   PaginatedComments,
   ReportDto,
+  RoutePreview,
   UpdateAiClassificationRequest,
   VoteCountResponse,
   WorkflowAction,
   WorkflowActionRequest,
 } from '@prizren/shared-types';
-import { createCommentRequestSchema } from '@prizren/shared-types';
+import { PRE_APPROVAL_STATUSES, createCommentRequestSchema } from '@prizren/shared-types';
 import { apiFetch } from '@/lib/api';
 import { issueMessage, zodResolver } from '@/lib/form-validation';
 import { useAuth } from '@/components/auth-provider';
@@ -64,9 +68,14 @@ export function ReportDetailView() {
   const [workflowBusy, setWorkflowBusy] = useState(false);
   const [comments, setComments] = useState<CommentDto[]>([]);
   const [workflowNote, setWorkflowNote] = useState('');
+  const [duplicateOfId, setDuplicateOfId] = useState('');
   const [voteBusy, setVoteBusy] = useState(false);
   const [related, setRelated] = useState<ReportDto[]>([]);
   const [aiPolling, setAiPolling] = useState(false);
+  const [categories, setCategories] = useState<CategoryDto[]>([]);
+  const [approveCategoryId, setApproveCategoryId] = useState('');
+  const [routePreview, setRoutePreview] = useState<RoutePreview | null>(null);
+  const [previewBusy, setPreviewBusy] = useState(false);
 
   const canManageAi = user?.role === 'DEPARTMENT_ADMIN' || user?.role === 'SUPER_ADMIN';
   const canStaff =
@@ -98,11 +107,50 @@ export function ReportDetailView() {
     (event) => event.reportId === params.id,
   );
 
+  const pendingReview = Boolean(report && PRE_APPROVAL_STATUSES.includes(report.status));
+
+  useEffect(() => {
+    if (!canStaff || !pendingReview) return;
+    void apiFetch<CategoryDto[]>('/categories', { auth: true })
+      .then(setCategories)
+      .catch(() => setCategories([]));
+  }, [canStaff, pendingReview, report?.id]);
+
+  useEffect(() => {
+    setApproveCategoryId(report?.categoryId ?? '');
+  }, [report]);
+
+  useEffect(() => {
+    if (!canStaff || !pendingReview || !approveCategoryId) {
+      setRoutePreview(null);
+      return;
+    }
+    const query = new URLSearchParams({ categoryId: approveCategoryId });
+    if (report?.priority) query.set('severity', report.priority);
+    let cancelled = false;
+    setPreviewBusy(true);
+    void apiFetch<RoutePreview>(`/routing/preview?${query.toString()}`, { auth: true })
+      .then((result) => {
+        if (!cancelled) setRoutePreview(result);
+      })
+      .catch(() => {
+        if (!cancelled) setRoutePreview(null);
+      })
+      .finally(() => {
+        if (!cancelled) setPreviewBusy(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [approveCategoryId, canStaff, pendingReview, report?.priority]);
+
   useEffect(() => {
     if (!params.id) return;
     void (async () => {
       try {
-        const res = await apiFetch<PaginatedComments>(`/reports/${params.id}/comments?limit=50`);
+        const res = await apiFetch<PaginatedComments>(`/reports/${params.id}/comments?limit=50`, {
+          auth: true,
+        });
         setComments(res.data);
       } catch {
         // comments optional
@@ -112,7 +160,7 @@ export function ReportDetailView() {
 
   // Poll while AI classification is still pending (post-submit job)
   useEffect(() => {
-    if (!report || report.aiClassification) {
+    if (!canStaff || !report || report.aiClassification) {
       setAiPolling(false);
       return;
     }
@@ -144,7 +192,7 @@ export function ReportDetailView() {
     };
     // Intentionally keyed on id + whether AI exists — not the full report object
     // eslint-disable-next-line react-hooks/exhaustive-deps -- poll only while AI missing
-  }, [report?.id, report?.aiClassification]);
+  }, [canStaff, report?.id, report?.aiClassification]);
 
   useEffect(() => {
     if (!report) return;
@@ -255,6 +303,32 @@ export function ReportDetailView() {
     }
   }
 
+  async function runModeration(action: ModerationAction) {
+    if (!report) return;
+    setWorkflowBusy(true);
+    try {
+      const body: ModerateReportRequest = {
+        action,
+        note: workflowNote.trim() || undefined,
+        duplicateOfId: action === 'mark_duplicate' ? duplicateOfId.trim() || undefined : undefined,
+        categoryId: action === 'approve' ? approveCategoryId || undefined : undefined,
+      };
+      const updated = await apiFetch<ReportDto>(`/reports/${report.id}/moderate`, {
+        method: 'POST',
+        auth: true,
+        body,
+      });
+      setReport(updated);
+      setWorkflowNote('');
+      setDuplicateOfId('');
+      toast.push(t(`moderationDone.${action}`), 'success');
+    } catch (err) {
+      toast.push(errorMessage(err, t('statusFailed')), 'error');
+    } finally {
+      setWorkflowBusy(false);
+    }
+  }
+
   if (error) {
     return (
       <main className="py-16">
@@ -285,6 +359,12 @@ export function ReportDetailView() {
   const bucket = slaBucket(report.dueAt);
   const shortId = report.id.slice(0, 8);
   const mapUrl = `https://www.openstreetmap.org/?mlat=${report.lat}&mlon=${report.lng}#map=17/${report.lat}/${report.lng}`;
+  const canApprove =
+    Boolean(approveCategoryId) &&
+    !previewBusy &&
+    routePreview != null &&
+    routePreview.source !== 'unrouted' &&
+    Boolean(routePreview.departmentId || routePreview.institutionId);
 
   return (
     <main className="pb-bottom-nav pt-6 sm:pt-8">
@@ -342,6 +422,12 @@ export function ReportDetailView() {
             {report.institutionName ? ` · ${report.institutionName}` : ''}
           </p>
         </header>
+
+        {PRE_APPROVAL_STATUSES.includes(report.status) ? (
+          <p className="mt-4 rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-950">
+            {canStaff ? t('pendingStaffBanner') : t('pendingCitizenBanner')}
+          </p>
+        ) : null}
 
         <div className="mt-8 grid gap-10 lg:grid-cols-[minmax(0,1.45fr)_minmax(280px,0.85fr)] lg:items-start">
           {/* Main column */}
@@ -468,7 +554,117 @@ export function ReportDetailView() {
               </section>
             ) : null}
 
-            {canStaff ? (
+            {canStaff && (report.allowedModerationActions?.length ?? 0) > 0 ? (
+              <section
+                aria-labelledby="report-moderation-heading"
+                className="rounded-xl border border-amber-300 bg-amber-50/60 p-5"
+              >
+                <h2 id="report-moderation-heading" className="ds-card-title">
+                  {t('moderationHeading')}
+                </h2>
+                <p className="mt-1 text-sm text-muted-foreground">{t('moderationIntro')}</p>
+                <Label htmlFor="approve-category" className="mt-4">
+                  {t('approveCategory')}
+                </Label>
+                <Select
+                  id="approve-category"
+                  value={approveCategoryId}
+                  onChange={(e) => setApproveCategoryId(e.target.value)}
+                >
+                  <option value="">{t('approveCategoryPlaceholder')}</option>
+                  {approveCategoryId &&
+                  !categories.some((category) => category.id === approveCategoryId) ? (
+                    <option value={approveCategoryId}>
+                      {report.categoryName ?? approveCategoryId}
+                    </option>
+                  ) : null}
+                  {categories.map((category) => (
+                    <option key={category.id} value={category.id}>
+                      {category.name}
+                    </option>
+                  ))}
+                </Select>
+                {previewBusy ? (
+                  <p className="mt-3 text-sm text-muted-foreground">{t('routingPreviewLoading')}</p>
+                ) : null}
+                {routePreview && !previewBusy ? (
+                  <div className="mt-3 rounded-md border border-border bg-card px-3 py-3 text-sm">
+                    <p className="font-medium text-foreground">{t('routingPreviewHeading')}</p>
+                    <dl className="mt-2 grid gap-1 text-muted-foreground">
+                      <div>
+                        <dt className="inline">{t('routingPreviewInstitution')}: </dt>
+                        <dd className="inline text-foreground">
+                          {routePreview.institutionName ?? t('routingUnrouted')}
+                          {routePreview.departmentName ? ` / ${routePreview.departmentName}` : ''}
+                        </dd>
+                      </div>
+                      <div>
+                        <dt className="inline">{t('routingPreviewPriority')}: </dt>
+                        <dd className="inline text-foreground">{routePreview.defaultPriority}</dd>
+                      </div>
+                      <div>
+                        <dt className="inline">{t('routingPreviewSla')}: </dt>
+                        <dd className="inline text-foreground">
+                          {t('routingPreviewSlaHours', { hours: routePreview.slaHours })}
+                        </dd>
+                      </div>
+                      <div>
+                        <dt className="inline">{t('routingPreviewSource')}: </dt>
+                        <dd className="inline text-foreground">
+                          {t(`routingSource.${routePreview.source}`)}
+                        </dd>
+                      </div>
+                    </dl>
+                    {routePreview.source === 'unrouted' ||
+                    (!routePreview.departmentId && !routePreview.institutionId) ? (
+                      <p className="mt-2 text-sm text-destructive">{t('routingUnroutedHint')}</p>
+                    ) : null}
+                  </div>
+                ) : null}
+                {!approveCategoryId ? (
+                  <p className="mt-3 text-sm text-muted-foreground">{t('approveNeedsCategory')}</p>
+                ) : null}
+                <div className="mt-4 flex flex-wrap gap-2">
+                  {(report.allowedModerationActions ?? []).map((action) => (
+                    <Button
+                      key={action}
+                      type="button"
+                      size="sm"
+                      variant={action === 'approve' ? 'primary' : 'secondary'}
+                      disabled={workflowBusy || (action === 'approve' && !canApprove)}
+                      onClick={() => void runModeration(action)}
+                    >
+                      {t(`moderationActions.${action}`)}
+                    </Button>
+                  ))}
+                </div>
+                <Label htmlFor="moderation-note" className="mt-4">
+                  {t('moderationNote')}
+                </Label>
+                <Textarea
+                  id="moderation-note"
+                  rows={2}
+                  maxLength={500}
+                  value={workflowNote}
+                  onChange={(e) => setWorkflowNote(e.target.value)}
+                />
+                {(report.allowedModerationActions ?? []).includes('mark_duplicate') ? (
+                  <>
+                    <Label htmlFor="duplicate-of" className="mt-4">
+                      {t('duplicateOfLabel')}
+                    </Label>
+                    <Input
+                      id="duplicate-of"
+                      value={duplicateOfId}
+                      onChange={(e) => setDuplicateOfId(e.target.value)}
+                      placeholder={t('duplicateOfPlaceholder')}
+                    />
+                  </>
+                ) : null}
+              </section>
+            ) : null}
+
+            {canStaff && !PRE_APPROVAL_STATUSES.includes(report.status) ? (
               <section
                 aria-labelledby="report-workflow-heading"
                 className="rounded-xl border border-border bg-card p-5"
@@ -516,7 +712,7 @@ export function ReportDetailView() {
               </section>
             ) : null}
 
-            {report.aiClassification ? (
+            {canStaff && report.aiClassification ? (
               <section
                 aria-labelledby="report-ai-heading"
                 className="rounded-xl border border-mosque-200 bg-mosque-50/50 p-5"
@@ -693,7 +889,7 @@ export function ReportDetailView() {
                   </div>
                 </div>
               </section>
-            ) : aiPolling ? (
+            ) : canStaff && aiPolling ? (
               <section
                 aria-labelledby="report-ai-heading"
                 className="rounded-xl border border-mosque-200 bg-mosque-50/50 p-5"
