@@ -45,6 +45,9 @@ export interface OutboundEmailDto {
   nextRetryAt: string | null;
   createdAt: string;
   updatedAt: string;
+  accessTokenId: string | null;
+  accessTokenExpiresAt: string | null;
+  accessTokenRevokedAt: string | null;
 }
 
 export interface PaginatedOutboundEmails {

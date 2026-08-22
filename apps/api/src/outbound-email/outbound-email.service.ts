@@ -21,6 +21,7 @@ import { MailService } from '../mail/mail.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { STAFF_ROLES } from '../reports/visibility';
 import { REPORT_STATUS_CHANGED_EVENT, StatusChangedEvent } from '../events/status-changed.event';
+import { InstitutionAccessService } from '../institution-access/institution-access.service';
 import { evaluateInstitutionalMailPolicy } from './outbound-policy';
 import { ListOutboundEmailQueryDto } from './dto/list-outbound-email-query.dto';
 
@@ -36,6 +37,7 @@ const RETRYABLE: OutboundEmailStatus[] = [
 const OUTBOUND_INCLUDE = {
   report: { select: { publicId: true } },
   institution: { select: { name: true } },
+  accessToken: { select: { id: true, expiresAt: true, revokedAt: true } },
 } satisfies Prisma.OutboundEmailInclude;
 
 @Injectable()
@@ -47,6 +49,7 @@ export class OutboundEmailService {
     private readonly mail: MailService,
     private readonly config: ConfigService,
     private readonly audit: AuditService,
+    private readonly access: InstitutionAccessService,
   ) {}
 
   @OnEvent(REPORT_STATUS_CHANGED_EVENT)
@@ -196,15 +199,15 @@ export class OutboundEmailService {
 
     const report = await this.loadReport(row.reportId);
     const decision = this.decide(report.institution);
-    if (!decision.send) {
+    if (!decision.send || !report.institutionId) {
       const skipped = await this.prisma.outboundEmail.update({
         where: { id },
         data: {
           status: OutboundEmailStatus.NOT_CONFIGURED,
-          skipReason: decision.skipReason,
+          skipReason: decision.send ? 'NO_INSTITUTION' : decision.skipReason,
           recipient: report.institution?.contact ?? null,
           institutionId: report.institutionId,
-          lastError: decision.skipReason,
+          lastError: decision.send ? 'NO_INSTITUTION' : decision.skipReason,
         },
         include: OUTBOUND_INCLUDE,
       });
@@ -222,6 +225,12 @@ export class OutboundEmailService {
       },
     });
 
+    const token = await this.access.issue({
+      reportId: report.id,
+      institutionId: report.institutionId,
+      actorUserId,
+    });
+
     try {
       const result = await this.mail.sendInstitutionalNewCase({
         to: decision.recipient,
@@ -235,7 +244,7 @@ export class OutboundEmailService {
         createdAt: report.createdAt,
         dueAt: report.dueAt,
         photoUrl: report.photoUrl,
-        reportUrl: `${this.config.webOrigin}/reports/${report.id}`,
+        reportUrl: `${this.config.webOrigin}/institution/reports/${token.raw}`,
         institutionName: report.institution?.name ?? null,
       });
 
@@ -250,6 +259,7 @@ export class OutboundEmailService {
           failedAt: null,
           nextRetryAt: null,
           lastError: null,
+          accessTokenId: token.id,
         },
         include: OUTBOUND_INCLUDE,
       });
@@ -262,6 +272,7 @@ export class OutboundEmailService {
       });
       return this.toDto(sent);
     } catch (err) {
+      await this.access.revokeQuiet(token.id);
       const attemptCount = sending.attemptCount + 1;
       const permanent = attemptCount >= sending.maxAttempts;
       const message = err instanceof Error ? err.message : String(err);
@@ -355,6 +366,9 @@ export class OutboundEmailService {
       nextRetryAt: row.nextRetryAt?.toISOString() ?? null,
       createdAt: row.createdAt.toISOString(),
       updatedAt: row.updatedAt.toISOString(),
+      accessTokenId: row.accessToken?.id ?? row.accessTokenId,
+      accessTokenExpiresAt: row.accessToken?.expiresAt.toISOString() ?? null,
+      accessTokenRevokedAt: row.accessToken?.revokedAt?.toISOString() ?? null,
     };
   }
 }

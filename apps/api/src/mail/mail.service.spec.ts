@@ -101,7 +101,7 @@ describe('MailService — status-changed outcome templates', () => {
       createdAt: new Date('2026-08-22T10:00:00.000Z'),
       dueAt: null,
       photoUrl: null,
-      reportUrl: 'https://app.local/reports/uuid',
+      reportUrl: 'https://app.local/institution/reports/secure-token-example',
       institutionName: 'KEDS',
     });
     const logged = lastWarnText();
@@ -110,5 +110,7 @@ describe('MailService — status-changed outcome templates', () => {
     expect(logged).toContain('Ndriçim publik i prishur');
     expect(logged).not.toContain('citizen@');
     expect(logged).not.toContain('qytetar@');
+    expect(logged).toContain('/institution/reports/');
+    expect(logged).not.toMatch(/\/reports\/[0-9a-f-]{36}/i);
   });
 });

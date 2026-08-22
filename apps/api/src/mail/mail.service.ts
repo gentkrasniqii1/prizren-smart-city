@@ -309,10 +309,10 @@ Afati SLA: ${due}
 ${excerpt}
 ${photoLine}
 
-Hap rastin (kërkon hyrje stafi):
+Hap rastin (lidhje e sigurt, kërkon hyrje të stafit të institucionit):
 ${params.reportUrl}
 
-Mos përfshini të dhëna personale të qytetarit në përgjigje.`,
+Lidhja skadon dhe mund të revokohet. Mos përfshini të dhëna personale të qytetarit në përgjigje.`,
       html: this.layout(
         `Raport i ri ${this.escapeHtml(params.publicId)}`,
         `<p>Një rast i ri hyri në radhën e institucionit${
@@ -331,7 +331,7 @@ Mos përfshini të dhëna personale të qytetarit në përgjigje.`,
          <p style="padding:12px 16px;background:#f5f0e8;border-radius:8px;color:#4a3f33">${this.escapeHtml(excerpt)}</p>
          ${photoHtml}
          <p><a href="${this.escapeHtml(params.reportUrl)}" style="display:inline-block;padding:12px 20px;background:#335f9b;color:#faf8f5;border-radius:8px;text-decoration:none;font-weight:600">Hap rastin</a></p>
-         <p style="color:#7d6a55;font-size:13px">Lidhja kërkon hyrje stafi. Mos përfshini të dhëna personale të qytetarit në përgjigje.</p>`,
+         <p style="color:#7d6a55;font-size:13px">Lidhja është e sigurt, skadon, dhe kërkon hyrje si staf i këtij institucioni. Mos përfshini të dhëna personale të qytetarit në përgjigje.</p>`,
       ),
     });
   }
