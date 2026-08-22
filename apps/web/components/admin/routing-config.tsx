@@ -222,6 +222,9 @@ export function RoutingConfig() {
                 <Link href="/admin/data">{tAdmin('dataLink')}</Link>
               </Button>
             ) : null}
+            <Button asChild variant="secondary">
+              <Link href="/admin/mail">{tAdmin('mailLink')}</Link>
+            </Button>
             {canEdit ? (
               <Button type="button" onClick={openCreate}>
                 <Plus className="h-4 w-4" aria-hidden />
