@@ -319,16 +319,19 @@ async function main() {
   const komuna = seeded.get('komuna-prizren');
   if (!komuna) throw new Error('Seed missing Komuna e Prizrenit');
 
-  await prisma.institution.updateMany({
-    where: { slug: { notIn: KEEP_INSTITUTION_SLUGS } },
-    data: {
-      contact: null,
-      phone: null,
-      active: false,
-      integrationType: IntegrationType.MANUAL,
-      integrationStatus: IntegrationStatus.NOT_CONFIGURED,
-    },
-  });
+  const prune = process.env.SEED_PRUNE === 'true';
+  if (prune) {
+    await prisma.institution.updateMany({
+      where: { slug: { notIn: KEEP_INSTITUTION_SLUGS } },
+      data: {
+        contact: null,
+        phone: null,
+        active: false,
+        integrationType: IntegrationType.MANUAL,
+        integrationStatus: IntegrationStatus.NOT_CONFIGURED,
+      },
+    });
+  }
 
   const deptByName = new Map<string, { id: string; name: string }>();
   for (const dept of DEPARTMENTS) {
@@ -400,77 +403,80 @@ async function main() {
     }
   }
 
-  const extraRules = await prisma.routingRule.findMany({
-    where: { name: { notIn: [...keepRuleNames] } },
-  });
-  for (const rule of extraRules) {
-    await prisma.routingRule.delete({ where: { id: rule.id } });
-  }
-
-  const extraPolicies = await prisma.slaPolicy.findMany({
-    where: { name: { notIn: [...keepSlaNames] } },
-  });
-  for (const policy of extraPolicies) {
-    await prisma.slaPolicy.delete({ where: { id: policy.id } });
-  }
-
   const keepCatNames = CATEGORIES.map((c) => c.name);
-  const extraCats = await prisma.category.findMany({
-    where: { name: { notIn: keepCatNames } },
-  });
-  for (const cat of extraCats) {
-    const [reports, rules, policies] = await Promise.all([
-      prisma.report.count({ where: { categoryId: cat.id } }),
-      prisma.routingRule.count({ where: { categoryId: cat.id } }),
-      prisma.slaPolicy.count({ where: { categoryId: cat.id } }),
-    ]);
-    if (reports + rules + policies === 0) {
-      await prisma.category.delete({ where: { id: cat.id } });
-    } else {
-      console.warn(
-        `Kept leftover category "${cat.name}" (${reports} reports, ${rules} rules) — reassign before deleting.`,
-      );
-    }
-  }
-
   const keepDeptNames = DEPARTMENTS.map((d) => d.name);
-  const extraDepts = await prisma.department.findMany({
-    where: { name: { notIn: keepDeptNames } },
-  });
-  for (const dept of extraDepts) {
-    const [reports, cats, rules, staff, policies] = await Promise.all([
-      prisma.report.count({ where: { departmentId: dept.id } }),
-      prisma.category.count({ where: { departmentId: dept.id } }),
-      prisma.routingRule.count({ where: { departmentId: dept.id } }),
-      prisma.user.count({ where: { departments: { some: { id: dept.id } } } }),
-      prisma.slaPolicy.count({ where: { departmentId: dept.id } }),
-    ]);
-    if (reports + cats + rules + staff + policies === 0) {
-      await prisma.department.delete({ where: { id: dept.id } });
-    } else {
-      await prisma.department.update({
-        where: { id: dept.id },
-        data: { contact: null },
-      });
-      console.warn(
-        `Kept leftover department "${dept.name}" (in use) — contact stripped; reassign before deleting.`,
-      );
+
+  if (prune) {
+    const extraRules = await prisma.routingRule.findMany({
+      where: { name: { notIn: [...keepRuleNames] } },
+    });
+    for (const rule of extraRules) {
+      await prisma.routingRule.delete({ where: { id: rule.id } });
     }
-  }
 
-  await prisma.department.updateMany({ data: { contact: null } });
+    const extraPolicies = await prisma.slaPolicy.findMany({
+      where: { name: { notIn: [...keepSlaNames] } },
+    });
+    for (const policy of extraPolicies) {
+      await prisma.slaPolicy.delete({ where: { id: policy.id } });
+    }
 
-  const extraInstitutions = await prisma.institution.findMany({
-    where: { slug: { notIn: KEEP_INSTITUTION_SLUGS } },
-  });
-  for (const inst of extraInstitutions) {
-    const [depts, reports, rules] = await Promise.all([
-      prisma.department.count({ where: { institutionId: inst.id } }),
-      prisma.report.count({ where: { institutionId: inst.id } }),
-      prisma.routingRule.count({ where: { institutionId: inst.id } }),
-    ]);
-    if (depts + reports + rules === 0) {
-      await prisma.institution.delete({ where: { id: inst.id } });
+    const extraCats = await prisma.category.findMany({
+      where: { name: { notIn: keepCatNames } },
+    });
+    for (const cat of extraCats) {
+      const [reports, rules, policies] = await Promise.all([
+        prisma.report.count({ where: { categoryId: cat.id } }),
+        prisma.routingRule.count({ where: { categoryId: cat.id } }),
+        prisma.slaPolicy.count({ where: { categoryId: cat.id } }),
+      ]);
+      if (reports + rules + policies === 0) {
+        await prisma.category.delete({ where: { id: cat.id } });
+      } else {
+        console.warn(
+          `Kept leftover category "${cat.name}" (${reports} reports, ${rules} rules) — reassign before deleting.`,
+        );
+      }
+    }
+
+    const extraDepts = await prisma.department.findMany({
+      where: { name: { notIn: keepDeptNames } },
+    });
+    for (const dept of extraDepts) {
+      const [reports, cats, rules, staff, policies] = await Promise.all([
+        prisma.report.count({ where: { departmentId: dept.id } }),
+        prisma.category.count({ where: { departmentId: dept.id } }),
+        prisma.routingRule.count({ where: { departmentId: dept.id } }),
+        prisma.user.count({ where: { departments: { some: { id: dept.id } } } }),
+        prisma.slaPolicy.count({ where: { departmentId: dept.id } }),
+      ]);
+      if (reports + cats + rules + staff + policies === 0) {
+        await prisma.department.delete({ where: { id: dept.id } });
+      } else {
+        await prisma.department.update({
+          where: { id: dept.id },
+          data: { contact: null },
+        });
+        console.warn(
+          `Kept leftover department "${dept.name}" (in use) — contact stripped; reassign before deleting.`,
+        );
+      }
+    }
+
+    await prisma.department.updateMany({ data: { contact: null } });
+
+    const extraInstitutions = await prisma.institution.findMany({
+      where: { slug: { notIn: KEEP_INSTITUTION_SLUGS } },
+    });
+    for (const inst of extraInstitutions) {
+      const [depts, reports, rules] = await Promise.all([
+        prisma.department.count({ where: { institutionId: inst.id } }),
+        prisma.report.count({ where: { institutionId: inst.id } }),
+        prisma.routingRule.count({ where: { institutionId: inst.id } }),
+      ]);
+      if (depts + reports + rules === 0) {
+        await prisma.institution.delete({ where: { id: inst.id } });
+      }
     }
   }
 

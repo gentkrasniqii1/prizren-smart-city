@@ -1,0 +1,23 @@
+# Render Blueprint. Docker start already runs: migrate deploy → db seed → API.
+# Dashboard equivalent if you are not using this file:
+#   Build: (Dockerfile — no extra buildCommand)
+#   Docker start: node scripts/start-prod.mjs
+#
+# Native Node (no Docker) dashboard commands:
+#   Build Command:
+#     HUSKY=0 npm ci && npm run build -w @prizren/shared-types && npm run build -w @prizren/api
+#   Start Command:
+#     npm run start:prod -w @prizren/api
+#   Root Directory: repo root
+#   Working directory for Prisma schema: apps/api (start:prod already cds via the workspace)
+
+services:
+  - type: web
+    name: prizren-api
+    runtime: docker
+    dockerfilePath: ./apps/api/Dockerfile
+    dockerContext: .
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production

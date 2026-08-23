@@ -3,6 +3,7 @@
 import { Check } from 'lucide-react';
 import { useLocale, useTranslations } from 'next-intl';
 import { cn } from '@/lib/utils';
+import { publicStaffNote } from '@/lib/staff-note';
 import { CITIZEN_PIPELINE, type ReportStatus, type StatusHistoryDto } from '@prizren/shared-types';
 import type { AppLocale } from '@/i18n/request';
 
@@ -34,6 +35,9 @@ export function ReportStatusTimeline({
   const t = useTranslations('ReportDetail');
   const locale = useLocale() as AppLocale;
   const rejected = status === 'REJECTED' || status === 'DUPLICATE';
+  const rejectReason = publicStaffNote(
+    [...(history ?? [])].reverse().find((row) => row.note)?.note,
+  );
   const waiting = status === 'WAITING_FOR_INFORMATION';
   const currentIndex = Math.max(
     0,
@@ -54,7 +58,11 @@ export function ReportStatusTimeline({
 
       {rejected ? (
         <p className="mt-3 rounded-md bg-status-rejected px-3 py-2 text-sm text-status-rejected-foreground">
-          {status === 'DUPLICATE' ? t('timelineDuplicate') : t('timelineRejected')}
+          {status === 'DUPLICATE'
+            ? t('timelineDuplicate')
+            : rejectReason
+              ? t('timelineRejectedReason', { reason: rejectReason })
+              : t('timelineRejected')}
         </p>
       ) : (
         <ol className="mt-4 space-y-0">

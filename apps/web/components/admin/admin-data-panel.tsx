@@ -16,6 +16,8 @@ import type {
 import { ADMIN_DATA_RESOURCES } from '@prizren/shared-types';
 import { apiFetch } from '@/lib/api';
 import { useAuth } from '@/components/auth-provider';
+import { useRealtimeRefresh } from '@/components/realtime-provider';
+import { LIVE_POLL_MS, usePolling } from '@/lib/use-polling';
 import { useToast } from '@/components/toast-provider';
 import { Breadcrumbs } from '@/components/breadcrumbs';
 import { PageContainer } from '@/components/layout/page-container';
@@ -207,31 +209,50 @@ export function AdminDataPanel() {
     [t],
   );
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const params = new URLSearchParams({
-        page: String(page),
-        limit: '20',
-      });
-      if (q.trim()) params.set('q', q.trim());
-      const res = await apiFetch<AdminDataPage>(`/admin/data/${resource}?${params.toString()}`, {
-        auth: true,
-      });
-      setPayload(res);
-    } catch (err) {
-      setPayload(null);
-      setError(errorMessage(err, t('loadError')));
-    } finally {
-      setLoading(false);
-    }
-  }, [errorMessage, page, q, resource, t]);
+  const load = useCallback(
+    async (opts?: { background?: boolean }) => {
+      if (!opts?.background) {
+        setLoading(true);
+        setError(null);
+      }
+      try {
+        const params = new URLSearchParams({
+          page: String(page),
+          limit: '20',
+        });
+        if (q.trim()) params.set('q', q.trim());
+        const res = await apiFetch<AdminDataPage>(`/admin/data/${resource}?${params.toString()}`, {
+          auth: true,
+        });
+        setPayload(res);
+      } catch (err) {
+        if (!opts?.background) {
+          setPayload(null);
+          setError(errorMessage(err, t('loadError')));
+        }
+      } finally {
+        if (!opts?.background) setLoading(false);
+      }
+    },
+    [errorMessage, page, q, resource, t],
+  );
 
   useEffect(() => {
     if (user?.role !== 'SUPER_ADMIN') return;
     void load();
   }, [load, user?.role]);
+
+  useRealtimeRefresh(() => {
+    if (!slaDialog && !deleteSla && !roleBusy) void load({ background: true });
+  }, user?.role === 'SUPER_ADMIN');
+
+  usePolling(
+    () => {
+      if (!slaDialog && !deleteSla && !roleBusy) void load({ background: true });
+    },
+    LIVE_POLL_MS,
+    user?.role === 'SUPER_ADMIN',
+  );
 
   function changeResource(next: AdminDataResource) {
     setResource(next);

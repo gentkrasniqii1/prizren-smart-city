@@ -463,7 +463,7 @@ export class ReportsService {
       this.prisma.report.count({ where }),
       this.prisma.report.findMany({
         where,
-        include: REPORT_INCLUDE,
+        include: REPORT_DETAIL_INCLUDE,
         orderBy: { createdAt: 'desc' },
         skip: (page - 1) * limit,
         take: limit,

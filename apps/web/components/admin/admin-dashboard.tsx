@@ -15,6 +15,7 @@ import type {
   CategoryDto,
   DepartmentDto,
   InstitutionDto,
+  ModerateReportRequest,
   PaginatedReports,
   PublicUser,
   ReportDto,
@@ -22,7 +23,7 @@ import type {
   UpdateReportStatusRequest,
 } from '@prizren/shared-types';
 import { apiFetch } from '@/lib/api';
-import { usePolling } from '@/lib/use-polling';
+import { usePolling, LIVE_POLL_MS } from '@/lib/use-polling';
 import { useAuth } from '@/components/auth-provider';
 import { useRealtimeRefresh } from '@/components/realtime-provider';
 import { useToast } from '@/components/toast-provider';
@@ -217,7 +218,7 @@ export function AdminDashboard() {
     () => {
       if (!rowBusy) void loadDashboard({ background: true });
     },
-    90_000,
+    LIVE_POLL_MS,
     !authLoading && isStaff(user?.role),
   );
 
@@ -313,6 +314,21 @@ export function AdminDashboard() {
         id: report.publicId,
         priority: getPriorityLabel(body.priority, locale),
       }),
+    );
+  }
+
+  async function handleModerate(report: ReportDto, body: ModerateReportRequest) {
+    await runMutation(
+      report.id,
+      () =>
+        apiFetch<ReportDto>(`/reports/${report.id}/moderate`, {
+          method: 'POST',
+          auth: true,
+          body,
+        }),
+      body.action === 'approve'
+        ? t('moderateApproved', { id: report.publicId })
+        : t('moderateRejected', { id: report.publicId }),
     );
   }
 
@@ -590,7 +606,7 @@ export function AdminDashboard() {
                   <TableHead>{t('colPriority')}</TableHead>
                   <TableHead>{t('colInstitution')}</TableHead>
                   <TableHead>{t('colCreated')}</TableHead>
-                  <TableHead className="w-14">{t('colActions')}</TableHead>
+                  <TableHead className="min-w-[11rem]">{t('colActions')}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -627,12 +643,14 @@ export function AdminDashboard() {
                           report={report}
                           busy={rowBusy === report.id}
                           canAssign={canAssign}
+                          categories={categories}
                           departments={departments}
                           institutions={institutions}
                           staff={staff}
                           onAssign={(patch) => handleAssign(report, patch)}
                           onStatus={(body) => handleStatus(report, body)}
                           onPriority={(body) => handlePriority(report, body)}
+                          onModerate={(body) => handleModerate(report, body)}
                           onNote={(note) => handleNote(report, note)}
                           onEscalate={(note) => handleEscalate(report, note)}
                           onResolve={() => handleResolve(report)}

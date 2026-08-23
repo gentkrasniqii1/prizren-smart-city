@@ -3,12 +3,14 @@
 import { useEffect, useRef } from 'react';
 
 /**
- * Slow safety-net refresh while a tab is visible.
+ * Safety-net refresh while a tab is visible.
  *
  * Live updates go through SSE (`RealtimeProvider`) on the existing Nest
  * EventEmitter bus. Polling remains as a fallback if the stream drops, and
  * still pauses while the tab is hidden.
  */
+export const LIVE_POLL_MS = 10_000;
+
 export function usePolling(callback: () => void, intervalMs: number, enabled = true): void {
   const callbackRef = useRef(callback);
   callbackRef.current = callback;

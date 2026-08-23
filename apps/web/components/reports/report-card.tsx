@@ -8,6 +8,7 @@ import { RemoteImage } from '@/components/remote-image';
 import { PriorityBadge, StatusBadge } from '@/components/ui/badge';
 import { colorForCategory } from '@/components/reports-map';
 import { reportPublicPath } from '@/lib/report-path';
+import { publicStaffNote } from '@/lib/staff-note';
 import { cn } from '@/lib/utils';
 import type { AppLocale } from '@/i18n/request';
 
@@ -30,6 +31,7 @@ export function ReportCard({
 }) {
   const t = useTranslations('Reports');
   const locale = useLocale() as AppLocale;
+  const rejectNote = report.status === 'REJECTED' ? publicStaffNote(report.latestNote) : null;
 
   const body = (
     <>
@@ -74,6 +76,11 @@ export function ReportCard({
         >
           {excerpt(report.description, compact ? 80 : 120)}
         </p>
+        {rejectNote ? (
+          <p className="mt-1.5 text-xs font-medium text-status-rejected-foreground">
+            {t('rejectedReason', { reason: rejectNote })}
+          </p>
+        ) : null}
         <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
           {report.categoryName ? <span>{report.categoryName}</span> : null}
           <span className="inline-flex items-center gap-1">

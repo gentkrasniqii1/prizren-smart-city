@@ -13,6 +13,8 @@ import type {
 import { OUTBOUND_EMAIL_STATUSES } from '@prizren/shared-types';
 import { apiFetch } from '@/lib/api';
 import { useAuth } from '@/components/auth-provider';
+import { useRealtimeRefresh } from '@/components/realtime-provider';
+import { LIVE_POLL_MS, usePolling } from '@/lib/use-polling';
 import { PageContainer } from '@/components/layout/page-container';
 import { Breadcrumbs } from '@/components/breadcrumbs';
 import { Badge, Button, EmptyState, ErrorBanner, FilterTabs } from '@/components/ui';
@@ -91,29 +93,54 @@ export function OutboundMailLedger() {
     }
   }, [authLoading, user, router]);
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const params = new URLSearchParams({ limit: '50' });
-      if (status !== 'all') params.set('status', status);
-      const res = await apiFetch<PaginatedOutboundEmails>(`/outbound-emails?${params.toString()}`, {
-        auth: true,
-      });
-      setRows(res.data);
-      setTotal(res.meta.total);
-      setEnabled(res.meta.enabled);
-    } catch (err) {
-      setError(errorMessage(err, t('loadError')));
-    } finally {
-      setLoading(false);
-    }
-  }, [status, errorMessage, t]);
+  const load = useCallback(
+    async (opts?: { background?: boolean }) => {
+      if (!opts?.background) {
+        setLoading(true);
+        setError(null);
+      }
+      try {
+        const params = new URLSearchParams({ limit: '50' });
+        if (status !== 'all') params.set('status', status);
+        const res = await apiFetch<PaginatedOutboundEmails>(
+          `/outbound-emails?${params.toString()}`,
+          {
+            auth: true,
+          },
+        );
+        setRows(res.data);
+        setTotal(res.meta.total);
+        setEnabled(res.meta.enabled);
+      } catch (err) {
+        if (!opts?.background) {
+          setError(errorMessage(err, t('loadError')));
+        }
+      } finally {
+        if (!opts?.background) setLoading(false);
+      }
+    },
+    [status, errorMessage, t],
+  );
 
   useEffect(() => {
     if (authLoading || !isStaff(user?.role)) return;
     void load();
   }, [authLoading, user?.role, load]);
+
+  useRealtimeRefresh(
+    () => {
+      if (!busy) void load({ background: true });
+    },
+    !authLoading && isStaff(user?.role),
+  );
+
+  usePolling(
+    () => {
+      if (!busy) void load({ background: true });
+    },
+    LIVE_POLL_MS,
+    !authLoading && isStaff(user?.role),
+  );
 
   async function retry() {
     if (!retryTarget) return;

@@ -14,6 +14,8 @@ import type {
 } from '@prizren/shared-types';
 import { apiFetch } from '@/lib/api';
 import { useAuth } from '@/components/auth-provider';
+import { useRealtimeRefresh } from '@/components/realtime-provider';
+import { LIVE_POLL_MS, usePolling } from '@/lib/use-polling';
 import { Breadcrumbs } from '@/components/breadcrumbs';
 import { PageContainer } from '@/components/layout/page-container';
 import { useToast } from '@/components/toast-provider';
@@ -127,6 +129,23 @@ export function RoutingConfig() {
     if (authLoading || !isStaff(user?.role)) return;
     void load();
   }, [authLoading, user?.role, load]);
+
+  const dialogOpen = Boolean(ruleDialog || instDialog || deptDialog || catDialog || deleteTarget);
+
+  useRealtimeRefresh(
+    () => {
+      if (!dialogOpen) void load();
+    },
+    !authLoading && isStaff(user?.role),
+  );
+
+  usePolling(
+    () => {
+      if (!dialogOpen) void load();
+    },
+    LIVE_POLL_MS,
+    !authLoading && isStaff(user?.role),
+  );
 
   const runPreview = useCallback(async () => {
     if (!previewCategoryId) {
