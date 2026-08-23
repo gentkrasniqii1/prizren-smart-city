@@ -24,7 +24,7 @@ import type {
   ReportDto,
 } from '@prizren/shared-types';
 import { apiFetch } from '@/lib/api';
-import { usePolling } from '@/lib/use-polling';
+import { usePolling, LIVE_POLL_MS } from '@/lib/use-polling';
 import { useAuth } from '@/components/auth-provider';
 import { useRealtimeRefresh } from '@/components/realtime-provider';
 import { useNotificationInbox } from '@/components/notifications/notification-inbox';
@@ -143,7 +143,7 @@ export function AccountDashboard() {
   }, [setUnreadCount]);
 
   // Live SSE for new reports and status changes; slow poll if the stream drops.
-  usePolling(refreshLive, 90_000, Boolean(user) && !authLoading);
+  usePolling(refreshLive, LIVE_POLL_MS, Boolean(user) && !authLoading);
   useRealtimeRefresh(refreshLive, Boolean(user) && !authLoading);
 
   useEffect(() => {

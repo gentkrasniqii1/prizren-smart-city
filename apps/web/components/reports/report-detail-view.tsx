@@ -1022,7 +1022,9 @@ export function ReportDetailView() {
                 history={report.history}
                 hasAi={canStaff && Boolean(report.aiClassification)}
                 hasPhotoAfter={Boolean(report.photoAfterUrl) || afterUrls.length > 0}
-                showNotes={canStaff}
+                showNotes={
+                  canStaff || Boolean(user?.id && report.userId && user.id === report.userId)
+                }
               />
             </div>
 

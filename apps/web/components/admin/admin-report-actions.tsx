@@ -8,8 +8,10 @@ import {
   canTransitionStatus,
   PRE_APPROVAL_STATUSES,
   type AssignReportRequest,
+  type CategoryDto,
   type DepartmentDto,
   type InstitutionDto,
+  type ModerateReportRequest,
   type Priority,
   type PublicUser,
   type ReportDto,
@@ -38,18 +40,21 @@ import { Label, Select, Textarea } from '@/components/ui/field';
 import { getPriorityLabel, getStatusLabel, REPORT_PRIORITIES, REPORT_STATUSES } from '@/lib/labels';
 import type { AppLocale } from '@/i18n/request';
 
-type Action = 'assign' | 'status' | 'priority' | 'note' | 'escalate' | 'resolve' | null;
+type Action =
+  'assign' | 'status' | 'priority' | 'note' | 'escalate' | 'resolve' | 'moderate' | null;
 
 export function AdminReportActions({
   report,
   busy,
   canAssign,
+  categories,
   departments,
   institutions,
   staff,
   onAssign,
   onStatus,
   onPriority,
+  onModerate,
   onNote,
   onEscalate,
   onResolve,
@@ -57,12 +62,14 @@ export function AdminReportActions({
   report: ReportDto;
   busy: boolean;
   canAssign: boolean;
+  categories: CategoryDto[];
   departments: DepartmentDto[];
   institutions: InstitutionDto[];
   staff: PublicUser[];
   onAssign: (patch: AssignReportRequest) => Promise<void>;
   onStatus: (body: UpdateReportStatusRequest) => Promise<void>;
   onPriority: (body: UpdateReportPriorityRequest) => Promise<void>;
+  onModerate: (body: ModerateReportRequest) => Promise<void>;
   onNote: (note: string) => Promise<void>;
   onEscalate: (note: string) => Promise<void>;
   onResolve: () => Promise<void>;
@@ -76,6 +83,7 @@ export function AdminReportActions({
   const [status, setStatus] = useState<ReportStatus>(report.status);
   const [priority, setPriority] = useState<Priority>(report.priority ?? 'MEDIUM');
   const [note, setNote] = useState('');
+  const [categoryId, setCategoryId] = useState(report.categoryId ?? '');
 
   function open(next: Action) {
     setInstitutionId(report.institutionId ?? '');
@@ -84,6 +92,7 @@ export function AdminReportActions({
     setStatus(report.status);
     setPriority(report.priority ?? 'MEDIUM');
     setNote('');
+    setCategoryId(report.categoryId ?? '');
     setAction(next);
   }
 
@@ -99,46 +108,146 @@ export function AdminReportActions({
 
   return (
     <>
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button
-            type="button"
-            variant="icon"
-            size="sm"
-            disabled={busy}
-            aria-label={t('colActions')}
-          >
-            <MoreHorizontal className="h-4 w-4" />
+      <div className="flex items-center justify-end gap-1">
+        {preApproval ? (
+          <Button type="button" size="sm" disabled={busy} onClick={() => open('moderate')}>
+            {t('actionReview')}
           </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="min-w-[12rem]">
-          <DropdownMenuItem asChild>
-            <Link href={`/reports/${report.id}`}>
-              {preApproval ? t('actionReview') : t('actionView')}
-            </Link>
-          </DropdownMenuItem>
-          <DropdownMenuSeparator />
-          {canAssign && !preApproval ? (
-            <DropdownMenuItem onSelect={() => open('assign')}>{t('actionAssign')}</DropdownMenuItem>
-          ) : null}
-          <DropdownMenuItem onSelect={() => open('status')}>{t('actionStatus')}</DropdownMenuItem>
-          <DropdownMenuItem onSelect={() => open('priority')}>
-            {t('actionPriority')}
-          </DropdownMenuItem>
-          <DropdownMenuItem onSelect={() => open('note')}>{t('actionNote')}</DropdownMenuItem>
-          <DropdownMenuItem onSelect={() => open('escalate')} disabled={closed}>
-            {t('actionEscalate')}
-          </DropdownMenuItem>
-          {!preApproval ? (
-            <>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onSelect={() => open('resolve')} disabled={closed}>
-                {t('actionResolve')}
+        ) : null}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              type="button"
+              variant="icon"
+              size="sm"
+              disabled={busy}
+              aria-label={t('colActions')}
+            >
+              <MoreHorizontal className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="min-w-[12rem]">
+            {preApproval ? (
+              <DropdownMenuItem onSelect={() => open('moderate')}>
+                {t('actionReview')}
               </DropdownMenuItem>
-            </>
-          ) : null}
-        </DropdownMenuContent>
-      </DropdownMenu>
+            ) : null}
+            <DropdownMenuItem asChild>
+              <Link href={`/reports/${report.id}`}>
+                {preApproval ? t('moderateOpenFull') : t('actionView')}
+              </Link>
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            {canAssign && !preApproval ? (
+              <DropdownMenuItem onSelect={() => open('assign')}>
+                {t('actionAssign')}
+              </DropdownMenuItem>
+            ) : null}
+            <DropdownMenuItem onSelect={() => open('status')}>{t('actionStatus')}</DropdownMenuItem>
+            <DropdownMenuItem onSelect={() => open('priority')}>
+              {t('actionPriority')}
+            </DropdownMenuItem>
+            <DropdownMenuItem onSelect={() => open('note')}>{t('actionNote')}</DropdownMenuItem>
+            <DropdownMenuItem onSelect={() => open('escalate')} disabled={closed}>
+              {t('actionEscalate')}
+            </DropdownMenuItem>
+            {!preApproval ? (
+              <>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onSelect={() => open('resolve')} disabled={closed}>
+                  {t('actionResolve')}
+                </DropdownMenuItem>
+              </>
+            ) : null}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+
+      <Dialog
+        open={action === 'moderate'}
+        onOpenChange={(openState) => !openState && setAction(null)}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t('moderateTitle')}</DialogTitle>
+            <DialogDescription>{t('moderateBody')}</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <p className="font-mono text-caption text-muted-foreground">{report.publicId}</p>
+            <div>
+              <Label htmlFor={`moderate-cat-${report.id}`}>{t('moderateCategory')}</Label>
+              <Select
+                id={`moderate-cat-${report.id}`}
+                value={categoryId}
+                onChange={(e) => setCategoryId(e.target.value)}
+              >
+                <option value="">{t('moderateCategoryPlaceholder')}</option>
+                {categoryId && !categories.some((category) => category.id === categoryId) ? (
+                  <option value={categoryId}>{report.categoryName ?? categoryId}</option>
+                ) : null}
+                {categories.map((category) => (
+                  <option key={category.id} value={category.id}>
+                    {category.name}
+                  </option>
+                ))}
+              </Select>
+              {!categoryId ? (
+                <p className="mt-1.5 text-caption text-muted-foreground">
+                  {t('moderateNeedsCategory')}
+                </p>
+              ) : null}
+            </div>
+            <div>
+              <Label htmlFor={`moderate-note-${report.id}`}>{t('moderateNote')}</Label>
+              <Textarea
+                id={`moderate-note-${report.id}`}
+                value={note}
+                onChange={(e) => setNote(e.target.value)}
+                rows={3}
+                maxLength={500}
+              />
+            </div>
+          </div>
+          <DialogFooter className="flex-col gap-2 sm:flex-row sm:justify-between">
+            <Button asChild variant="ghost" size="sm">
+              <Link href={`/reports/${report.id}`}>{t('moderateOpenFull')}</Link>
+            </Button>
+            <div className="flex flex-wrap justify-end gap-2">
+              <Button type="button" variant="secondary" onClick={() => setAction(null)}>
+                {t('cancel')}
+              </Button>
+              <Button
+                type="button"
+                variant="secondary"
+                loading={busy}
+                disabled={!note.trim()}
+                onClick={() => {
+                  void onModerate({
+                    action: 'reject_invalid',
+                    note: note.trim(),
+                  }).then(() => setAction(null));
+                }}
+              >
+                {t('moderateReject')}
+              </Button>
+              <Button
+                type="button"
+                loading={busy}
+                disabled={!categoryId}
+                onClick={() => {
+                  void onModerate({
+                    action: 'approve',
+                    categoryId,
+                    note: note.trim() || undefined,
+                  }).then(() => setAction(null));
+                }}
+              >
+                {t('moderateApprove')}
+              </Button>
+            </div>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog
         open={action === 'assign'}

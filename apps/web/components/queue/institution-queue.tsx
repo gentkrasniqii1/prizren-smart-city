@@ -17,6 +17,7 @@ import {
 import { apiFetch } from '@/lib/api';
 import { useAuth } from '@/components/auth-provider';
 import { useRealtimeRefresh } from '@/components/realtime-provider';
+import { LIVE_POLL_MS, usePolling } from '@/lib/use-polling';
 import { PageContainer } from '@/components/layout/page-container';
 import { RemoteImage } from '@/components/remote-image';
 import {
@@ -112,6 +113,14 @@ export function InstitutionQueue() {
     () => {
       if (!busyId) void load({ background: true });
     },
+    !authLoading && isStaff(user?.role),
+  );
+
+  usePolling(
+    () => {
+      if (!busyId) void load({ background: true });
+    },
+    LIVE_POLL_MS,
     !authLoading && isStaff(user?.role),
   );
 

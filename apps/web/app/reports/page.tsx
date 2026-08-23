@@ -2,7 +2,7 @@
 
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslations, useLocale } from 'next-intl';
 import type { PaginatedReports, ReportDto } from '@prizren/shared-types';
 import { apiFetch } from '@/lib/api';
@@ -10,9 +10,12 @@ import { PageContainer } from '@/components/layout/page-container';
 import { ReportCard } from '@/components/reports/report-card';
 import { ReportDrawer } from '@/components/reports/report-drawer';
 import { ReportFilters, type ReportsFilterState } from '@/components/reports/report-filters';
+import { useAuth } from '@/components/auth-provider';
+import { useRealtimeRefresh } from '@/components/realtime-provider';
 import { Button, EmptyState, ErrorBanner, Skeleton } from '@/components/ui';
 import { MapSkeleton, ReportCardListSkeleton } from '@/components/ui/skeletons';
 import { useErrorMessage } from '@/lib/use-error-message';
+import { LIVE_POLL_MS, usePolling } from '@/lib/use-polling';
 import {
   Sheet,
   SheetContent,
@@ -43,6 +46,7 @@ const initialFilters: ReportsFilterState = {
 export default function ReportsPage() {
   const t = useTranslations('Reports');
   const locale = useLocale() as AppLocale;
+  const { user } = useAuth();
   const errorMessage = useErrorMessage();
   const [reports, setReports] = useState<ReportDto[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -51,12 +55,15 @@ export default function ReportsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [nearbyBusy, setNearbyBusy] = useState(false);
+  const [nearbyMode, setNearbyMode] = useState(false);
   const [mobileSheet, setMobileSheet] = useState<'peek' | 'list'>('peek');
 
-  function loadReports() {
-    void (async () => {
-      setLoading(true);
-      setError(null);
+  const loadReports = useCallback(
+    async (opts?: { background?: boolean }) => {
+      if (!opts?.background) {
+        setLoading(true);
+        setError(null);
+      }
       try {
         const params = new URLSearchParams();
         params.set('limit', '100');
@@ -68,13 +75,17 @@ export default function ReportsPage() {
         }
         const res = await apiFetch<PaginatedReports>(`/reports?${params.toString()}`);
         setReports(res.data);
+        setNearbyMode(false);
       } catch (err) {
-        setError(errorMessage(err, t('loadError')));
+        if (!opts?.background) {
+          setError(errorMessage(err, t('loadError')));
+        }
       } finally {
-        setLoading(false);
+        if (!opts?.background) setLoading(false);
       }
-    })();
-  }
+    },
+    [filters.status, filters.categoryId, filters.from, filters.to, errorMessage, t],
+  );
 
   useEffect(() => {
     void apiFetch<{ id: string; name: string }[]>('/categories')
@@ -83,9 +94,16 @@ export default function ReportsPage() {
   }, []);
 
   useEffect(() => {
-    loadReports();
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- reload when server-side filters change
-  }, [filters.status, filters.categoryId, filters.from, filters.to]);
+    void loadReports();
+  }, [loadReports]);
+
+  usePolling(() => {
+    if (!nearbyBusy && !nearbyMode) void loadReports({ background: true });
+  }, LIVE_POLL_MS);
+
+  useRealtimeRefresh(() => {
+    if (!nearbyBusy && !nearbyMode) void loadReports({ background: true });
+  }, Boolean(user));
 
   const visible = useMemo(() => {
     const q = filters.query.trim().toLowerCase();
@@ -131,6 +149,7 @@ export default function ReportsPage() {
             `/reports/nearby?lat=${pos.coords.latitude}&lng=${pos.coords.longitude}&radiusKm=${km}`,
           );
           setReports(data);
+          setNearbyMode(true);
           setSelectedId(null);
         } catch (err) {
           setError(errorMessage(err, t('nearbyFailed')));
@@ -232,7 +251,7 @@ export default function ReportsPage() {
 
         {error ? (
           <div className="mt-4">
-            <ErrorBanner message={error} onRetry={loadReports} />
+            <ErrorBanner message={error} onRetry={() => void loadReports()} />
           </div>
         ) : null}
       </PageContainer>
