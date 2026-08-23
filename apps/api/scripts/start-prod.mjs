@@ -5,15 +5,23 @@
  *
  * Seed is run via run-seed.mjs (not `prisma db seed`) so a temp Prisma cwd
  * cannot lose the relative seed command.
+ *
+ * Migrate + seed use the Neon unpooled host (DIRECT_URL, or DATABASE_URL with
+ * `-pooler` stripped). The Nest process keeps the original DATABASE_URL so
+ * request traffic stays on the pooler. Do not set spawn timeout — that kills
+ * Prisma; it does not extend the 10s advisory-lock wait.
  */
 import { spawn, spawnSync } from 'node:child_process';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { sleepMs } from './direct-database-url.mjs';
 
 const apiRoot = join(dirname(fileURLToPath(import.meta.url)), '..');
 const prismaProd = join(apiRoot, 'scripts', 'prisma-prod.mjs');
 const runSeed = join(apiRoot, 'scripts', 'run-seed.mjs');
 const main = join(apiRoot, 'dist', 'main.js');
+const SEED_ATTEMPTS = 3;
+const SEED_RETRY_MS = 5_000;
 
 function run(file, args = []) {
   const result = spawnSync(process.execPath, [file, ...args], {
@@ -25,8 +33,27 @@ function run(file, args = []) {
   if (code !== 0) process.exit(code);
 }
 
+function runSeedWithRetry() {
+  let status = 1;
+  for (let attempt = 1; attempt <= SEED_ATTEMPTS; attempt++) {
+    console.log(`Catalog seed attempt ${attempt}/${SEED_ATTEMPTS}`);
+    const result = spawnSync(process.execPath, [runSeed], {
+      stdio: 'inherit',
+      cwd: apiRoot,
+      env: process.env,
+    });
+    status = result.status === null ? 1 : result.status;
+    if (status === 0) return;
+    if (attempt < SEED_ATTEMPTS) {
+      console.warn(`Seed failed (exit ${status}). Retrying in ${SEED_RETRY_MS / 1000}s.`);
+      sleepMs(SEED_RETRY_MS);
+    }
+  }
+  process.exit(status);
+}
+
 run(prismaProd, ['migrate', 'deploy']);
-run(runSeed);
+runSeedWithRetry();
 
 const child = spawn(process.execPath, [main], {
   stdio: 'inherit',

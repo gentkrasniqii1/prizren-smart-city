@@ -8,6 +8,7 @@
  *   - reads only process.env.DATABASE_URL (no hardcoded fallback)
  *   - fills from apps/api/.env only when DATABASE_URL is unset AND not production
  *   - runs Prisma from a temp cwd so the CLI cannot load apps/api/.env
+ *   - points migrate at the Neon unpooled host (session advisory locks)
  */
 import { spawnSync } from 'node:child_process';
 import { createRequire } from 'node:module';
@@ -15,10 +16,13 @@ import { existsSync, mkdtempSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { describeDatabaseHost, schemaOpsEnv, sleepMs } from './direct-database-url.mjs';
 
 const apiRoot = join(dirname(fileURLToPath(import.meta.url)), '..');
 const isProd = process.env.NODE_ENV === 'production';
 const schemaPath = join(apiRoot, 'prisma', 'schema.prisma');
+const MIGRATE_ATTEMPTS = 3;
+const MIGRATE_RETRY_MS = 5_000;
 
 function fillFromLocalDotenvIfNeeded() {
   if (isProd) return;
@@ -42,14 +46,6 @@ function fillFromLocalDotenvIfNeeded() {
 
 fillFromLocalDotenvIfNeeded();
 
-function databaseHost(url) {
-  try {
-    return new URL(url.replace(/^postgres(ql)?:/i, 'http:')).host;
-  } catch {
-    return '(unparseable DATABASE_URL)';
-  }
-}
-
 const databaseUrl = process.env.DATABASE_URL ?? '';
 if (!databaseUrl) {
   console.error(
@@ -59,16 +55,14 @@ if (!databaseUrl) {
   process.exit(1);
 }
 
-const host = databaseHost(databaseUrl);
+const runtimeHost = describeDatabaseHost(databaseUrl);
 if (isProd && /localhost|127\.0\.0\.1/i.test(databaseUrl)) {
   console.error(
-    `Refusing prisma in production: DATABASE_URL host is "${host}". ` +
+    `Refusing prisma in production: DATABASE_URL host is "${runtimeHost}". ` +
       'Render is using the local Docker URL. Set Neon (*.neon.tech), do not import apps/api/.env.',
   );
   process.exit(1);
 }
-
-console.log(`Prisma DATABASE_URL host: ${host}`);
 
 const prismaArgs = process.argv.slice(2);
 if (prismaArgs.length === 0) {
@@ -76,12 +70,39 @@ if (prismaArgs.length === 0) {
   process.exit(1);
 }
 
-const prismaCwd = mkdtempSync(join(tmpdir(), 'prisma-deploy-'));
-const prismaCli = createRequire(import.meta.url).resolve('prisma/build/index.js');
-const result = spawnSync(process.execPath, [prismaCli, ...prismaArgs, '--schema', schemaPath], {
-  stdio: 'inherit',
-  env: { ...process.env, DATABASE_URL: databaseUrl },
-  cwd: prismaCwd,
-});
+const opsEnv = schemaOpsEnv(process.env);
+const opsHost = describeDatabaseHost(opsEnv.DATABASE_URL);
+if (opsHost !== runtimeHost) {
+  console.log(`Prisma runtime DATABASE_URL host: ${runtimeHost}`);
+  console.log(`Prisma migrate/seed host (unpooled): ${opsHost}`);
+} else {
+  console.log(`Prisma DATABASE_URL host: ${runtimeHost}`);
+}
 
-process.exit(result.status === null ? 1 : result.status);
+const isMigrate = prismaArgs[0] === 'migrate';
+const attempts = isMigrate ? MIGRATE_ATTEMPTS : 1;
+const prismaCli = createRequire(import.meta.url).resolve('prisma/build/index.js');
+
+let status = 1;
+for (let attempt = 1; attempt <= attempts; attempt++) {
+  if (attempts > 1) {
+    console.log(`Prisma migrate deploy attempt ${attempt}/${attempts}`);
+  }
+  const prismaCwd = mkdtempSync(join(tmpdir(), 'prisma-deploy-'));
+  const result = spawnSync(process.execPath, [prismaCli, ...prismaArgs, '--schema', schemaPath], {
+    stdio: 'inherit',
+    env: opsEnv,
+    cwd: prismaCwd,
+  });
+  status = result.status === null ? 1 : result.status;
+  if (status === 0) break;
+  if (attempt < attempts) {
+    console.warn(
+      `Prisma migrate failed (exit ${status}). Retrying in ${MIGRATE_RETRY_MS / 1000}s ` +
+        '(Neon pooler advisory-lock timeouts are P1002).',
+    );
+    sleepMs(MIGRATE_RETRY_MS);
+  }
+}
+
+process.exit(status);

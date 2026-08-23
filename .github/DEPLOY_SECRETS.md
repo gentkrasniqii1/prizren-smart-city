@@ -15,3 +15,5 @@
 # Optional app env (Vercel / Railway dashboards):
 #   NEXT_PUBLIC_API_URL, NEXT_PUBLIC_MAPBOX_TOKEN, NEXT_PUBLIC_SENTRY_DSN
 #   DATABASE_URL, JWT_*, CLOUDINARY_*, ANTHROPIC_*, CORS_ORIGIN, SENTRY_DSN
+#   Optional DIRECT_URL = Neon unpooled host (DATABASE_URL without `-pooler`).
+#   If omitted, API boot derives it from DATABASE_URL for migrate/seed only.
