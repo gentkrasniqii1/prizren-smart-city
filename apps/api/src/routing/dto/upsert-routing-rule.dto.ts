@@ -40,10 +40,20 @@ export class UpsertRoutingRuleDto {
 
   @IsOptional()
   @ValidateIf((_, value) => value !== null && value !== '')
+  @IsUUID()
+  zoneId?: string | null;
+
+  /**
+   * Legacy free-text — rejected on new writes without zoneId.
+   * Existing historical rows may still store a string for matcher fallback.
+   */
+  @IsOptional()
+  @ValidateIf((_, value) => value !== null && value !== '')
   @IsString()
   @MaxLength(80)
   zone?: string | null;
 
+  /** null = wildcard (any); true/false = must match exactly. Do not coerce null→false. */
   @IsOptional()
   @ValidateIf((_, value) => value !== null)
   @IsBoolean()

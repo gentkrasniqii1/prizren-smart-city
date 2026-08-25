@@ -52,6 +52,11 @@ export class RoutingService {
 
     const enriched: RoutingFacts = {
       ...facts,
+      // LEGACY heuristic (pre–Phase 3): when the caller omits isEmergency, a category
+      // whose defaultPriority is CRITICAL is treated as emergency so fire/police-style
+      // rules can match. This is NOT "report priority CRITICAL ⇒ emergency". Approve
+      // intentionally passes isEmergency: null and does not invent emergency from
+      // report.priority; only this category-default fallback remains.
       isEmergency:
         facts.isEmergency ??
         (category.defaultPriority === Priority.CRITICAL ? true : facts.isEmergency),

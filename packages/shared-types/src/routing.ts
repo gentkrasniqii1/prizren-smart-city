@@ -5,6 +5,7 @@ export type RouteInput = {
   subcategoryId?: string | null;
   subcategory?: string | null;
   severity?: Priority | null;
+  zoneId?: string | null;
   zone?: string | null;
   isEmergency?: boolean | null;
 };
@@ -17,6 +18,7 @@ export interface RoutingRuleDto {
   subcategoryId: string | null;
   subcategory: string | null;
   severity: Priority | null;
+  zoneId: string | null;
   zone: string | null;
   isEmergency: boolean | null;
   departmentId: string | null;
@@ -65,7 +67,12 @@ export interface UpsertRoutingRuleRequest {
    */
   subcategory?: string | null;
   severity?: Priority | null;
+  zoneId?: string | null;
+  /**
+   * Legacy free-text — rejected on new writes without zoneId.
+   */
   zone?: string | null;
+  /** null = wildcard; true/false = exact. Never coerce null to false. */
   isEmergency?: boolean | null;
   departmentId?: string | null;
   institutionId?: string | null;
@@ -87,4 +94,17 @@ export interface RoutePreview {
   matchedRuleId: string | null;
   matchedRuleName: string | null;
   source: 'rule' | 'category_fallback' | 'unrouted';
+}
+
+export interface ZoneDto {
+  id: string;
+  name: string;
+  active: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface UpsertZoneRequest {
+  name: string;
+  active?: boolean;
 }

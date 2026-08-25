@@ -176,6 +176,8 @@ export class AdminDataService {
         return this.listCategories(opts);
       case 'subcategories':
         return this.listSubcategories(opts);
+      case 'zones':
+        return this.listZones(opts);
       case 'routing-rules':
         return this.listRoutingRules(opts);
       case 'sla-policies':
@@ -503,6 +505,33 @@ export class AdminDataService {
     };
   }
 
+  private async listZones(opts: { skip: number; take: number; q?: string }) {
+    const where: Prisma.ZoneWhereInput = opts.q
+      ? {
+          OR: [{ name: { contains: opts.q, mode: 'insensitive' } }, { id: { equals: opts.q } }],
+        }
+      : {};
+    const [total, rows] = await Promise.all([
+      this.prisma.zone.count({ where }),
+      this.prisma.zone.findMany({
+        where,
+        orderBy: [{ name: 'asc' }],
+        skip: opts.skip,
+        take: opts.take,
+      }),
+    ]);
+    return {
+      total,
+      rows: rows.map((row) => ({
+        id: row.id,
+        name: row.name,
+        active: row.active,
+        createdAt: iso(row.createdAt),
+        updatedAt: iso(row.updatedAt),
+      })),
+    };
+  }
+
   private async listRoutingRules(opts: { skip: number; take: number; q?: string }) {
     const where: Prisma.RoutingRuleWhereInput = opts.q
       ? {
@@ -511,12 +540,22 @@ export class AdminDataService {
             { subcategory: { contains: opts.q, mode: 'insensitive' } },
             { subcategoryRef: { name: { contains: opts.q, mode: 'insensitive' } } },
             { zone: { contains: opts.q, mode: 'insensitive' } },
+            { zoneRef: { name: { contains: opts.q, mode: 'insensitive' } } },
             { severity: { equals: opts.q.toUpperCase() as never } },
             { category: { name: { contains: opts.q, mode: 'insensitive' } } },
             { department: { name: { contains: opts.q, mode: 'insensitive' } } },
             { institution: { name: { contains: opts.q, mode: 'insensitive' } } },
             { id: { equals: opts.q } },
             { subcategoryId: { equals: opts.q } },
+            { zoneId: { equals: opts.q } },
+            ...(opts.q.toLowerCase() === 'emergency' || opts.q.toLowerCase() === 'emergjenc'
+              ? [{ isEmergency: true as const }]
+              : []),
+            ...(opts.q.toLowerCase() === 'non-emergency' ||
+            opts.q.toLowerCase() === 'jo-emergjenc' ||
+            opts.q.toLowerCase() === 'jo emergjenc'
+              ? [{ isEmergency: false as const }]
+              : []),
           ],
         }
       : {};
@@ -531,6 +570,7 @@ export class AdminDataService {
           category: { select: { name: true } },
           department: { select: { name: true } },
           institution: { select: { name: true } },
+          zoneRef: { select: { name: true } },
         },
       }),
     ]);
@@ -544,7 +584,8 @@ export class AdminDataService {
         subcategoryId: row.subcategoryId,
         subcategory: row.subcategory,
         severity: row.severity,
-        zone: row.zone,
+        zoneId: row.zoneId,
+        zone: row.zoneRef?.name ?? row.zone,
         isEmergency: row.isEmergency,
         departmentId: row.departmentId,
         departmentName: row.department?.name ?? null,

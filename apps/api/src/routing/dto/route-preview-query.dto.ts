@@ -20,7 +20,20 @@ export class RoutePreviewQueryDto {
   severity?: Priority;
 
   @IsOptional()
-  @Transform(({ value }) => value === 'true' || value === true)
+  @IsUUID()
+  zoneId?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(80)
+  zone?: string;
+
+  @IsOptional()
+  @Transform(({ value }) => {
+    if (value === 'true' || value === true) return true;
+    if (value === 'false' || value === false) return false;
+    return value;
+  })
   @IsBoolean()
   isEmergency?: boolean;
 }

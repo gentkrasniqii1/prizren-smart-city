@@ -39,6 +39,8 @@ export class RoutingController {
       subcategoryId: query.subcategoryId,
       subcategory: query.subcategory,
       severity: query.severity,
+      zoneId: query.zoneId,
+      zone: query.zone,
       isEmergency: query.isEmergency,
     });
   }

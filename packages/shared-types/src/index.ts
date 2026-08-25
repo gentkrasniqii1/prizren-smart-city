@@ -165,6 +165,8 @@ export interface ReportDto {
   subcategoryId: string | null;
   /** Denormalized name from Subcategory, or legacy free-text when no FK. */
   subcategory: string | null;
+  /** Optional administrative zone for zone-scoped routing. */
+  zoneId: string | null;
   departmentId: string | null;
   /** Responsible external organization, distinct from the internal department. */
   institutionId: string | null;
@@ -275,6 +277,8 @@ export interface ModerateReportRequest {
   categoryId?: string;
   /** Optional subcategory FK; must belong to the selected/existing category. */
   subcategoryId?: string;
+  /** Optional zone FK for zone-scoped routing facts. */
+  zoneId?: string;
 }
 
 export interface UpdateReportPriorityRequest {
@@ -459,6 +463,8 @@ export type {
   UpsertDepartmentRequest,
   UpsertInstitutionRequest,
   UpsertRoutingRuleRequest,
+  UpsertZoneRequest,
+  ZoneDto,
 } from './routing';
 export type { PasswordChecks } from './password';
 export {

@@ -35,7 +35,7 @@ const STATUS_LABELS: Record<AppLocale, Record<ReportStatusKey, string>> = {
 const PRIORITY_LABELS: Record<AppLocale, Record<ReportPriorityKey, string>> = {
   sq: {
     LOW: 'E ulët',
-    MEDIUM: 'Mesatare',
+    MEDIUM: 'E mesme',
     HIGH: 'E lartë',
     CRITICAL: 'Kritike',
   },
