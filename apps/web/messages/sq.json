@@ -987,6 +987,8 @@
     "search": "Kërko",
     "searchPlaceholder": "Filtro këtë tabelë…",
     "searchSubmit": "Kërko",
+    "statusFilter": "Statusi",
+    "statusAny": "Çdo status",
     "emptyTitle": "Nuk ka rreshta",
     "emptyBody": "Asgjë nuk përputhet me kërkimin, ose tabela është bosh.",
     "pageOf": "Faqja {page} nga {totalPages} · {total} rreshta",
