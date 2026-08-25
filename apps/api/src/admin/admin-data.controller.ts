@@ -59,6 +59,7 @@ export class AdminDataController {
       page: query.page,
       limit: query.limit,
       q: query.q,
+      status: query.status,
     });
   }
 }

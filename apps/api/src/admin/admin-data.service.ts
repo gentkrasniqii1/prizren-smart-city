@@ -1,8 +1,9 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
-import { Prisma, Priority } from '@prisma/client';
+import { Prisma, Priority, ReportStatus } from '@prisma/client';
 import {
   ADMIN_DATA_BLOCKED_RESOURCES,
   ADMIN_DATA_RESOURCES,
+  REPORT_STATUSES,
   type AdminDataPage,
   type AdminDataResource,
   type AdminDataRow,
@@ -15,6 +16,7 @@ import { UpsertSlaPolicyDto } from './dto/upsert-sla-policy.dto';
 
 const BLOCKED = new Set<string>(ADMIN_DATA_BLOCKED_RESOURCES);
 const ALLOWED = new Set<string>(ADMIN_DATA_RESOURCES);
+const REPORT_STATUS_SET = new Set<string>(REPORT_STATUSES);
 
 function iso(value: Date | null | undefined): string | null {
   return value ? value.toISOString() : null;
@@ -41,13 +43,25 @@ export class AdminDataService {
     return key as AdminDataResource;
   }
 
-  async list(resource: AdminDataResource, opts: { page?: number; limit?: number; q?: string }) {
+  async list(
+    resource: AdminDataResource,
+    opts: { page?: number; limit?: number; q?: string; status?: string },
+  ) {
     const page = opts.page && opts.page > 0 ? opts.page : 1;
     const limit = opts.limit && opts.limit > 0 ? Math.min(opts.limit, 100) : 20;
     const q = opts.q?.trim() || undefined;
+    const status = opts.status?.trim() || undefined;
+    if (status) {
+      if (resource !== 'reports') {
+        throw new BadRequestException('status filter is only supported for reports');
+      }
+      if (!REPORT_STATUS_SET.has(status)) {
+        throw new BadRequestException(`Unknown report status: ${status}`);
+      }
+    }
     const skip = (page - 1) * limit;
 
-    const { total, rows } = await this.fetch(resource, { skip, take: limit, q });
+    const { total, rows } = await this.fetch(resource, { skip, take: limit, q, status });
     const data: AdminDataRow[] = rows;
     const payload: AdminDataPage = {
       resource,
@@ -147,7 +161,7 @@ export class AdminDataService {
 
   private async fetch(
     resource: AdminDataResource,
-    opts: { skip: number; take: number; q?: string },
+    opts: { skip: number; take: number; q?: string; status?: string },
   ): Promise<{ total: number; rows: AdminDataRow[] }> {
     switch (resource) {
       case 'users':
@@ -238,16 +252,19 @@ export class AdminDataService {
     };
   }
 
-  private async listReports(opts: { skip: number; take: number; q?: string }) {
-    const where: Prisma.ReportWhereInput = opts.q
-      ? {
-          OR: [
-            { publicId: { contains: opts.q, mode: 'insensitive' } },
-            { description: { contains: opts.q, mode: 'insensitive' } },
-            { address: { contains: opts.q, mode: 'insensitive' } },
-          ],
-        }
-      : {};
+  private async listReports(opts: { skip: number; take: number; q?: string; status?: string }) {
+    const where: Prisma.ReportWhereInput = {
+      ...(opts.q
+        ? {
+            OR: [
+              { publicId: { contains: opts.q, mode: 'insensitive' } },
+              { description: { contains: opts.q, mode: 'insensitive' } },
+              { address: { contains: opts.q, mode: 'insensitive' } },
+            ],
+          }
+        : {}),
+      ...(opts.status ? { status: opts.status as ReportStatus } : {}),
+    };
     const [total, rows] = await Promise.all([
       this.prisma.report.count({ where }),
       this.prisma.report.findMany({
@@ -282,14 +299,60 @@ export class AdminDataService {
           dueAt: true,
           createdAt: true,
           updatedAt: true,
+          category: { select: { name: true } },
+          department: { select: { name: true } },
+          institution: { select: { name: true } },
+          user: { select: { email: true } },
         },
       }),
     ]);
+
+    // assignedStaffId has no Prisma @relation — resolve emails in one batch.
+    const staffIds = [
+      ...new Set(rows.map((row) => row.assignedStaffId).filter((id): id is string => Boolean(id))),
+    ];
+    const staffRows =
+      staffIds.length > 0
+        ? await this.prisma.user.findMany({
+            where: { id: { in: staffIds } },
+            select: { id: true, email: true },
+          })
+        : [];
+    const staffEmailById = new Map(staffRows.map((row) => [row.id, row.email]));
+
     return {
       total,
       rows: rows.map((row) => ({
-        ...row,
+        id: row.id,
+        publicId: row.publicId,
+        userId: row.userId,
+        userEmail: row.user?.email ?? null,
+        categoryId: row.categoryId,
+        categoryName: row.category?.name ?? null,
+        subcategory: row.subcategory,
+        departmentId: row.departmentId,
+        departmentName: row.department?.name ?? null,
+        institutionId: row.institutionId,
+        institutionName: row.institution?.name ?? null,
+        description: row.description,
+        status: row.status,
+        priority: row.priority,
+        lat: row.lat,
+        lng: row.lng,
+        address: row.address,
+        photoUrl: row.photoUrl,
+        photoAfterUrl: row.photoAfterUrl,
         aiClassification: row.aiClassification,
+        aiConfidence: row.aiConfidence,
+        duplicateOfId: row.duplicateOfId,
+        isDuplicate: row.isDuplicate,
+        assignedStaffId: row.assignedStaffId,
+        assignedStaffEmail: row.assignedStaffId
+          ? (staffEmailById.get(row.assignedStaffId) ?? null)
+          : null,
+        source: row.source,
+        anonymous: row.anonymous,
+        language: row.language,
         dueAt: iso(row.dueAt),
         createdAt: iso(row.createdAt),
         updatedAt: iso(row.updatedAt),
@@ -344,6 +407,7 @@ export class AdminDataService {
         orderBy: { name: 'asc' },
         skip: opts.skip,
         take: opts.take,
+        include: { institution: { select: { name: true } } },
       }),
     ]);
     return {
@@ -354,6 +418,7 @@ export class AdminDataService {
         contact: row.contact,
         slaHours: row.slaHours,
         institutionId: row.institutionId,
+        institutionName: row.institution?.name ?? null,
       })),
     };
   }
@@ -369,6 +434,7 @@ export class AdminDataService {
         orderBy: { name: 'asc' },
         skip: opts.skip,
         take: opts.take,
+        include: { department: { select: { name: true } } },
       }),
     ]);
     return {
@@ -377,6 +443,7 @@ export class AdminDataService {
         id: row.id,
         name: row.name,
         departmentId: row.departmentId,
+        departmentName: row.department?.name ?? null,
         slaHours: row.slaHours,
         defaultPriority: row.defaultPriority,
       })),
@@ -400,6 +467,11 @@ export class AdminDataService {
         orderBy: [{ priority: 'asc' }, { name: 'asc' }],
         skip: opts.skip,
         take: opts.take,
+        include: {
+          category: { select: { name: true } },
+          department: { select: { name: true } },
+          institution: { select: { name: true } },
+        },
       }),
     ]);
     return {
@@ -408,12 +480,15 @@ export class AdminDataService {
         id: row.id,
         name: row.name,
         categoryId: row.categoryId,
+        categoryName: row.category?.name ?? null,
         subcategory: row.subcategory,
         severity: row.severity,
         zone: row.zone,
         isEmergency: row.isEmergency,
         departmentId: row.departmentId,
+        departmentName: row.department?.name ?? null,
         institutionId: row.institutionId,
+        institutionName: row.institution?.name ?? null,
         priority: row.priority,
         slaHours: row.slaHours,
         defaultPriority: row.defaultPriority,
@@ -462,6 +537,7 @@ export class AdminDataService {
         orderBy: { createdAt: 'desc' },
         skip: opts.skip,
         take: opts.take,
+        include: { user: { select: { email: true } } },
       }),
     ]);
     return {
@@ -469,6 +545,7 @@ export class AdminDataService {
       rows: rows.map((row) => ({
         id: row.id,
         userId: row.userId,
+        userEmail: row.user?.email ?? null,
         actorType: row.actorType,
         action: row.action,
         entityType: row.entityType,

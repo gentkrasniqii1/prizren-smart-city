@@ -47,7 +47,13 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { DashboardSkeleton, TableSkeleton } from '@/components/ui/skeletons';
-import { REPORT_PRIORITIES, USER_ROLES, getRoleLabel } from '@/lib/labels';
+import {
+  REPORT_PRIORITIES,
+  REPORT_STATUSES,
+  USER_ROLES,
+  getRoleLabel,
+  getStatusLabel,
+} from '@/lib/labels';
 import { useErrorMessage } from '@/lib/use-error-message';
 import type { AppLocale } from '@/i18n/request';
 
@@ -78,10 +84,14 @@ const RESOURCE_COLUMNS: Record<AdminDataResource, readonly string[]> = {
     'id',
     'publicId',
     'userId',
+    'userEmail',
     'categoryId',
+    'categoryName',
     'subcategory',
     'departmentId',
+    'departmentName',
     'institutionId',
+    'institutionName',
     'description',
     'status',
     'priority',
@@ -95,6 +105,7 @@ const RESOURCE_COLUMNS: Record<AdminDataResource, readonly string[]> = {
     'duplicateOfId',
     'isDuplicate',
     'assignedStaffId',
+    'assignedStaffEmail',
     'source',
     'anonymous',
     'language',
@@ -114,18 +125,21 @@ const RESOURCE_COLUMNS: Record<AdminDataResource, readonly string[]> = {
     'integrationStatus',
     'createdAt',
   ],
-  departments: ['id', 'name', 'contact', 'slaHours', 'institutionId'],
-  categories: ['id', 'name', 'departmentId', 'slaHours', 'defaultPriority'],
+  departments: ['id', 'name', 'contact', 'slaHours', 'institutionId', 'institutionName'],
+  categories: ['id', 'name', 'departmentId', 'departmentName', 'slaHours', 'defaultPriority'],
   'routing-rules': [
     'id',
     'name',
     'categoryId',
+    'categoryName',
     'subcategory',
     'severity',
     'zone',
     'isEmergency',
     'departmentId',
+    'departmentName',
     'institutionId',
+    'institutionName',
     'priority',
     'slaHours',
     'defaultPriority',
@@ -150,6 +164,7 @@ const RESOURCE_COLUMNS: Record<AdminDataResource, readonly string[]> = {
   'audit-logs': [
     'id',
     'userId',
+    'userEmail',
     'actorType',
     'action',
     'entityType',
@@ -165,6 +180,31 @@ const RESOURCE_COLUMNS: Record<AdminDataResource, readonly string[]> = {
 };
 
 const READ_ONLY = new Set<AdminDataResource>(['audit-logs', 'status-history']);
+
+const COLUMN_OVERRIDES: Record<string, string> = {
+  id: 'ID',
+  userId: 'User ID',
+  googleId: 'Google ID',
+  facebookId: 'Facebook ID',
+  categoryId: 'Category ID',
+  departmentId: 'Department ID',
+  institutionId: 'Institution ID',
+  assignedStaffId: 'Assigned Staff ID',
+  duplicateOfId: 'Duplicate Of ID',
+  entityId: 'Entity ID',
+  reportId: 'Report ID',
+  slaHours: 'SLA Hours',
+  aiClassification: 'AI Classification',
+  aiConfidence: 'AI Confidence',
+  ipAddress: 'IP Address',
+  userAgent: 'User Agent',
+  totpEnabled: 'TOTP Enabled',
+};
+
+function humanizeColumn(col: string): string {
+  if (COLUMN_OVERRIDES[col]) return COLUMN_OVERRIDES[col];
+  return col.replace(/([a-z0-9])([A-Z])/g, '$1 $2').replace(/^./, (c) => c.toUpperCase());
+}
 
 function stringifyCell(value: unknown): { text: string; title?: string } {
   if (value == null || value === '') return { text: '—' };
@@ -193,6 +233,7 @@ export function AdminDataPanel() {
   const [page, setPage] = useState(1);
   const [draftQ, setDraftQ] = useState('');
   const [q, setQ] = useState('');
+  const [status, setStatus] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [payload, setPayload] = useState<AdminDataPage | null>(null);
@@ -221,6 +262,7 @@ export function AdminDataPanel() {
           limit: '20',
         });
         if (q.trim()) params.set('q', q.trim());
+        if (resource === 'reports' && status) params.set('status', status);
         const res = await apiFetch<AdminDataPage>(`/admin/data/${resource}?${params.toString()}`, {
           auth: true,
         });
@@ -234,7 +276,7 @@ export function AdminDataPanel() {
         if (!opts?.background) setLoading(false);
       }
     },
-    [errorMessage, page, q, resource, t],
+    [errorMessage, page, q, resource, status, t],
   );
 
   useEffect(() => {
@@ -259,6 +301,7 @@ export function AdminDataPanel() {
     setPage(1);
     setDraftQ('');
     setQ('');
+    setStatus('');
     setPayload(null);
   }
 
@@ -386,6 +429,26 @@ export function AdminDataPanel() {
                 placeholder={t('searchPlaceholder')}
               />
             </div>
+            {resource === 'reports' ? (
+              <div className="w-full sm:w-56">
+                <Label htmlFor="admin-data-status">{t('statusFilter')}</Label>
+                <Select
+                  id="admin-data-status"
+                  value={status}
+                  onChange={(e) => {
+                    setPage(1);
+                    setStatus(e.target.value);
+                  }}
+                >
+                  <option value="">{t('statusAny')}</option>
+                  {REPORT_STATUSES.map((value) => (
+                    <option key={value} value={value}>
+                      {getStatusLabel(value, locale)}
+                    </option>
+                  ))}
+                </Select>
+              </div>
+            ) : null}
             <Button type="submit">{t('searchSubmit')}</Button>
           </form>
 
@@ -408,7 +471,7 @@ export function AdminDataPanel() {
                   <TableRow>
                     {columns.map((col) => (
                       <TableHead key={col} className="whitespace-nowrap">
-                        {col}
+                        {humanizeColumn(col)}
                       </TableHead>
                     ))}
                     {resource === 'sla-policies' ? (

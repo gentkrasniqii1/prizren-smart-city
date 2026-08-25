@@ -987,6 +987,8 @@
     "search": "Search",
     "searchPlaceholder": "Filter this table…",
     "searchSubmit": "Search",
+    "statusFilter": "Status",
+    "statusAny": "Any status",
     "emptyTitle": "No rows",
     "emptyBody": "Nothing matches this search, or the table is empty.",
     "pageOf": "Page {page} of {totalPages} · {total} rows",
