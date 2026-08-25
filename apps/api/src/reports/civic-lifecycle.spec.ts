@@ -10,6 +10,7 @@ import { RoutingService } from '../routing/routing.service';
 import { MailService } from '../mail/mail.service';
 import { ConfigService } from '../auth/config.service';
 import { AuditService } from '../audit/audit.service';
+import { SlaResolutionService } from './sla-resolution.service';
 import { OutboundEmailService } from '../outbound-email/outbound-email.service';
 import { REPORT_STATUS_CHANGED_EVENT, StatusChangedEvent } from '../events/status-changed.event';
 
@@ -62,6 +63,9 @@ function reportRow(overrides: Record<string, unknown> = {}) {
     anonymous: false,
     language: 'sq',
     dueAt: null,
+    slaPolicyId: null,
+    responseDueAt: null,
+    resolutionDueAt: null,
     createdAt: new Date(),
     updatedAt: new Date(),
     category: { name: 'Ndriçimi' },
@@ -102,6 +106,15 @@ function reportsService(
     { sendReportReceivedEmail: vi.fn().mockResolvedValue(undefined) } as unknown as MailService,
     { webOrigin: 'http://localhost:3000' } as unknown as ConfigService,
     { log: vi.fn().mockResolvedValue({ id: 'audit-1' }) } as unknown as AuditService,
+    {
+      resolveForFacts: vi.fn().mockResolvedValue({
+        policy: null,
+        scope: null,
+        responseDueAt: null,
+        resolutionDueAt: null,
+        reason: 'no_matching_policy',
+      }),
+    } as unknown as SlaResolutionService,
   );
 }
 
@@ -204,6 +217,15 @@ describe('Phase 10 civic lifecycle', () => {
       { sendReportReceivedEmail: vi.fn() } as unknown as MailService,
       { webOrigin: 'http://localhost:3000' } as unknown as ConfigService,
       audit as unknown as AuditService,
+      {
+        resolveForFacts: vi.fn().mockResolvedValue({
+          policy: null,
+          scope: null,
+          responseDueAt: null,
+          resolutionDueAt: null,
+          reason: 'no_matching_policy',
+        }),
+      } as unknown as SlaResolutionService,
     ).moderate('r1', staff as never, { action: 'approve' });
 
     expect(approved.status).toBe(ReportStatus.ASSIGNED);

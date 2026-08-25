@@ -8,12 +8,16 @@ import {
   Max,
   MaxLength,
   Min,
+  MinLength,
   ValidateIf,
 } from 'class-validator';
+import { Transform } from 'class-transformer';
 import { Priority } from '@prisma/client';
 
 export class UpsertSlaPolicyDto {
+  @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
   @IsString()
+  @MinLength(1)
   @MaxLength(160)
   name!: string;
 
@@ -39,6 +43,11 @@ export class UpsertSlaPolicyDto {
   @ValidateIf((_, value) => value !== null && value !== '')
   @IsUUID()
   categoryId?: string | null;
+
+  @IsOptional()
+  @ValidateIf((_, value) => value !== null && value !== '')
+  @IsUUID()
+  subcategoryId?: string | null;
 
   @IsOptional()
   @IsBoolean()

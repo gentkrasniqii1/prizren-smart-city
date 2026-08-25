@@ -60,6 +60,9 @@ export class AdminDataController {
       limit: query.limit,
       q: query.q,
       status: query.status,
+      priority: query.priority,
+      scope: query.scope,
+      active: query.active,
     });
   }
 }

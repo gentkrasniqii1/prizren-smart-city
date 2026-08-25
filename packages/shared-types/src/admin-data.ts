@@ -49,6 +49,10 @@ export interface SlaPolicyDto {
   departmentName: string | null;
   categoryId: string | null;
   categoryName: string | null;
+  subcategoryId: string | null;
+  subcategoryName: string | null;
+  /** Derived: global | department | category | subcategory */
+  scope: 'global' | 'department' | 'category' | 'subcategory';
   active: boolean;
   createdAt: string;
   updatedAt: string;
@@ -61,5 +65,6 @@ export interface UpsertSlaPolicyRequest {
   resolutionTime: number;
   departmentId?: string | null;
   categoryId?: string | null;
+  subcategoryId?: string | null;
   active?: boolean;
 }

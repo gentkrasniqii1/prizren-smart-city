@@ -10,6 +10,7 @@ import { RoutingService } from '../routing/routing.service';
 import { MailService } from '../mail/mail.service';
 import { ConfigService } from '../auth/config.service';
 import { AuditService } from '../audit/audit.service';
+import { SlaResolutionService } from './sla-resolution.service';
 
 describe('ReportsService.updateStatus', () => {
   let prisma: {
@@ -40,6 +41,15 @@ describe('ReportsService.updateStatus', () => {
       { sendReportReceivedEmail: vi.fn() } as unknown as MailService,
       { webOrigin: 'http://localhost:3000' } as unknown as ConfigService,
       { log: vi.fn().mockResolvedValue({ id: 'audit-1' }) } as unknown as AuditService,
+      {
+        resolveForFacts: vi.fn().mockResolvedValue({
+          policy: null,
+          scope: null,
+          responseDueAt: null,
+          resolutionDueAt: null,
+          reason: 'no_matching_policy',
+        }),
+      } as unknown as SlaResolutionService,
     );
   });
 
@@ -166,6 +176,15 @@ describe('ReportsService.updateStatus', () => {
       { sendReportReceivedEmail: vi.fn() } as unknown as MailService,
       { webOrigin: 'http://localhost:3000' } as unknown as ConfigService,
       audit as unknown as AuditService,
+      {
+        resolveForFacts: vi.fn().mockResolvedValue({
+          policy: null,
+          scope: null,
+          responseDueAt: null,
+          resolutionDueAt: null,
+          reason: 'no_matching_policy',
+        }),
+      } as unknown as SlaResolutionService,
     );
     prisma.report.findUnique.mockResolvedValue({
       id: 'r1',
@@ -304,6 +323,15 @@ describe('ReportsService.create', () => {
       mail as unknown as MailService,
       { webOrigin: 'http://localhost:3000' } as unknown as ConfigService,
       audit as unknown as AuditService,
+      {
+        resolveForFacts: vi.fn().mockResolvedValue({
+          policy: null,
+          scope: null,
+          responseDueAt: null,
+          resolutionDueAt: null,
+          reason: 'no_matching_policy',
+        }),
+      } as unknown as SlaResolutionService,
     );
 
     return { service, reportCreate, sequenceCounterUpsert, routing, audit, prisma };
@@ -554,6 +582,15 @@ describe('ReportsService.escalate', () => {
       { sendReportReceivedEmail: vi.fn() } as unknown as MailService,
       { webOrigin: 'http://localhost:3000' } as unknown as ConfigService,
       { log: vi.fn().mockResolvedValue({ id: 'audit-1' }) } as unknown as AuditService,
+      {
+        resolveForFacts: vi.fn().mockResolvedValue({
+          policy: null,
+          scope: null,
+          responseDueAt: null,
+          resolutionDueAt: null,
+          reason: 'no_matching_policy',
+        }),
+      } as unknown as SlaResolutionService,
     );
     return { service, reportUpdate, events };
   }
@@ -607,6 +644,9 @@ describe('ReportsService.addStaffNote', () => {
           isDuplicate: false,
           assignedStaffId: null,
           dueAt: null,
+          slaPolicyId: null,
+          responseDueAt: null,
+          resolutionDueAt: null,
           createdAt: new Date(),
           updatedAt: new Date(),
           category: null,
@@ -625,6 +665,15 @@ describe('ReportsService.addStaffNote', () => {
       { sendReportReceivedEmail: vi.fn() } as unknown as MailService,
       { webOrigin: 'http://localhost:3000' } as unknown as ConfigService,
       audit as unknown as AuditService,
+      {
+        resolveForFacts: vi.fn().mockResolvedValue({
+          policy: null,
+          scope: null,
+          responseDueAt: null,
+          resolutionDueAt: null,
+          reason: 'no_matching_policy',
+        }),
+      } as unknown as SlaResolutionService,
     );
 
     await service.addStaffNote(
@@ -669,6 +718,9 @@ function reportRow(overrides: Record<string, unknown> = {}) {
     anonymous: false,
     language: 'sq',
     dueAt: null,
+    slaPolicyId: null,
+    responseDueAt: null,
+    resolutionDueAt: null,
     createdAt: new Date(),
     updatedAt: new Date(),
     category: null,
@@ -695,6 +747,15 @@ describe('ReportsService public visibility', () => {
       { sendReportReceivedEmail: vi.fn() } as unknown as MailService,
       { webOrigin: 'http://localhost:3000' } as unknown as ConfigService,
       { log: vi.fn().mockResolvedValue({ id: 'audit-1' }) } as unknown as AuditService,
+      {
+        resolveForFacts: vi.fn().mockResolvedValue({
+          policy: null,
+          scope: null,
+          responseDueAt: null,
+          resolutionDueAt: null,
+          reason: 'no_matching_policy',
+        }),
+      } as unknown as SlaResolutionService,
     );
   }
 
@@ -861,6 +922,15 @@ describe('ReportsService.moderate', () => {
       { sendReportReceivedEmail: vi.fn() } as unknown as MailService,
       { webOrigin: 'http://localhost:3000' } as unknown as ConfigService,
       { log: vi.fn().mockResolvedValue({ id: 'audit-1' }) } as unknown as AuditService,
+      {
+        resolveForFacts: vi.fn().mockResolvedValue({
+          policy: null,
+          scope: null,
+          responseDueAt: null,
+          resolutionDueAt: null,
+          reason: 'no_matching_policy',
+        }),
+      } as unknown as SlaResolutionService,
     );
     await expect(
       service.moderate('r1', citizen as never, { action: 'reject_spam', note: 'joke' }),
@@ -879,6 +949,15 @@ describe('ReportsService.moderate', () => {
       { sendReportReceivedEmail: vi.fn() } as unknown as MailService,
       { webOrigin: 'http://localhost:3000' } as unknown as ConfigService,
       { log: vi.fn().mockResolvedValue({ id: 'audit-1' }) } as unknown as AuditService,
+      {
+        resolveForFacts: vi.fn().mockResolvedValue({
+          policy: null,
+          scope: null,
+          responseDueAt: null,
+          resolutionDueAt: null,
+          reason: 'no_matching_policy',
+        }),
+      } as unknown as SlaResolutionService,
     );
     await expect(
       service.moderate('r1', staff as never, { action: 'reject_spam' }),
@@ -908,6 +987,15 @@ describe('ReportsService.moderate', () => {
       { sendReportReceivedEmail: vi.fn() } as unknown as MailService,
       { webOrigin: 'http://localhost:3000' } as unknown as ConfigService,
       audit as unknown as AuditService,
+      {
+        resolveForFacts: vi.fn().mockResolvedValue({
+          policy: null,
+          scope: null,
+          responseDueAt: null,
+          resolutionDueAt: null,
+          reason: 'no_matching_policy',
+        }),
+      } as unknown as SlaResolutionService,
     );
 
     const dto = await service.moderate('r1', staff as never, {
@@ -971,6 +1059,15 @@ describe('ReportsService.moderate', () => {
       { sendReportReceivedEmail: vi.fn() } as unknown as MailService,
       { webOrigin: 'http://localhost:3000' } as unknown as ConfigService,
       audit as unknown as AuditService,
+      {
+        resolveForFacts: vi.fn().mockResolvedValue({
+          policy: null,
+          scope: null,
+          responseDueAt: null,
+          resolutionDueAt: null,
+          reason: 'no_matching_policy',
+        }),
+      } as unknown as SlaResolutionService,
     );
 
     const dto = await service.moderate('r1', staff as never, { action: 'approve' });
@@ -1016,6 +1113,169 @@ describe('ReportsService.moderate', () => {
     expect(events.emit).toHaveBeenCalled();
   });
 
+  it('snapshots SLA policy and deadlines on approve (immutable thereafter)', async () => {
+    const submitted = reportRow({
+      categoryId: 'cat-1',
+      priority: Priority.HIGH,
+      slaPolicyId: null,
+      responseDueAt: null,
+      resolutionDueAt: null,
+      dueAt: null,
+    });
+    const responseDueAt = new Date('2026-08-25T11:00:00.000Z');
+    const resolutionDueAt = new Date('2026-08-26T10:00:00.000Z');
+    const assigned = reportRow({
+      status: ReportStatus.ASSIGNED,
+      categoryId: 'cat-1',
+      departmentId: 'dept-1',
+      institutionId: 'inst-1',
+      priority: Priority.HIGH,
+      slaPolicyId: 'sla-high',
+      responseDueAt,
+      resolutionDueAt,
+      dueAt: resolutionDueAt,
+    });
+    const reportUpdate = vi.fn().mockResolvedValue(assigned);
+    const resolveForFacts = vi.fn().mockResolvedValue({
+      policy: {
+        id: 'sla-high',
+        name: 'SLA e lartë',
+        priority: Priority.HIGH,
+        responseTime: 240,
+        resolutionTime: 2880,
+        departmentId: null,
+        categoryId: null,
+        subcategoryId: null,
+        active: true,
+      },
+      scope: 'global',
+      responseDueAt,
+      resolutionDueAt,
+    });
+    const prisma = {
+      report: { findUnique: vi.fn().mockResolvedValue(submitted) },
+      $transaction: vi.fn().mockImplementation(async (cb: (tx: unknown) => unknown) =>
+        cb({
+          report: { update: reportUpdate },
+          statusHistory: { create: vi.fn() },
+        }),
+      ),
+    };
+    const route = vi.fn().mockResolvedValue({
+      categoryId: 'cat-1',
+      departmentId: 'dept-1',
+      institutionId: 'inst-1',
+      slaHours: 48,
+      defaultPriority: Priority.HIGH,
+      matchedRuleId: 'rule-1',
+      matchedRuleName: 'Ndriçimi',
+      source: 'rule',
+    });
+    const service = new ReportsService(
+      prisma as unknown as PrismaService,
+      { uploadImage: vi.fn() } as unknown as CloudinaryService,
+      { classifyReportPhoto: vi.fn() } as unknown as AiClassificationService,
+      { emit: vi.fn() } as unknown as EventEmitter2,
+      { route } as unknown as RoutingService,
+      { sendReportReceivedEmail: vi.fn() } as unknown as MailService,
+      { webOrigin: 'http://localhost:3000' } as unknown as ConfigService,
+      { log: vi.fn().mockResolvedValue({ id: 'audit-1' }) } as unknown as AuditService,
+      { resolveForFacts } as unknown as SlaResolutionService,
+    );
+
+    const dto = await service.moderate('r1', staff as never, { action: 'approve' });
+
+    expect(resolveForFacts).toHaveBeenCalledWith({
+      departmentId: 'dept-1',
+      categoryId: 'cat-1',
+      subcategoryId: null,
+      priority: Priority.HIGH,
+    });
+    expect(reportUpdate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          slaPolicyId: 'sla-high',
+          responseDueAt,
+          resolutionDueAt,
+          dueAt: resolutionDueAt,
+        }),
+      }),
+    );
+    expect(dto.slaPolicyId).toBe('sla-high');
+    expect(dto.responseDueAt).toBe(responseDueAt.toISOString());
+    expect(dto.resolutionDueAt).toBe(resolutionDueAt.toISOString());
+  });
+
+  it('does not re-resolve SLA when snapshot already exists', async () => {
+    const existingDue = new Date('2026-08-26T10:00:00.000Z');
+    const withSnapshot = reportRow({
+      status: ReportStatus.SUBMITTED,
+      categoryId: 'cat-1',
+      priority: Priority.HIGH,
+      slaPolicyId: 'sla-snap',
+      responseDueAt: new Date('2026-08-25T11:00:00.000Z'),
+      resolutionDueAt: existingDue,
+      dueAt: existingDue,
+    });
+    const reportUpdate = vi.fn().mockResolvedValue(
+      reportRow({
+        status: ReportStatus.ASSIGNED,
+        categoryId: 'cat-1',
+        departmentId: 'dept-1',
+        institutionId: 'inst-1',
+        priority: Priority.HIGH,
+        slaPolicyId: 'sla-snap',
+        responseDueAt: withSnapshot.responseDueAt,
+        resolutionDueAt: existingDue,
+        dueAt: existingDue,
+      }),
+    );
+    const resolveForFacts = vi.fn();
+    const prisma = {
+      report: { findUnique: vi.fn().mockResolvedValue(withSnapshot) },
+      $transaction: vi.fn().mockImplementation(async (cb: (tx: unknown) => unknown) =>
+        cb({
+          report: { update: reportUpdate },
+          statusHistory: { create: vi.fn() },
+        }),
+      ),
+    };
+    const route = vi.fn().mockResolvedValue({
+      categoryId: 'cat-1',
+      departmentId: 'dept-1',
+      institutionId: 'inst-1',
+      slaHours: 1,
+      defaultPriority: Priority.CRITICAL,
+      matchedRuleId: null,
+      matchedRuleName: null,
+      source: 'category_fallback',
+    });
+    const service = new ReportsService(
+      prisma as unknown as PrismaService,
+      { uploadImage: vi.fn() } as unknown as CloudinaryService,
+      { classifyReportPhoto: vi.fn() } as unknown as AiClassificationService,
+      { emit: vi.fn() } as unknown as EventEmitter2,
+      { route } as unknown as RoutingService,
+      { sendReportReceivedEmail: vi.fn() } as unknown as MailService,
+      { webOrigin: 'http://localhost:3000' } as unknown as ConfigService,
+      { log: vi.fn().mockResolvedValue({ id: 'audit-1' }) } as unknown as AuditService,
+      { resolveForFacts } as unknown as SlaResolutionService,
+    );
+
+    await service.moderate('r1', staff as never, { action: 'approve' });
+
+    expect(resolveForFacts).not.toHaveBeenCalled();
+    expect(reportUpdate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          slaPolicyId: 'sla-snap',
+          resolutionDueAt: existingDue,
+          dueAt: existingDue,
+        }),
+      }),
+    );
+  });
+
   it.each([Priority.CRITICAL, Priority.HIGH, Priority.MEDIUM, Priority.LOW] as const)(
     'approve does not invent isEmergency from priority %s (passes null)',
     async (priority) => {
@@ -1057,6 +1317,15 @@ describe('ReportsService.moderate', () => {
         { sendReportReceivedEmail: vi.fn() } as unknown as MailService,
         { webOrigin: 'http://localhost:3000' } as unknown as ConfigService,
         { log: vi.fn().mockResolvedValue({ id: 'audit-1' }) } as unknown as AuditService,
+        {
+          resolveForFacts: vi.fn().mockResolvedValue({
+            policy: null,
+            scope: null,
+            responseDueAt: null,
+            resolutionDueAt: null,
+            reason: 'no_matching_policy',
+          }),
+        } as unknown as SlaResolutionService,
       );
 
       await service.moderate('r1', staff as never, { action: 'approve' });
@@ -1111,6 +1380,15 @@ describe('ReportsService.moderate', () => {
       { sendReportReceivedEmail: vi.fn() } as unknown as MailService,
       { webOrigin: 'http://localhost:3000' } as unknown as ConfigService,
       { log: vi.fn().mockResolvedValue({ id: 'audit-1' }) } as unknown as AuditService,
+      {
+        resolveForFacts: vi.fn().mockResolvedValue({
+          policy: null,
+          scope: null,
+          responseDueAt: null,
+          resolutionDueAt: null,
+          reason: 'no_matching_policy',
+        }),
+      } as unknown as SlaResolutionService,
     ).moderate('r1', staff as never, { action: 'approve', categoryId: 'cat-1' });
 
     expect(dto.status).toBe(ReportStatus.ASSIGNED);
@@ -1132,6 +1410,15 @@ describe('ReportsService.moderate', () => {
       { sendReportReceivedEmail: vi.fn() } as unknown as MailService,
       { webOrigin: 'http://localhost:3000' } as unknown as ConfigService,
       { log: vi.fn().mockResolvedValue({ id: 'audit-1' }) } as unknown as AuditService,
+      {
+        resolveForFacts: vi.fn().mockResolvedValue({
+          policy: null,
+          scope: null,
+          responseDueAt: null,
+          resolutionDueAt: null,
+          reason: 'no_matching_policy',
+        }),
+      } as unknown as SlaResolutionService,
     );
 
     await expect(
@@ -1165,6 +1452,15 @@ describe('ReportsService.moderate', () => {
       { sendReportReceivedEmail: vi.fn() } as unknown as MailService,
       { webOrigin: 'http://localhost:3000' } as unknown as ConfigService,
       { log: vi.fn().mockResolvedValue({ id: 'audit-1' }) } as unknown as AuditService,
+      {
+        resolveForFacts: vi.fn().mockResolvedValue({
+          policy: null,
+          scope: null,
+          responseDueAt: null,
+          resolutionDueAt: null,
+          reason: 'no_matching_policy',
+        }),
+      } as unknown as SlaResolutionService,
     );
 
     await expect(
@@ -1189,6 +1485,15 @@ describe('ReportsService.moderate', () => {
       { sendReportReceivedEmail: vi.fn() } as unknown as MailService,
       { webOrigin: 'http://localhost:3000' } as unknown as ConfigService,
       { log: vi.fn().mockResolvedValue({ id: 'audit-1' }) } as unknown as AuditService,
+      {
+        resolveForFacts: vi.fn().mockResolvedValue({
+          policy: null,
+          scope: null,
+          responseDueAt: null,
+          resolutionDueAt: null,
+          reason: 'no_matching_policy',
+        }),
+      } as unknown as SlaResolutionService,
     );
 
     await expect(
@@ -1212,6 +1517,15 @@ describe('ReportsService.listQueue', () => {
       { sendReportReceivedEmail: vi.fn() } as unknown as MailService,
       { webOrigin: 'http://localhost:3000' } as unknown as ConfigService,
       { log: vi.fn().mockResolvedValue({ id: 'audit-1' }) } as unknown as AuditService,
+      {
+        resolveForFacts: vi.fn().mockResolvedValue({
+          policy: null,
+          scope: null,
+          responseDueAt: null,
+          resolutionDueAt: null,
+          reason: 'no_matching_policy',
+        }),
+      } as unknown as SlaResolutionService,
     );
   }
 
