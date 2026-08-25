@@ -36,7 +36,7 @@ const RETRYABLE: OutboundEmailStatus[] = [
 
 const OUTBOUND_INCLUDE = {
   report: { select: { publicId: true } },
-  institution: { select: { name: true } },
+  institution: { select: { name: true, integrationType: true } },
   accessToken: { select: { id: true, expiresAt: true, revokedAt: true } },
 } satisfies Prisma.OutboundEmailInclude;
 
@@ -390,6 +390,7 @@ export class OutboundEmailService {
       publicId: row.report.publicId,
       institutionId: row.institutionId,
       institutionName: row.institution?.name ?? null,
+      institutionIntegrationType: row.institution?.integrationType ?? null,
       purpose: row.purpose,
       recipient: row.recipient,
       subject: row.subject,

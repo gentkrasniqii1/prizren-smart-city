@@ -138,6 +138,8 @@ export interface InstitutionDto {
   type: string;
   phone: string | null;
   contact: string | null;
+  /** Facebook/Messenger/etc. for manual staff outreach — never used by outbound email. */
+  socialContact: string | null;
   active: boolean;
   /** How incidents are exchanged with this organization — MANUAL until an adapter is configured. */
   integrationType: IntegrationType;

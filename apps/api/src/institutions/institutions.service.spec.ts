@@ -13,6 +13,7 @@ function institutionRow() {
     type: 'UTILITY',
     phone: '0800-123',
     contact: 'ops@keds.example',
+    socialContact: null,
     active: true,
     integrationType: 'MANUAL' as const,
     integrationStatus: 'NOT_CONFIGURED' as const,
@@ -32,11 +33,13 @@ describe('InstitutionsService.list', () => {
 
     const publicList = await service.list(false, false);
     expect(publicList[0].contact).toBeNull();
+    expect(publicList[0].socialContact).toBeNull();
     expect(publicList[0].phone).toBe('0800-123');
     expect(publicList[0].name).toBe('KEDS');
 
     const staffList = await service.list(false, true);
     expect(staffList[0].contact).toBe('ops@keds.example');
+    expect(staffList[0].socialContact).toBeNull();
   });
 });
 
@@ -98,6 +101,46 @@ describe('InstitutionsService.update + institutional mail policy', () => {
       },
     });
     expect(decision).toEqual({ send: true, recipient: 'ops@keds.example' });
+  });
+
+  it('persists socialContact on update', async () => {
+    const existing = institutionRow();
+    const updated = {
+      ...existing,
+      socialContact: 'https://www.facebook.com/kkprizren',
+    };
+    const prisma = {
+      institution: {
+        findUnique: vi.fn().mockResolvedValue(existing),
+        update: vi.fn().mockResolvedValue(updated),
+      },
+    };
+    const service = new InstitutionsService(
+      prisma as unknown as PrismaService,
+      { log: vi.fn().mockResolvedValue({ id: 'audit-1' }) } as unknown as AuditService,
+    );
+
+    const dto = await service.update(
+      existing.id,
+      admin as never,
+      {
+        name: existing.name,
+        type: existing.type,
+        phone: existing.phone,
+        contact: existing.contact,
+        socialContact: 'https://www.facebook.com/kkprizren',
+      },
+      null,
+    );
+
+    expect(prisma.institution.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          socialContact: 'https://www.facebook.com/kkprizren',
+        }),
+      }),
+    );
+    expect(dto.socialContact).toBe('https://www.facebook.com/kkprizren');
   });
 
   it('keeps fail-closed INTEGRATION_STATUS when status stays NOT_CONFIGURED', async () => {

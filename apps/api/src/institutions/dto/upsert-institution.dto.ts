@@ -28,6 +28,12 @@ export class UpsertInstitutionDto {
   contact?: string | null;
 
   @IsOptional()
+  @ValidateIf((_, value) => value !== null && value !== '')
+  @IsString()
+  @MaxLength(300)
+  socialContact?: string | null;
+
+  @IsOptional()
   @IsEnum(IntegrationType)
   integrationType?: IntegrationType;
 

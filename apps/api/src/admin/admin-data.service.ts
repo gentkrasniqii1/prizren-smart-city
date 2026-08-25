@@ -464,6 +464,7 @@ export class AdminDataService {
         type: row.type,
         phone: row.phone,
         contact: row.contact,
+        socialContact: row.socialContact,
         active: row.active,
         integrationType: row.integrationType,
         integrationStatus: row.integrationStatus,
