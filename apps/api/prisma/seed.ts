@@ -304,8 +304,74 @@ const SUBCATEGORIES: Record<string, string[]> = {
   ],
 };
 
-/** Populate with real Prizren zones/neighborhoods (e.g. lagje names) once confirmed by the user — do not invent. */
-const ZONES: { name: string }[] = [];
+/**
+ * Villages/settlements of Prizren Municipality — provided directly by the project owner.
+ * Do not add, remove, rename, or reformat entries without an explicit request; this is
+ * user-supplied source data, not AI-researched.
+ */
+const ZONES: { name: string }[] = [
+  { name: 'Sërbicë e Epërme' },
+  { name: 'Lubinjë e Epërme' },
+  { name: 'Gorjnasellë' },
+  { name: 'Gorozhup' },
+  { name: 'Grozhdanik' },
+  { name: 'Gërnqar' },
+  { name: 'Hoçë e Qytetit' },
+  { name: 'Jabllanicë' },
+  { name: 'Jeshkovë' },
+  { name: 'Kabash' },
+  { name: 'Kabash i Hasit' },
+  { name: 'Karashëngjergj' },
+  { name: 'Kobajë' },
+  { name: 'Kojushë' },
+  { name: 'Korishë' },
+  { name: 'Krajk' },
+  { name: 'Kushnin' },
+  { name: 'Kushtendil' },
+  { name: 'Landovicë' },
+  { name: 'Leskovec' },
+  { name: 'Lez' },
+  { name: 'Lubiqevë' },
+  { name: 'Lubizhdë' },
+  { name: 'Lubizhdë e Hasit I' },
+  { name: 'Lubizhdë e Hasit II' },
+  { name: 'Lukinaj' },
+  { name: 'Lutogllavë' },
+  { name: 'Llokvicë' },
+  { name: 'Krushë e Vogël' },
+  { name: 'Manastiricë' },
+  { name: 'Mazrekë' },
+  { name: 'Medvec' },
+  { name: 'Milaj' },
+  { name: 'Mushnikovë' },
+  { name: 'Nashec' },
+  { name: 'Nebregosht' },
+  { name: 'Novak' },
+  { name: 'Novosellë' },
+  { name: 'Petrovë' },
+  { name: 'Piranë' },
+  { name: 'Pllanejë' },
+  { name: 'Pllanjan' },
+  { name: 'Poslishtë' },
+  { name: 'Randobravë' },
+  { name: 'Reçan' },
+  { name: 'Romajë' },
+  { name: 'Skorobishtë' },
+  { name: 'Smaç' },
+  { name: 'Shpenadi' },
+  { name: 'Sredskë' },
+  { name: 'Struzhë' },
+  { name: 'Trepetincë' },
+  { name: 'Tupec' },
+  { name: 'Velezhë' },
+  { name: 'Vlashnjë' },
+  { name: 'Vërbiçan' },
+  { name: 'Vërmicë' },
+  { name: 'Zhivinjan' },
+  { name: 'Zym' },
+  { name: 'Zojz' },
+  { name: 'Zhur' },
+];
 
 const SLA_POLICIES: {
   name: string;
@@ -480,7 +546,7 @@ async function main() {
     }
   }
 
-  // No-op while ZONES is empty — ready once real lagje names are confirmed.
+  // Upsert owner-provided settlement zones (find-or-create by unique name).
   let zoneCount = 0;
   for (const zone of ZONES) {
     await upsertZone(zone.name);
