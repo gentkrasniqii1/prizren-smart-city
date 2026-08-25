@@ -1178,6 +1178,7 @@ function InstitutionDialog({
   const [type, setType] = useState('MUNICIPALITY');
   const [phone, setPhone] = useState('');
   const [contact, setContact] = useState('');
+  const [socialContact, setSocialContact] = useState('');
   const [integrationType, setIntegrationType] = useState('MANUAL');
   const [integrationStatus, setIntegrationStatus] = useState('NOT_CONFIGURED');
   const [active, setActive] = useState(true);
@@ -1191,6 +1192,7 @@ function InstitutionDialog({
     setType(existing?.type ?? 'MUNICIPALITY');
     setPhone(existing?.phone ?? '');
     setContact(existing?.contact ?? '');
+    setSocialContact(existing?.socialContact ?? '');
     // New institutions stay MANUAL / NOT_CONFIGURED — never default to ACTIVE/TEST.
     setIntegrationType(existing?.integrationType ?? 'MANUAL');
     setIntegrationStatus(existing?.integrationStatus ?? 'NOT_CONFIGURED');
@@ -1211,6 +1213,7 @@ function InstitutionDialog({
         type,
         phone: emptyToNull(phone),
         contact: emptyToNull(contact),
+        socialContact: emptyToNull(socialContact),
         integrationType,
         integrationStatus,
         active,
@@ -1271,6 +1274,17 @@ function InstitutionDialog({
                 setWarnContact(false);
               }}
             />
+          </div>
+          <div>
+            <Label htmlFor="inst-social-contact">{t('colSocialContact')}</Label>
+            <Input
+              id="inst-social-contact"
+              type="url"
+              value={socialContact}
+              onChange={(e) => setSocialContact(e.target.value)}
+              placeholder={t('socialContactPlaceholder')}
+            />
+            <p className="mt-1 text-caption text-muted-foreground">{t('socialContactHint')}</p>
           </div>
           <div>
             <Label htmlFor="inst-integration-type">{t('colIntegrationType')}</Label>

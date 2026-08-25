@@ -898,7 +898,8 @@
       "NO_CONTACT": "Institution.contact is empty",
       "INTEGRATION_TYPE": "Integration type does not allow email",
       "INTEGRATION_STATUS": "Integration is not TEST or ACTIVE",
-      "NO_PROVIDER": "No Resend/SMTP provider configured"
+      "NO_PROVIDER": "No Resend/SMTP provider configured",
+      "MANUAL_NO_EMAIL": "No email channel — contact {institutionName} directly (see Institutions tab for phone/Messenger)."
     }
   },
   "InstitutionAccess": {
@@ -961,6 +962,9 @@
     "colCategory": "Category",
     "colPhone": "Phone",
     "colContact": "Email",
+    "colSocialContact": "Social / Messenger contact",
+    "socialContactPlaceholder": "https://www.facebook.com/…",
+    "socialContactHint": "Optional. For institutions without a public email — staff use this for manual outreach. Never used by automated mail.",
     "colIntegrationType": "Integration type",
     "colIntegrationStatus": "Integration status",
     "colActions": "Actions",
