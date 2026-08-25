@@ -928,6 +928,7 @@ function DepartmentDialog({
   const [name, setName] = useState('');
   const [institutionId, setInstitutionId] = useState('');
   const [slaHours, setSlaHours] = useState('48');
+  const [contact, setContact] = useState('');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -936,6 +937,7 @@ function DepartmentDialog({
     setName(existing?.name ?? '');
     setInstitutionId(existing?.institutionId ?? institutions[0]?.id ?? '');
     setSlaHours(String(existing?.slaHours ?? 48));
+    setContact(existing?.contact ?? '');
     setError(null);
   }, [existing, institutions, open]);
 
@@ -947,6 +949,7 @@ function DepartmentDialog({
         name,
         institutionId: emptyToNull(institutionId),
         slaHours: parseHours(slaHours) ?? 48,
+        contact: emptyToNull(contact),
       };
       if (existing) {
         await apiFetch(`/departments/${existing.id}`, {
@@ -1002,6 +1005,15 @@ function DepartmentDialog({
               min={1}
               value={slaHours}
               onChange={(e) => setSlaHours(e.target.value)}
+            />
+          </div>
+          <div>
+            <Label htmlFor="dept-contact">{t('colPhone')}</Label>
+            <Input
+              id="dept-contact"
+              type="tel"
+              value={contact}
+              onChange={(e) => setContact(e.target.value)}
             />
           </div>
         </div>

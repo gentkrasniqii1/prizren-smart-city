@@ -80,21 +80,30 @@ const CATEGORY_ALIASES: Record<string, string[]> = {
   'Rrezik zjarri / emergjencë': ['Zjarr / emergjencë'],
 };
 
-const DEPARTMENTS: { name: string; slaHours: number }[] = [
-  { name: 'Administratë', slaHours: 168 },
-  { name: 'Ekonomi dhe Financave', slaHours: 168 },
-  { name: 'Shërbime Publike', slaHours: 48 },
-  { name: 'Urbanizëm dhe Planifikim Hapësinor', slaHours: 72 },
-  { name: 'Inspektorate', slaHours: 48 },
-  { name: 'Bujqësi dhe Zhvillim Rural', slaHours: 240 },
-  { name: 'Gjeodezi dhe Kadastër', slaHours: 168 },
-  { name: 'Kulturë, Rini dhe Sport', slaHours: 120 },
-  { name: 'Arsim dhe Shkencë', slaHours: 48 },
-  { name: 'Emergjencë dhe Siguri', slaHours: 24 },
-  { name: 'Turizëm dhe Zhvillim Ekonomik', slaHours: 168 },
-  { name: 'Shëndetësi', slaHours: 48 },
-  { name: 'Punë dhe Mirëqenie Sociale', slaHours: 168 },
-  { name: 'Pronë dhe Çështje Ligjore', slaHours: 240 },
+/**
+ * Official direct lines from Komuna e Prizrenit's "Telefonat me rëndësi" page.
+ * Pronë dhe Çështje Ligjore has two offices, not one number: Zyra për Çështje
+ * të Pronës (747) and Zyra Ligjore (781). Keep both, do not collapse to one.
+ */
+const DEPARTMENTS: { name: string; slaHours: number; contact: string | null }[] = [
+  { name: 'Administratë', slaHours: 168, contact: '038 200 44 728' },
+  { name: 'Ekonomi dhe Financave', slaHours: 168, contact: '038 200 44 738' },
+  { name: 'Shërbime Publike', slaHours: 48, contact: '038 200 44 730' },
+  { name: 'Urbanizëm dhe Planifikim Hapësinor', slaHours: 72, contact: '038 200 44 731' },
+  { name: 'Inspektorate', slaHours: 48, contact: '038 200 44 708' },
+  { name: 'Bujqësi dhe Zhvillim Rural', slaHours: 240, contact: '038 200 44 733' },
+  { name: 'Gjeodezi dhe Kadastër', slaHours: 168, contact: '038 200 44 736' },
+  { name: 'Kulturë, Rini dhe Sport', slaHours: 120, contact: '038 200 44 734' },
+  { name: 'Arsim dhe Shkencë', slaHours: 48, contact: '038 200 44 737' },
+  { name: 'Emergjencë dhe Siguri', slaHours: 24, contact: '038 200 44 732' },
+  { name: 'Turizëm dhe Zhvillim Ekonomik', slaHours: 168, contact: '038 200 44 710' },
+  { name: 'Shëndetësi', slaHours: 48, contact: '038 200 44 735' },
+  { name: 'Punë dhe Mirëqenie Sociale', slaHours: 168, contact: '038 200 44 711' },
+  {
+    name: 'Pronë dhe Çështje Ligjore',
+    slaHours: 240,
+    contact: '038 200 44 747 / 038 200 44 781', // Zyra e Pronës / Zyra Ligjore
+  },
 ];
 
 const CATEGORIES: {
@@ -254,6 +263,7 @@ async function upsertDepartment(
   name: string,
   institutionId: string,
   slaHours: number,
+  contact: string | null,
 ): Promise<{ id: string; name: string }> {
   const aliases = DEPARTMENT_ALIASES[name] ?? [];
   const existing =
@@ -261,7 +271,7 @@ async function upsertDepartment(
     (aliases.length
       ? await prisma.department.findFirst({ where: { name: { in: aliases } } })
       : null);
-  const data = { name, contact: null, institutionId, slaHours };
+  const data = { name, contact, institutionId, slaHours };
   if (existing) {
     return prisma.department.update({ where: { id: existing.id }, data });
   }
@@ -335,7 +345,7 @@ async function main() {
 
   const deptByName = new Map<string, { id: string; name: string }>();
   for (const dept of DEPARTMENTS) {
-    const row = await upsertDepartment(dept.name, komuna.id, dept.slaHours);
+    const row = await upsertDepartment(dept.name, komuna.id, dept.slaHours, dept.contact);
     deptByName.set(dept.name, row);
   }
 
@@ -462,8 +472,6 @@ async function main() {
         );
       }
     }
-
-    await prisma.department.updateMany({ data: { contact: null } });
 
     const extraInstitutions = await prisma.institution.findMany({
       where: { slug: { notIn: KEEP_INSTITUTION_SLUGS } },
