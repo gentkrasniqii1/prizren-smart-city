@@ -66,6 +66,7 @@ import {
 } from '../events/status-changed.event';
 import { assertValidImageUpload } from '../uploads/image-validation';
 import { RoutingService } from '../routing/routing.service';
+import { resolveActiveSubcategory } from '../common/subcategory-ref';
 import {
   isStaffUser,
   STAFF_ROLES,
@@ -88,6 +89,7 @@ const SYSTEM_ACTOR = 'SYSTEM';
 /** Shared `include` shape so every Report query returns display names consistently. */
 const REPORT_INCLUDE = {
   category: { select: { name: true } },
+  subcategoryRef: { select: { name: true } },
   department: { select: { name: true } },
   institution: { select: { name: true } },
   _count: { select: { votes: true } },
@@ -101,6 +103,7 @@ const REPORT_DETAIL_INCLUDE = {
 
 type ReportWithRelations = Report & {
   category?: { name: string } | null;
+  subcategoryRef?: { name: string } | null;
   department?: { name: string } | null;
   institution?: { name: string } | null;
   _count?: { votes: number };
@@ -162,8 +165,18 @@ export class ReportsService {
     }
     const photoUrl = uploaded[0]?.url;
 
-    const routed = fields.categoryId
-      ? await this.routing.route({ categoryId: fields.categoryId })
+    const subcategory = await resolveActiveSubcategory(this.prisma, {
+      subcategoryId: fields.subcategoryId,
+      categoryId: fields.categoryId ?? null,
+    });
+    const categoryId = fields.categoryId ?? subcategory?.categoryId ?? null;
+
+    const routed = categoryId
+      ? await this.routing.route({
+          categoryId,
+          subcategoryId: subcategory?.subcategoryId,
+          subcategory: subcategory?.subcategory,
+        })
       : null;
 
     const report = await this.prisma.$transaction(async (tx) => {
@@ -176,7 +189,9 @@ export class ReportsService {
           lat: fields.lat,
           lng: fields.lng,
           address: fields.address,
-          categoryId: fields.categoryId,
+          categoryId,
+          subcategoryId: subcategory?.subcategoryId ?? null,
+          subcategory: subcategory?.subcategory ?? null,
           departmentId: routed?.departmentId,
           institutionId: routed?.institutionId ?? undefined,
           priority: routed?.defaultPriority ?? null,
@@ -209,7 +224,7 @@ export class ReportsService {
       description: fields.description,
       lat: fields.lat,
       lng: fields.lng,
-      categoryId: fields.categoryId ?? null,
+      categoryId,
       currentStatus: report.status,
     });
 
@@ -281,6 +296,7 @@ export class ReportsService {
       userId: string;
       categoryId: string | null;
       subcategory: string | null;
+      subcategoryId: string | null;
       departmentId: string | null;
       institutionId: string | null;
       description: string;
@@ -315,6 +331,7 @@ export class ReportsService {
         r."userId",
         r."categoryId",
         r."subcategory",
+        r."subcategoryId",
         r."departmentId",
         r."institutionId",
         r.description,
@@ -1513,8 +1530,27 @@ export class ReportsService {
       );
     }
 
+    // New subcategory selection must be active and belong to category; existing FK is preserved.
+    const subcategory = dto.subcategoryId
+      ? await resolveActiveSubcategory(this.prisma, {
+          subcategoryId: dto.subcategoryId,
+          categoryId,
+        })
+      : existing.subcategoryId
+        ? {
+            subcategoryId: existing.subcategoryId,
+            subcategory: existing.subcategory ?? '',
+            categoryId: existing.categoryId ?? categoryId,
+          }
+        : null;
+    if (subcategory && subcategory.categoryId !== categoryId && dto.subcategoryId) {
+      throw new BadRequestException('Subcategory does not belong to the selected category');
+    }
+
     const routed = await this.routing.route({
       categoryId,
+      subcategoryId: subcategory?.subcategoryId ?? null,
+      subcategory: subcategory?.subcategory || existing.subcategory,
       severity: existing.priority,
     });
 
@@ -1536,6 +1572,8 @@ export class ReportsService {
         where: { id: existing.id },
         data: {
           categoryId: routed.categoryId,
+          subcategoryId: subcategory?.subcategoryId ?? null,
+          subcategory: subcategory?.subcategory || existing.subcategory,
           departmentId: routed.departmentId,
           institutionId: routed.institutionId,
           priority: routed.defaultPriority,
@@ -1736,7 +1774,8 @@ export class ReportsService {
       id: report.id,
       publicId: report.publicId,
       categoryId: report.categoryId,
-      subcategory: report.subcategory,
+      subcategoryId: report.subcategoryId,
+      subcategory: report.subcategoryRef?.name ?? report.subcategory,
       departmentId: report.departmentId,
       institutionId: report.institutionId,
       description: report.description,

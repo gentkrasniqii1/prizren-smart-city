@@ -312,4 +312,29 @@ describe('OutboundEmailService', () => {
     );
     expect(mail.sendInstitutionalNewCase).not.toHaveBeenCalled();
   });
+
+  it('searches the ledger by recipient, subject, publicId, and institution', async () => {
+    prisma.outboundEmail.count.mockResolvedValue(0);
+    prisma.outboundEmail.findMany.mockResolvedValue([]);
+    prisma.user.findUnique.mockResolvedValue({
+      id: staff.id,
+      role: Role.DEPARTMENT_ADMIN,
+      departments: [],
+    });
+
+    await service.list(staff as never, { page: 1, limit: 20, q: 'KEDS' });
+
+    expect(prisma.outboundEmail.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          OR: expect.arrayContaining([
+            { recipient: { contains: 'KEDS', mode: 'insensitive' } },
+            { subject: { contains: 'KEDS', mode: 'insensitive' } },
+            { report: { publicId: { contains: 'KEDS', mode: 'insensitive' } } },
+            { institution: { name: { contains: 'KEDS', mode: 'insensitive' } } },
+          ]),
+        }),
+      }),
+    );
+  });
 });

@@ -174,6 +174,8 @@ export class AdminDataService {
         return this.listDepartments(opts);
       case 'categories':
         return this.listCategories(opts);
+      case 'subcategories':
+        return this.listSubcategories(opts);
       case 'routing-rules':
         return this.listRoutingRules(opts);
       case 'sla-policies':
@@ -278,6 +280,7 @@ export class AdminDataService {
           userId: true,
           categoryId: true,
           subcategory: true,
+          subcategoryId: true,
           departmentId: true,
           institutionId: true,
           description: true,
@@ -329,6 +332,7 @@ export class AdminDataService {
         userEmail: row.user?.email ?? null,
         categoryId: row.categoryId,
         categoryName: row.category?.name ?? null,
+        subcategoryId: row.subcategoryId,
         subcategory: row.subcategory,
         departmentId: row.departmentId,
         departmentName: row.department?.name ?? null,
@@ -398,7 +402,14 @@ export class AdminDataService {
 
   private async listDepartments(opts: { skip: number; take: number; q?: string }) {
     const where: Prisma.DepartmentWhereInput = opts.q
-      ? { name: { contains: opts.q, mode: 'insensitive' } }
+      ? {
+          OR: [
+            { name: { contains: opts.q, mode: 'insensitive' } },
+            { contact: { contains: opts.q, mode: 'insensitive' } },
+            { institution: { name: { contains: opts.q, mode: 'insensitive' } } },
+            { id: { equals: opts.q } },
+          ],
+        }
       : {};
     const [total, rows] = await Promise.all([
       this.prisma.department.count({ where }),
@@ -425,7 +436,14 @@ export class AdminDataService {
 
   private async listCategories(opts: { skip: number; take: number; q?: string }) {
     const where: Prisma.CategoryWhereInput = opts.q
-      ? { name: { contains: opts.q, mode: 'insensitive' } }
+      ? {
+          OR: [
+            { name: { contains: opts.q, mode: 'insensitive' } },
+            { department: { name: { contains: opts.q, mode: 'insensitive' } } },
+            { department: { institution: { name: { contains: opts.q, mode: 'insensitive' } } } },
+            { id: { equals: opts.q } },
+          ],
+        }
       : {};
     const [total, rows] = await Promise.all([
       this.prisma.category.count({ where }),
@@ -450,13 +468,55 @@ export class AdminDataService {
     };
   }
 
+  private async listSubcategories(opts: { skip: number; take: number; q?: string }) {
+    const where: Prisma.SubcategoryWhereInput = opts.q
+      ? {
+          OR: [
+            { name: { contains: opts.q, mode: 'insensitive' } },
+            { category: { name: { contains: opts.q, mode: 'insensitive' } } },
+            { id: { equals: opts.q } },
+            { categoryId: { equals: opts.q } },
+          ],
+        }
+      : {};
+    const [total, rows] = await Promise.all([
+      this.prisma.subcategory.count({ where }),
+      this.prisma.subcategory.findMany({
+        where,
+        orderBy: [{ category: { name: 'asc' } }, { name: 'asc' }],
+        skip: opts.skip,
+        take: opts.take,
+        include: { category: { select: { name: true } } },
+      }),
+    ]);
+    return {
+      total,
+      rows: rows.map((row) => ({
+        id: row.id,
+        name: row.name,
+        categoryId: row.categoryId,
+        categoryName: row.category.name,
+        active: row.active,
+        createdAt: iso(row.createdAt),
+        updatedAt: iso(row.updatedAt),
+      })),
+    };
+  }
+
   private async listRoutingRules(opts: { skip: number; take: number; q?: string }) {
     const where: Prisma.RoutingRuleWhereInput = opts.q
       ? {
           OR: [
             { name: { contains: opts.q, mode: 'insensitive' } },
             { subcategory: { contains: opts.q, mode: 'insensitive' } },
+            { subcategoryRef: { name: { contains: opts.q, mode: 'insensitive' } } },
             { zone: { contains: opts.q, mode: 'insensitive' } },
+            { severity: { equals: opts.q.toUpperCase() as never } },
+            { category: { name: { contains: opts.q, mode: 'insensitive' } } },
+            { department: { name: { contains: opts.q, mode: 'insensitive' } } },
+            { institution: { name: { contains: opts.q, mode: 'insensitive' } } },
+            { id: { equals: opts.q } },
+            { subcategoryId: { equals: opts.q } },
           ],
         }
       : {};
@@ -481,6 +541,7 @@ export class AdminDataService {
         name: row.name,
         categoryId: row.categoryId,
         categoryName: row.category?.name ?? null,
+        subcategoryId: row.subcategoryId,
         subcategory: row.subcategory,
         severity: row.severity,
         zone: row.zone,
@@ -501,7 +562,17 @@ export class AdminDataService {
 
   private async listSlaPolicies(opts: { skip: number; take: number; q?: string }) {
     const where: Prisma.SlaPolicyWhereInput = opts.q
-      ? { name: { contains: opts.q, mode: 'insensitive' } }
+      ? {
+          OR: [
+            { name: { contains: opts.q, mode: 'insensitive' } },
+            { priority: { equals: opts.q.toUpperCase() as never } },
+            { department: { name: { contains: opts.q, mode: 'insensitive' } } },
+            { category: { name: { contains: opts.q, mode: 'insensitive' } } },
+            { id: { equals: opts.q } },
+            { departmentId: { equals: opts.q } },
+            { categoryId: { equals: opts.q } },
+          ],
+        }
       : {};
     const [total, rows] = await Promise.all([
       this.prisma.slaPolicy.count({ where }),
@@ -527,6 +598,8 @@ export class AdminDataService {
             { entityType: { contains: opts.q, mode: 'insensitive' } },
             { entityId: { contains: opts.q, mode: 'insensitive' } },
             { userId: { contains: opts.q, mode: 'insensitive' } },
+            { user: { email: { contains: opts.q, mode: 'insensitive' } } },
+            { user: { name: { contains: opts.q, mode: 'insensitive' } } },
           ],
         }
       : {};
@@ -567,6 +640,10 @@ export class AdminDataService {
             { reportId: { contains: opts.q, mode: 'insensitive' } },
             { changedBy: { contains: opts.q, mode: 'insensitive' } },
             { note: { contains: opts.q, mode: 'insensitive' } },
+            { oldStatus: { equals: opts.q.toUpperCase() as never } },
+            { newStatus: { equals: opts.q.toUpperCase() as never } },
+            { report: { publicId: { contains: opts.q, mode: 'insensitive' } } },
+            { report: { department: { name: { contains: opts.q, mode: 'insensitive' } } } },
           ],
         }
       : {};

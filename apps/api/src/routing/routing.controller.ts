@@ -36,6 +36,8 @@ export class RoutingController {
   preview(@Query() query: RoutePreviewQueryDto) {
     return this.routing.preview({
       categoryId: query.categoryId,
+      subcategoryId: query.subcategoryId,
+      subcategory: query.subcategory,
       severity: query.severity,
       isEmergency: query.isEmergency,
     });

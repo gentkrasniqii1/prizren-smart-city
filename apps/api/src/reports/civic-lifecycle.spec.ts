@@ -542,7 +542,12 @@ describe('Phase 10 AI remains assistive', () => {
       action: 'approve',
       categoryId: 'cat-official',
     });
-    expect(route).toHaveBeenCalledWith({ categoryId: 'cat-official', severity: Priority.MEDIUM });
+    expect(route).toHaveBeenCalledWith({
+      categoryId: 'cat-official',
+      severity: Priority.MEDIUM,
+      subcategoryId: null,
+      subcategory: null,
+    });
     expect(dto.status).toBe(ReportStatus.ASSIGNED);
     expect(dto.categoryId).toBe('cat-official');
   });

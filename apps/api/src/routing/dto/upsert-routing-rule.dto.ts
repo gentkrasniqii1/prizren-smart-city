@@ -24,6 +24,11 @@ export class UpsertRoutingRuleDto {
 
   @IsOptional()
   @ValidateIf((_, value) => value !== null && value !== '')
+  @IsUUID()
+  subcategoryId?: string | null;
+
+  @IsOptional()
+  @ValidateIf((_, value) => value !== null && value !== '')
   @IsString()
   @MaxLength(80)
   subcategory?: string | null;

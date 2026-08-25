@@ -2,11 +2,13 @@ import { ReportStatus } from '@prisma/client';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { TransparencyController } from './transparency.controller';
 import { AnalyticsService } from '../analytics/analytics.service';
+import { DepartmentsService } from '../departments/departments.service';
 
 describe('TransparencyController', () => {
   let summary: ReturnType<typeof vi.fn>;
   let byStatus: ReturnType<typeof vi.fn>;
   let byCategory: ReturnType<typeof vi.fn>;
+  let listDepartments: ReturnType<typeof vi.fn>;
   let controller: TransparencyController;
 
   beforeEach(() => {
@@ -29,11 +31,34 @@ describe('TransparencyController', () => {
       { status: ReportStatus.REJECTED, count: 0 },
     ]);
     byCategory = vi.fn().mockResolvedValue([{ categoryId: 'c1', category: 'Ndriçimi', count: 5 }]);
-    controller = new TransparencyController({
-      summary,
-      byStatus,
-      byCategory,
-    } as unknown as AnalyticsService);
+    listDepartments = vi.fn().mockResolvedValue([
+      {
+        id: 'd1',
+        name: 'Shërbime Publike',
+        contact: '038 200 44 730',
+        slaHours: 48,
+        institutionId: 'i1',
+        institutionName: 'Komuna e Prizrenit',
+      },
+      {
+        id: 'd2',
+        name: 'Administratë',
+        contact: null,
+        slaHours: 168,
+        institutionId: 'i1',
+        institutionName: 'Komuna e Prizrenit',
+      },
+    ]);
+    controller = new TransparencyController(
+      {
+        summary,
+        byStatus,
+        byCategory,
+      } as unknown as AnalyticsService,
+      {
+        list: listDepartments,
+      } as unknown as DepartmentsService,
+    );
   });
 
   it('counts only approved public statuses and omits rejected/unapproved rows', async () => {
@@ -49,5 +74,17 @@ describe('TransparencyController', () => {
     ]);
     expect(stats.byStatus.some((row) => row.status === ReportStatus.SUBMITTED)).toBe(false);
     expect(stats.byStatus.some((row) => row.status === ReportStatus.REJECTED)).toBe(false);
+  });
+
+  it('exposes only departments with verified public phone contacts', async () => {
+    const stats = await controller.getStats();
+    expect(listDepartments).toHaveBeenCalledWith(true);
+    expect(stats.contacts).toEqual([
+      {
+        departmentName: 'Shërbime Publike',
+        phone: '038 200 44 730',
+        institutionName: 'Komuna e Prizrenit',
+      },
+    ]);
   });
 });

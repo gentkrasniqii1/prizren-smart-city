@@ -167,15 +167,35 @@ model Department {
 }
 
 model Category {
-  id              String        @id @default(uuid())
+  id              String         @id @default(uuid())
   name            String
   departmentId    String
-  department      Department    @relation(fields: [departmentId], references: [id])
-  slaHours        Int           @default(48)
-  defaultPriority Priority      @default(MEDIUM)
+  department      Department     @relation(fields: [departmentId], references: [id])
+  slaHours        Int            @default(48)
+  defaultPriority Priority       @default(MEDIUM)
   reports         Report[]
   routingRules    RoutingRule[]
   slaPolicies     SlaPolicy[]
+  subcategories   Subcategory[]
+}
+
+/// First-class subcategory under a Category. Routing rules and reports may
+/// reference `subcategoryId`; the legacy free-text `subcategory` string on
+/// RoutingRule/Report is kept in sync with `name` when an id is set.
+model Subcategory {
+  id           String        @id @default(uuid())
+  name         String
+  categoryId   String
+  category     Category      @relation(fields: [categoryId], references: [id])
+  active       Boolean       @default(true)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  reports      Report[]
+  routingRules RoutingRule[]
+
+  @@unique([categoryId, name])
+  @@index([categoryId])
+  @@index([active])
 }
 
 /// Deterministic routing rule ("category/subcategory/severity/zone/emergency
@@ -184,30 +204,34 @@ model Category {
 /// evaluation engine itself is wired up in Phase 3 — see RoutingService.
 /// Null fields act as wildcards (match any value) except `active`.
 model RoutingRule {
-  id            String       @id @default(uuid())
-  name          String
-  categoryId    String?
-  category      Category?    @relation(fields: [categoryId], references: [id])
-  subcategory   String?
-  severity      Priority?
-  zone          String?
+  id              String        @id @default(uuid())
+  name            String
+  categoryId      String?
+  category        Category?     @relation(fields: [categoryId], references: [id])
+  /// Legacy / denormalized name — kept for match fallback and admin display.
+  subcategory     String?
+  subcategoryId   String?
+  subcategoryRef  Subcategory?  @relation(fields: [subcategoryId], references: [id])
+  severity        Priority?
+  zone            String?
   /// null = matches emergency or non-emergency; true/false = must match exactly
-  isEmergency   Boolean?
-  departmentId  String?
-  department    Department?  @relation(fields: [departmentId], references: [id])
-  institutionId String?
-  institution   Institution? @relation(fields: [institutionId], references: [id])
+  isEmergency     Boolean?
+  departmentId    String?
+  department      Department?   @relation(fields: [departmentId], references: [id])
+  institutionId   String?
+  institution     Institution?  @relation(fields: [institutionId], references: [id])
   /// Lower value = higher precedence when multiple rules match.
-  priority      Int          @default(100)
+  priority        Int           @default(100)
   /// Optional overrides — when null, routing falls back to category then department.
-  slaHours      Int?
+  slaHours        Int?
   defaultPriority Priority?
-  active        Boolean      @default(true)
-  createdAt     DateTime     @default(now())
-  updatedAt     DateTime     @updatedAt
+  active          Boolean       @default(true)
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
 
   @@index([active, priority])
   @@index([categoryId])
+  @@index([subcategoryId])
   @@index([departmentId])
   @@index([institutionId])
 }
@@ -254,7 +278,10 @@ model Report {
   user             User            @relation(fields: [userId], references: [id])
   categoryId       String?
   category         Category?       @relation(fields: [categoryId], references: [id])
+  /// Legacy free-text label; prefer subcategoryId when set.
   subcategory      String?
+  subcategoryId    String?
+  subcategoryRef   Subcategory?    @relation(fields: [subcategoryId], references: [id])
   departmentId     String?
   department       Department?     @relation(fields: [departmentId], references: [id])
   /// Responsible external organization, when routing selects one (distinct
@@ -297,6 +324,7 @@ model Report {
 
   @@index([status])
   @@index([categoryId])
+  @@index([subcategoryId])
   @@index([departmentId])
   @@index([institutionId])
   @@index([userId])

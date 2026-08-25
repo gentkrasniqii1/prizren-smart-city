@@ -17,4 +17,8 @@ export class ModerateReportDto {
   @IsOptional()
   @IsUUID()
   categoryId?: string;
+
+  @IsOptional()
+  @IsUUID()
+  subcategoryId?: string;
 }

@@ -23,6 +23,7 @@ export type CreateReportFields = {
   lng: number;
   address?: string;
   categoryId?: string;
+  subcategoryId?: string;
   /** Honeypot — must stay empty. */
   website?: string;
 };

@@ -9,6 +9,7 @@ import { UsersModule } from './users/users.module';
 import { AdminModule } from './admin/admin.module';
 import { ReportsModule } from './reports/reports.module';
 import { CategoriesModule } from './categories/categories.module';
+import { SubcategoriesModule } from './subcategories/subcategories.module';
 import { UploadsModule } from './uploads/uploads.module';
 import { AnalyticsModule } from './analytics/analytics.module';
 import { DepartmentsModule } from './departments/departments.module';
@@ -39,6 +40,7 @@ import { InstitutionAccessModule } from './institution-access/institution-access
     AdminModule,
     ReportsModule,
     CategoriesModule,
+    SubcategoriesModule,
     UploadsModule,
     AnalyticsModule,
     DepartmentsModule,

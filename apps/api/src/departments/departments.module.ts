@@ -8,5 +8,6 @@ import { DepartmentsService } from './departments.service';
   imports: [AuthModule, AuditModule],
   controllers: [DepartmentsController],
   providers: [DepartmentsService],
+  exports: [DepartmentsService],
 })
 export class DepartmentsModule {}
