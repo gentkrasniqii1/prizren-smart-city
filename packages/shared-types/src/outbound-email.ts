@@ -29,6 +29,9 @@ export interface OutboundEmailDto {
   publicId: string;
   institutionId: string | null;
   institutionName: string | null;
+  /** Present for ledger display — never invents send channels. */
+  institutionIntegrationType?:
+    'EMAIL' | 'REST_API' | 'WEBHOOK' | 'SFTP' | 'MANUAL' | 'MOCK' | string | null;
   purpose: OutboundEmailPurpose;
   recipient: string | null;
   subject: string;

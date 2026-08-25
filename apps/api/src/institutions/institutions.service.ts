@@ -34,6 +34,7 @@ export class InstitutionsService {
         type: dto.type.trim(),
         phone: dto.phone?.trim() || null,
         contact: dto.contact?.trim() || null,
+        socialContact: dto.socialContact?.trim() || null,
         // Defaults stay MANUAL / NOT_CONFIGURED unless admin explicitly sets them.
         ...(dto.integrationType ? { integrationType: dto.integrationType } : {}),
         ...(dto.integrationStatus ? { integrationStatus: dto.integrationStatus } : {}),
@@ -73,6 +74,7 @@ export class InstitutionsService {
         type: dto.type.trim(),
         phone: dto.phone?.trim() || null,
         contact: dto.contact?.trim() || null,
+        socialContact: dto.socialContact?.trim() || null,
         integrationType: dto.integrationType ?? existing.integrationType,
         integrationStatus: dto.integrationStatus ?? existing.integrationStatus,
         active: dto.active ?? existing.active,
@@ -139,6 +141,7 @@ export class InstitutionsService {
       type: string;
       phone: string | null;
       contact: string | null;
+      socialContact: string | null;
       active: boolean;
       integrationType: InstitutionDto['integrationType'];
       integrationStatus: InstitutionDto['integrationStatus'];
@@ -153,6 +156,7 @@ export class InstitutionsService {
       type: row.type,
       phone: row.phone,
       contact: includeContact ? row.contact : null,
+      socialContact: includeContact ? row.socialContact : null,
       active: row.active,
       integrationType: row.integrationType,
       integrationStatus: row.integrationStatus,

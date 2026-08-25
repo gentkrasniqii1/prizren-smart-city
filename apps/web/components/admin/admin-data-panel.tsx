@@ -127,6 +127,7 @@ const RESOURCE_COLUMNS: Record<AdminDataResource, readonly string[]> = {
     'type',
     'phone',
     'contact',
+    'socialContact',
     'active',
     'integrationType',
     'integrationStatus',
@@ -222,6 +223,7 @@ const COLUMN_OVERRIDES: Record<string, string> = {
   categoryName: 'Category',
   subcategoryName: 'Subcategory',
   institutionName: 'Institution',
+  socialContact: 'Social / Messenger',
 };
 
 function humanizeColumn(col: string): string {

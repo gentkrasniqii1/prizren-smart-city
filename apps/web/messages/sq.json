@@ -898,7 +898,8 @@
       "NO_CONTACT": "Institution.contact është bosh",
       "INTEGRATION_TYPE": "Lloji i integrimit nuk lejon email",
       "INTEGRATION_STATUS": "Integrimi nuk është TEST ose ACTIVE",
-      "NO_PROVIDER": "Nuk ka ofrues Resend/SMTP"
+      "NO_PROVIDER": "Nuk ka ofrues Resend/SMTP",
+      "MANUAL_NO_EMAIL": "Nuk ka kanal email — kontaktoni {institutionName} drejtpërdrejt (shihni skedën Institutions për telefon/Messenger)."
     }
   },
   "InstitutionAccess": {
@@ -961,6 +962,9 @@
     "colCategory": "Kategoria",
     "colPhone": "Telefoni",
     "colContact": "Email",
+    "colSocialContact": "Kontakt social / Messenger",
+    "socialContactPlaceholder": "https://www.facebook.com/…",
+    "socialContactHint": "Opsionale. Për institucione pa email publik — stafi e përdor për kontakt manual. Nuk përdoret nga posta e automatizuar.",
     "colIntegrationType": "Lloji i integrimit",
     "colIntegrationStatus": "Statusi i integrimit",
     "colActions": "Veprimet",

@@ -141,6 +141,10 @@ model Institution {
   phone             String?
   /// Email mailbox only. Null until a public address is verified on an official page.
   contact           String?
+  /// Public social/messaging contact (e.g. Facebook Page URL or Messenger link) for institutions
+  /// without a public email. Never used by the automated outbound-mail sender — informational only,
+  /// for staff to use when initiating manual contact.
+  socialContact     String?
   active            Boolean           @default(true)
   integrationType   IntegrationType   @default(MANUAL)
   integrationStatus IntegrationStatus @default(NOT_CONFIGURED)

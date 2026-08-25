@@ -284,15 +284,23 @@ export function OutboundMailLedger() {
               <TableBody>
                 {rows.map((row) => {
                   const link = linkStatus(row);
-                  const reason = row.skipReason
-                    ? t(`skipReasons.${row.skipReason}`)
-                    : link === 'revoked'
-                      ? t('linkRevoked')
-                      : link === 'expired'
-                        ? t('linkExpired')
-                        : link === 'active'
-                          ? t('linkActive')
-                          : (row.lastError ?? '—');
+                  const manualNoEmailChannel =
+                    row.institutionName &&
+                    row.institutionIntegrationType === 'MANUAL' &&
+                    (row.skipReason === 'INTEGRATION_TYPE' || row.skipReason === 'NO_CONTACT');
+                  const reason = manualNoEmailChannel
+                    ? t('skipReasons.MANUAL_NO_EMAIL', {
+                        institutionName: row.institutionName!,
+                      })
+                    : row.skipReason
+                      ? t(`skipReasons.${row.skipReason}`)
+                      : link === 'revoked'
+                        ? t('linkRevoked')
+                        : link === 'expired'
+                          ? t('linkExpired')
+                          : link === 'active'
+                            ? t('linkActive')
+                            : (row.lastError ?? '—');
                   return (
                     <TableRow key={row.id}>
                       <TableCell>
