@@ -337,4 +337,40 @@ describe('OutboundEmailService', () => {
       }),
     );
   });
+
+  it.each([
+    ['recipient', { recipient: { contains: 'ops@keds.example', mode: 'insensitive' } }],
+    ['subject', { subject: { contains: 'Raport i ri', mode: 'insensitive' } }],
+    [
+      'institution.name',
+      { institution: { name: { contains: 'Komuna e Prizrenit', mode: 'insensitive' } } },
+    ],
+    [
+      'report.publicId',
+      { report: { publicId: { contains: 'PRZ-2026-000184', mode: 'insensitive' } } },
+    ],
+  ] as const)('list OR clause includes %s when q is set', async (_label, expectedClause) => {
+    prisma.outboundEmail.count.mockResolvedValue(0);
+    prisma.outboundEmail.findMany.mockResolvedValue([]);
+    prisma.user.findUnique.mockResolvedValue({
+      id: staff.id,
+      role: Role.DEPARTMENT_ADMIN,
+      departments: [],
+    });
+    const q =
+      'recipient' in expectedClause
+        ? 'ops@keds.example'
+        : 'subject' in expectedClause
+          ? 'Raport i ri'
+          : 'institution' in expectedClause
+            ? 'Komuna e Prizrenit'
+            : 'PRZ-2026-000184';
+
+    await service.list(staff as never, { page: 1, limit: 20, q });
+
+    const where = prisma.outboundEmail.findMany.mock.calls[0]?.[0]?.where as {
+      OR: unknown[];
+    };
+    expect(where.OR).toEqual(expect.arrayContaining([expectedClause]));
+  });
 });

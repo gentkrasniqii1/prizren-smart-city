@@ -1,4 +1,4 @@
-import { IsEnum, IsInt, IsOptional, IsString, Max, Min } from 'class-validator';
+import { IsEnum, IsInt, IsOptional, IsString, Max, MaxLength, Min } from 'class-validator';
 import { Type } from 'class-transformer';
 import { OutboundEmailStatus } from '@prisma/client';
 
@@ -9,6 +9,7 @@ export class ListOutboundEmailQueryDto {
 
   @IsOptional()
   @IsString()
+  @MaxLength(200)
   q?: string;
 
   @IsOptional()
