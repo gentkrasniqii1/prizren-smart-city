@@ -5,6 +5,7 @@ export const ADMIN_DATA_RESOURCES = [
   'departments',
   'categories',
   'subcategories',
+  'zones',
   'routing-rules',
   'sla-policies',
   'audit-logs',

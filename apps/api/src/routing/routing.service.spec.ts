@@ -124,7 +124,7 @@ describe('RoutingService.route', () => {
     });
   });
 
-  it('treats a CRITICAL category as emergency so fire/police rules can match', async () => {
+  it('LEGACY: treats a CRITICAL category defaultPriority as emergency so fire/police rules can match', async () => {
     const fireCategory = {
       id: 'cat-fire',
       name: 'Zjarr / emergjencë',

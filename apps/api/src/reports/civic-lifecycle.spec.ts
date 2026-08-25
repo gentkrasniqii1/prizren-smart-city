@@ -547,6 +547,8 @@ describe('Phase 10 AI remains assistive', () => {
       severity: Priority.MEDIUM,
       subcategoryId: null,
       subcategory: null,
+      zoneId: null,
+      isEmergency: null,
     });
     expect(dto.status).toBe(ReportStatus.ASSIGNED);
     expect(dto.categoryId).toBe('cat-official');

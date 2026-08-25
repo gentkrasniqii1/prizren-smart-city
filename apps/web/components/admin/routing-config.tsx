@@ -12,6 +12,7 @@ import type {
   RoutePreview,
   RoutingRuleDto,
   SubcategoryDto,
+  ZoneDto,
 } from '@prizren/shared-types';
 import { apiFetch } from '@/lib/api';
 import { useAuth } from '@/components/auth-provider';
@@ -54,10 +55,10 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { DashboardSkeleton } from '@/components/ui/skeletons';
-import { REPORT_PRIORITIES } from '@/lib/labels';
+import { getPriorityLabel, REPORT_PRIORITIES } from '@/lib/labels';
 import { useErrorMessage } from '@/lib/use-error-message';
 
-type Tab = 'rules' | 'institutions' | 'departments' | 'categories' | 'subcategories';
+type Tab = 'rules' | 'institutions' | 'departments' | 'categories' | 'subcategories' | 'zones';
 
 const STAFF_ROLES = new Set(['DEPARTMENT_STAFF', 'DEPARTMENT_ADMIN', 'SUPER_ADMIN']);
 const EDIT_ROLES = new Set(['DEPARTMENT_ADMIN', 'SUPER_ADMIN']);
@@ -85,6 +86,21 @@ function matchesQuery(haystack: Array<string | null | undefined>, q: string): bo
   return haystack.some((part) => (part ?? '').toLowerCase().includes(needle));
 }
 
+function severityLabel(
+  severity: Priority | null,
+  t: (key: string) => string,
+  locale: 'sq' | 'en',
+): string {
+  if (!severity) return t('anySeverity');
+  return getPriorityLabel(severity, locale);
+}
+
+function emergencyLabel(value: boolean | null, t: (key: string) => string): string {
+  if (value === true) return t('emergencyOnly');
+  if (value === false) return t('nonEmergency');
+  return t('anyEmergency');
+}
+
 export function RoutingConfig() {
   const t = useTranslations('Routing');
   const tAdmin = useTranslations('Admin');
@@ -102,6 +118,7 @@ export function RoutingConfig() {
   const [departments, setDepartments] = useState<DepartmentDto[]>([]);
   const [categories, setCategories] = useState<CategoryDto[]>([]);
   const [subcategories, setSubcategories] = useState<SubcategoryDto[]>([]);
+  const [zones, setZones] = useState<ZoneDto[]>([]);
   const [rules, setRules] = useState<RoutingRuleDto[]>([]);
   const [previewCategoryId, setPreviewCategoryId] = useState('');
   const [preview, setPreview] = useState<RoutePreview | null>(null);
@@ -111,25 +128,32 @@ export function RoutingConfig() {
   const [deptDialog, setDeptDialog] = useState<DepartmentDto | 'new' | null>(null);
   const [catDialog, setCatDialog] = useState<CategoryDto | 'new' | null>(null);
   const [subDialog, setSubDialog] = useState<SubcategoryDto | 'new' | null>(null);
+  const [zoneDialog, setZoneDialog] = useState<ZoneDto | 'new' | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<{ kind: Tab; id: string; name: string } | null>(
     null,
   );
   const [listQuery, setListQuery] = useState('');
+  const [filterSeverity, setFilterSeverity] = useState('');
+  const [filterZoneId, setFilterZoneId] = useState('');
+  const [filterEmergency, setFilterEmergency] = useState('');
+  const [filterActive, setFilterActive] = useState('');
 
   const load = useCallback(async () => {
     setError(null);
     try {
-      const [i, d, c, s, r] = await Promise.all([
+      const [i, d, c, s, z, r] = await Promise.all([
         apiFetch<InstitutionDto[]>('/institutions?includeInactive=true', { auth: true }),
         apiFetch<DepartmentDto[]>('/departments', { auth: true }),
         apiFetch<CategoryDto[]>('/categories', { auth: true }),
         apiFetch<SubcategoryDto[]>('/subcategories?includeInactive=true', { auth: true }),
+        apiFetch<ZoneDto[]>('/zones?includeInactive=true', { auth: true }),
         apiFetch<RoutingRuleDto[]>('/routing-rules', { auth: true }),
       ]);
       setInstitutions(i);
       setDepartments(d);
       setCategories(c);
       setSubcategories(s);
+      setZones(z);
       setRules(r);
     } catch (err) {
       setError(errorMessage(err, t('loadError')));
@@ -145,8 +169,14 @@ export function RoutingConfig() {
 
   const filteredRules = useMemo(
     () =>
-      rules.filter((rule) =>
-        matchesQuery(
+      rules.filter((rule) => {
+        if (filterSeverity && (rule.severity ?? '') !== filterSeverity) return false;
+        if (filterZoneId && (rule.zoneId ?? '') !== filterZoneId) return false;
+        if (filterEmergency === 'true' && rule.isEmergency !== true) return false;
+        if (filterEmergency === 'false' && rule.isEmergency !== false) return false;
+        if (filterActive === 'true' && !rule.active) return false;
+        if (filterActive === 'false' && rule.active) return false;
+        return matchesQuery(
           [
             rule.name,
             rule.categoryName,
@@ -156,20 +186,18 @@ export function RoutingConfig() {
             rule.institutionName,
             rule.severity,
             rule.zone,
-            rule.isEmergency === true
-              ? 'emergency'
-              : rule.isEmergency === false
-                ? 'non-emergency'
-                : '',
+            rule.zoneId,
+            emergencyLabel(rule.isEmergency, t),
+            severityLabel(rule.severity, t, 'sq'),
             rule.id,
             rule.categoryId,
             rule.departmentId,
             rule.institutionId,
           ],
           listQuery,
-        ),
-      ),
-    [listQuery, rules],
+        );
+      }),
+    [filterActive, filterEmergency, filterSeverity, filterZoneId, listQuery, rules, t],
   );
 
   const filteredCategories = useMemo(
@@ -191,8 +219,13 @@ export function RoutingConfig() {
     [listQuery, subcategories],
   );
 
+  const filteredZones = useMemo(
+    () => zones.filter((z) => matchesQuery([z.name, z.id], listQuery)),
+    [listQuery, zones],
+  );
+
   const dialogOpen = Boolean(
-    ruleDialog || instDialog || deptDialog || catDialog || subDialog || deleteTarget,
+    ruleDialog || instDialog || deptDialog || catDialog || subDialog || zoneDialog || deleteTarget,
   );
 
   useRealtimeRefresh(
@@ -242,7 +275,9 @@ export function RoutingConfig() {
             ? `/departments/${deleteTarget.id}`
             : deleteTarget.kind === 'subcategories'
               ? `/subcategories/${deleteTarget.id}`
-              : `/categories/${deleteTarget.id}`;
+              : deleteTarget.kind === 'zones'
+                ? `/zones/${deleteTarget.id}`
+                : `/categories/${deleteTarget.id}`;
     try {
       await apiFetch(path, { method: 'DELETE', auth: true });
       toast.push(t('deleted'), 'success');
@@ -259,6 +294,7 @@ export function RoutingConfig() {
     if (tab === 'departments') setDeptDialog('new');
     if (tab === 'categories') setCatDialog('new');
     if (tab === 'subcategories') setSubDialog('new');
+    if (tab === 'zones') setZoneDialog('new');
   }
 
   if (authLoading || (isStaff(user?.role) && loading && rules.length === 0 && !error)) {
@@ -366,17 +402,78 @@ export function RoutingConfig() {
             <TabsTrigger value="departments">{t('tabDepartments')}</TabsTrigger>
             <TabsTrigger value="categories">{t('tabCategories')}</TabsTrigger>
             <TabsTrigger value="subcategories">{t('tabSubcategories')}</TabsTrigger>
+            <TabsTrigger value="zones">{t('tabZones')}</TabsTrigger>
           </TabsList>
 
-          {tab === 'rules' || tab === 'categories' || tab === 'subcategories' ? (
-            <div className="mt-4 max-w-md">
-              <Label htmlFor="routing-list-q">{t('searchPlaceholder')}</Label>
-              <Input
-                id="routing-list-q"
-                value={listQuery}
-                onChange={(e) => setListQuery(e.target.value)}
-                placeholder={t('searchPlaceholder')}
-              />
+          {tab === 'rules' || tab === 'categories' || tab === 'subcategories' || tab === 'zones' ? (
+            <div className="mt-4 flex flex-col gap-3">
+              <div className="max-w-md">
+                <Label htmlFor="routing-list-q">{t('searchPlaceholder')}</Label>
+                <Input
+                  id="routing-list-q"
+                  value={listQuery}
+                  onChange={(e) => setListQuery(e.target.value)}
+                  placeholder={t('searchPlaceholder')}
+                />
+              </div>
+              {tab === 'rules' ? (
+                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                  <div>
+                    <Label htmlFor="filter-sev">{t('filterSeverity')}</Label>
+                    <Select
+                      id="filter-sev"
+                      value={filterSeverity}
+                      onChange={(e) => setFilterSeverity(e.target.value)}
+                    >
+                      <option value="">{t('filterAll')}</option>
+                      {REPORT_PRIORITIES.map((p) => (
+                        <option key={p} value={p}>
+                          {getPriorityLabel(p, 'sq')}
+                        </option>
+                      ))}
+                    </Select>
+                  </div>
+                  <div>
+                    <Label htmlFor="filter-zone">{t('filterZone')}</Label>
+                    <Select
+                      id="filter-zone"
+                      value={filterZoneId}
+                      onChange={(e) => setFilterZoneId(e.target.value)}
+                    >
+                      <option value="">{t('filterAll')}</option>
+                      {zones.map((z) => (
+                        <option key={z.id} value={z.id}>
+                          {z.name}
+                        </option>
+                      ))}
+                    </Select>
+                  </div>
+                  <div>
+                    <Label htmlFor="filter-em">{t('filterEmergency')}</Label>
+                    <Select
+                      id="filter-em"
+                      value={filterEmergency}
+                      onChange={(e) => setFilterEmergency(e.target.value)}
+                    >
+                      <option value="">{t('filterAll')}</option>
+                      <option value="true">{t('emergencyOnly')}</option>
+                      <option value="false">{t('nonEmergency')}</option>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label htmlFor="filter-active">{t('filterActive')}</Label>
+                    <Select
+                      id="filter-active"
+                      value={filterActive}
+                      onChange={(e) => setFilterActive(e.target.value)}
+                    >
+                      <option value="">{t('filterAll')}</option>
+                      <option value="true">{t('active')}</option>
+                      <option value="false">{t('inactive')}</option>
+                    </Select>
+                  </div>
+                </div>
+              ) : null}
             </div>
           ) : null}
 
@@ -396,47 +493,47 @@ export function RoutingConfig() {
               />
             ) : (
               <div className="-mx-gutter overflow-x-auto border-y border-border bg-card sm:mx-0 sm:rounded-xl sm:border">
-                <Table className="min-w-[56rem]">
+                <Table className="min-w-[72rem]">
                   <TableHeader>
                     <TableRow>
                       <TableHead>{t('colName')}</TableHead>
-                      <TableHead>{t('colMatch')}</TableHead>
-                      <TableHead>{t('colRouteTo')}</TableHead>
-                      <TableHead>{t('colPriority')}</TableHead>
-                      <TableHead>{t('colSla')}</TableHead>
+                      <TableHead>{t('colInstitution')}</TableHead>
+                      <TableHead>{t('colDepartment')}</TableHead>
+                      <TableHead>{t('colCategory')}</TableHead>
+                      <TableHead>{t('colSubcategory')}</TableHead>
+                      <TableHead>{t('colSeverity')}</TableHead>
+                      <TableHead>{t('colZone')}</TableHead>
+                      <TableHead>{t('colEmergency')}</TableHead>
+                      <TableHead>{t('colStatus')}</TableHead>
+                      <TableHead>{t('order')}</TableHead>
                       <TableHead className="text-right">{t('colActions')}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {filteredRules.map((rule) => (
                       <TableRow key={rule.id}>
-                        <TableCell>
-                          <div className="font-medium">{rule.name}</div>
-                          <div className="text-xs text-muted-foreground">
-                            {t('order')}: {rule.priority}
-                            {rule.active ? '' : ` · ${t('inactive')}`}
-                          </div>
+                        <TableCell className="font-medium">{rule.name}</TableCell>
+                        <TableCell className="text-sm">
+                          {rule.institutionName ?? t('unrouted')}
                         </TableCell>
+                        <TableCell className="text-sm">{rule.departmentName ?? '—'}</TableCell>
                         <TableCell className="text-sm">
                           {rule.categoryName ?? t('anyCategory')}
-                          {rule.subcategory ? ` · ${rule.subcategory}` : ''}
-                          {rule.isEmergency ? ` · ${t('emergencyOnly')}` : ''}
                         </TableCell>
                         <TableCell className="text-sm">
-                          {[rule.institutionName, rule.departmentName]
-                            .filter(Boolean)
-                            .join(' / ') || t('unrouted')}
+                          {rule.subcategory ?? t('anySubcategory')}
                         </TableCell>
-                        <TableCell>
-                          {rule.defaultPriority ? (
-                            <PriorityBadge priority={rule.defaultPriority} />
-                          ) : (
-                            '—'
-                          )}
+                        <TableCell className="text-sm">
+                          {severityLabel(rule.severity, t, 'sq')}
                         </TableCell>
-                        <TableCell>
-                          {rule.slaHours != null ? t('hours', { n: rule.slaHours }) : '—'}
+                        <TableCell className="text-sm">{rule.zone ?? t('anyZone')}</TableCell>
+                        <TableCell className="text-sm">
+                          {emergencyLabel(rule.isEmergency, t)}
                         </TableCell>
+                        <TableCell className="text-sm">
+                          {rule.active ? t('active') : t('inactive')}
+                        </TableCell>
+                        <TableCell className="text-sm">{rule.priority}</TableCell>
                         <TableCell className="text-right">
                           <RowActions
                             canEdit={canEdit}
@@ -635,6 +732,55 @@ export function RoutingConfig() {
               </div>
             )}
           </TabsContent>
+
+          <TabsContent value="zones">
+            {zones.length === 0 ? (
+              <EmptyState
+                icon={<GitBranch className="h-5 w-5" aria-hidden />}
+                title={t('emptyZones')}
+                description={t('emptyZonesHint')}
+                action={
+                  canEdit ? (
+                    <Button type="button" onClick={() => setZoneDialog('new')}>
+                      {t('add')}
+                    </Button>
+                  ) : undefined
+                }
+              />
+            ) : (
+              <div className="-mx-gutter overflow-x-auto border-y border-border bg-card sm:mx-0 sm:rounded-xl sm:border">
+                <Table className="min-w-[36rem]">
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>{t('colName')}</TableHead>
+                      <TableHead>{t('colStatus')}</TableHead>
+                      <TableHead className="text-right">{t('colActions')}</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredZones.map((zone) => (
+                      <TableRow key={zone.id}>
+                        <TableCell className="font-medium">{zone.name}</TableCell>
+                        <TableCell>{zone.active ? t('active') : t('inactive')}</TableCell>
+                        <TableCell className="text-right">
+                          <RowActions
+                            canEdit={canEdit}
+                            canDelete={canDelete}
+                            onEdit={() => setZoneDialog(zone)}
+                            onDelete={() =>
+                              setDeleteTarget({ kind: 'zones', id: zone.id, name: zone.name })
+                            }
+                            editLabel={t('edit')}
+                            deleteLabel={t('delete')}
+                          />
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
+          </TabsContent>
         </Tabs>
 
         <RuleDialog
@@ -643,6 +789,7 @@ export function RoutingConfig() {
           departments={departments}
           categories={categories}
           subcategories={subcategories}
+          zones={zones}
           onClose={() => setRuleDialog(null)}
           onSaved={load}
         />
@@ -665,6 +812,7 @@ export function RoutingConfig() {
           onClose={() => setSubDialog(null)}
           onSaved={load}
         />
+        <ZoneDialog open={zoneDialog} onClose={() => setZoneDialog(null)} onSaved={load} />
 
         <ConfirmDialog
           open={Boolean(deleteTarget)}
@@ -721,6 +869,7 @@ function RuleDialog({
   departments,
   categories,
   subcategories,
+  zones,
   onClose,
   onSaved,
 }: {
@@ -729,6 +878,7 @@ function RuleDialog({
   departments: DepartmentDto[];
   categories: CategoryDto[];
   subcategories: SubcategoryDto[];
+  zones: ZoneDto[];
   onClose: () => void;
   onSaved: () => Promise<void>;
 }) {
@@ -739,6 +889,8 @@ function RuleDialog({
   const [name, setName] = useState('');
   const [categoryId, setCategoryId] = useState('');
   const [subcategoryId, setSubcategoryId] = useState('');
+  const [severity, setSeverity] = useState('');
+  const [zoneId, setZoneId] = useState('');
   const [emergency, setEmergency] = useState('');
   const [institutionId, setInstitutionId] = useState('');
   const [departmentId, setDepartmentId] = useState('');
@@ -763,6 +915,11 @@ function RuleDialog({
           )?.id ?? '')
         : '');
     setSubcategoryId(matchedId);
+    setSeverity(existing?.severity ?? '');
+    setZoneId(
+      existing?.zoneId ??
+        (existing?.zone ? (zones.find((z) => z.name === existing.zone)?.id ?? '') : ''),
+    );
     setEmergency(
       existing?.isEmergency === true ? 'true' : existing?.isEmergency === false ? 'false' : '',
     );
@@ -773,7 +930,7 @@ function RuleDialog({
     setSlaHours(existing?.slaHours != null ? String(existing.slaHours) : '');
     setActive(existing?.active ?? true);
     setError(null);
-  }, [existing, open, subcategories]);
+  }, [existing, open, subcategories, zones]);
 
   const filteredDepts = useMemo(
     () => departments.filter((d) => !institutionId || d.institutionId === institutionId),
@@ -788,6 +945,11 @@ function RuleDialog({
     [subcategories, categoryId, subcategoryId],
   );
 
+  const activeZones = useMemo(
+    () => zones.filter((z) => z.active || z.id === zoneId),
+    [zones, zoneId],
+  );
+
   async function save() {
     setSaving(true);
     setError(null);
@@ -796,6 +958,9 @@ function RuleDialog({
       categoryId: emptyToNull(categoryId),
       subcategoryId: emptyToNull(subcategoryId),
       subcategory: null,
+      severity: emptyToNull(severity) as Priority | null,
+      zoneId: emptyToNull(zoneId),
+      zone: null,
       isEmergency: emergency === '' ? null : emergency === 'true',
       institutionId: emptyToNull(institutionId),
       departmentId: emptyToNull(departmentId),
@@ -803,12 +968,6 @@ function RuleDialog({
       defaultPriority: emptyToNull(priority) as Priority | null,
       slaHours: parseHours(slaHours),
       active,
-      ...(existing
-        ? {
-            severity: existing.severity,
-            zone: existing.zone,
-          }
-        : {}),
     };
     try {
       if (existing) {
@@ -878,6 +1037,29 @@ function RuleDialog({
             </Select>
           </div>
           <div>
+            <Label htmlFor="rule-sev">{t('matchSeverity')}</Label>
+            <Select id="rule-sev" value={severity} onChange={(e) => setSeverity(e.target.value)}>
+              <option value="">{t('anySeverity')}</option>
+              {REPORT_PRIORITIES.map((p) => (
+                <option key={p} value={p}>
+                  {getPriorityLabel(p, 'sq')}
+                </option>
+              ))}
+            </Select>
+          </div>
+          <div>
+            <Label htmlFor="rule-zone">{t('matchZone')}</Label>
+            <Select id="rule-zone" value={zoneId} onChange={(e) => setZoneId(e.target.value)}>
+              <option value="">{t('anyZone')}</option>
+              {activeZones.map((z) => (
+                <option key={z.id} value={z.id}>
+                  {z.name}
+                  {z.active ? '' : ` (${t('inactive')})`}
+                </option>
+              ))}
+            </Select>
+          </div>
+          <div>
             <Label htmlFor="rule-em">{t('matchEmergency')}</Label>
             <Select id="rule-em" value={emergency} onChange={(e) => setEmergency(e.target.value)}>
               <option value="">{t('anyEmergency')}</option>
@@ -935,7 +1117,7 @@ function RuleDialog({
                 <option value="">{t('inherit')}</option>
                 {REPORT_PRIORITIES.map((p) => (
                   <option key={p} value={p}>
-                    {p}
+                    {getPriorityLabel(p, 'sq')}
                   </option>
                 ))}
               </Select>
@@ -1417,6 +1599,85 @@ function SubcategoryDialog({
             </Select>
           </div>
           <Checkbox id="sub-active" checked={active} onChange={setActive}>
+            {t('active')}
+          </Checkbox>
+        </div>
+        <DialogFooter>
+          <Button type="button" variant="ghost" onClick={onClose}>
+            {t('cancel')}
+          </Button>
+          <Button type="button" loading={saving} onClick={() => void save()}>
+            {t('save')}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function ZoneDialog({
+  open,
+  onClose,
+  onSaved,
+}: {
+  open: ZoneDto | 'new' | null;
+  onClose: () => void;
+  onSaved: () => Promise<void>;
+}) {
+  const t = useTranslations('Routing');
+  const toast = useToast();
+  const errorMessage = useErrorMessage();
+  const existing = open && open !== 'new' ? open : null;
+  const [name, setName] = useState('');
+  const [active, setActive] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    setName(existing?.name ?? '');
+    setActive(existing?.active ?? true);
+    setError(null);
+  }, [existing, open]);
+
+  async function save() {
+    if (!name.trim()) {
+      setError(t('nameRequired'));
+      return;
+    }
+    setSaving(true);
+    setError(null);
+    try {
+      const body = { name: name.trim(), active };
+      if (existing) {
+        await apiFetch(`/zones/${existing.id}`, { method: 'PATCH', auth: true, body });
+      } else {
+        await apiFetch('/zones', { method: 'POST', auth: true, body });
+      }
+      toast.push(t('saved'), 'success');
+      await onSaved();
+      onClose();
+    } catch (err) {
+      setError(errorMessage(err, t('saveFailed')));
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <Dialog open={Boolean(open)} onOpenChange={(v) => (!v ? onClose() : undefined)}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>{existing ? t('editZone') : t('newZone')}</DialogTitle>
+          <DialogDescription>{t('zoneHint')}</DialogDescription>
+        </DialogHeader>
+        <FormError message={error} />
+        <div className="grid gap-3">
+          <div>
+            <Label htmlFor="zone-name">{t('colName')}</Label>
+            <Input id="zone-name" value={name} onChange={(e) => setName(e.target.value)} required />
+          </div>
+          <Checkbox id="zone-active" checked={active} onChange={setActive}>
             {t('active')}
           </Checkbox>
         </div>

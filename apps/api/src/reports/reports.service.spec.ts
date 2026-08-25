@@ -980,6 +980,8 @@ describe('ReportsService.moderate', () => {
       severity: Priority.HIGH,
       subcategoryId: null,
       subcategory: null,
+      zoneId: null,
+      isEmergency: null,
     });
     expect(reportUpdate).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -1013,6 +1015,61 @@ describe('ReportsService.moderate', () => {
     expect(dto.status).toBe(ReportStatus.ASSIGNED);
     expect(events.emit).toHaveBeenCalled();
   });
+
+  it.each([Priority.CRITICAL, Priority.HIGH, Priority.MEDIUM, Priority.LOW] as const)(
+    'approve does not invent isEmergency from priority %s (passes null)',
+    async (priority) => {
+      const submitted = reportRow({
+        categoryId: 'cat-1',
+        priority,
+      });
+      const assigned = reportRow({
+        status: ReportStatus.ASSIGNED,
+        categoryId: 'cat-1',
+        departmentId: 'dept-1',
+        institutionId: 'inst-1',
+        priority,
+      });
+      const route = vi.fn().mockResolvedValue({
+        categoryId: 'cat-1',
+        departmentId: 'dept-1',
+        institutionId: 'inst-1',
+        slaHours: 48,
+        defaultPriority: priority,
+        matchedRuleId: null,
+        matchedRuleName: null,
+        source: 'category_fallback',
+      });
+      const service = new ReportsService(
+        {
+          report: { findUnique: vi.fn().mockResolvedValue(submitted) },
+          $transaction: vi.fn().mockImplementation(async (cb: (tx: unknown) => unknown) =>
+            cb({
+              report: { update: vi.fn().mockResolvedValue(assigned) },
+              statusHistory: { create: vi.fn() },
+            }),
+          ),
+        } as unknown as PrismaService,
+        { uploadImage: vi.fn() } as unknown as CloudinaryService,
+        { classifyReportPhoto: vi.fn() } as unknown as AiClassificationService,
+        { emit: vi.fn() } as unknown as EventEmitter2,
+        { route } as unknown as RoutingService,
+        { sendReportReceivedEmail: vi.fn() } as unknown as MailService,
+        { webOrigin: 'http://localhost:3000' } as unknown as ConfigService,
+        { log: vi.fn().mockResolvedValue({ id: 'audit-1' }) } as unknown as AuditService,
+      );
+
+      await service.moderate('r1', staff as never, { action: 'approve' });
+
+      expect(route).toHaveBeenCalledWith(
+        expect.objectContaining({
+          severity: priority,
+          isEmergency: null,
+        }),
+      );
+      expect(route.mock.calls[0][0].isEmergency).toBeNull();
+    },
+  );
 
   it('approves UNDER_REVIEW reports into the institution queue', async () => {
     const reviewing = reportRow({

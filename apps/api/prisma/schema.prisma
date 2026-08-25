@@ -198,6 +198,20 @@ model Subcategory {
   @@index([active])
 }
 
+/// Geographic / administrative zone for routing match. Empty seed by design —
+/// admins configure real zones; null zoneId on a rule is a wildcard.
+model Zone {
+  id           String        @id @default(uuid())
+  name         String        @unique
+  active       Boolean       @default(true)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  reports      Report[]
+  routingRules RoutingRule[]
+
+  @@index([active])
+}
+
 /// Deterministic routing rule ("category/subcategory/severity/zone/emergency
 /// status" -> department/organization), evaluated in `priority` order (lower
 /// number = evaluated first). Introduced as a domain model in Phase 1; the
@@ -213,7 +227,10 @@ model RoutingRule {
   subcategoryId   String?
   subcategoryRef  Subcategory?  @relation(fields: [subcategoryId], references: [id])
   severity        Priority?
+  /// Legacy free-text zone label; prefer zoneId. Synced from Zone.name when set.
   zone            String?
+  zoneId          String?
+  zoneRef         Zone?         @relation(fields: [zoneId], references: [id])
   /// null = matches emergency or non-emergency; true/false = must match exactly
   isEmergency     Boolean?
   departmentId    String?
@@ -232,6 +249,7 @@ model RoutingRule {
   @@index([active, priority])
   @@index([categoryId])
   @@index([subcategoryId])
+  @@index([zoneId])
   @@index([departmentId])
   @@index([institutionId])
 }
@@ -282,6 +300,9 @@ model Report {
   subcategory      String?
   subcategoryId    String?
   subcategoryRef   Subcategory?    @relation(fields: [subcategoryId], references: [id])
+  /// Optional administrative zone for zone-scoped routing rules.
+  zoneId           String?
+  zoneRef          Zone?           @relation(fields: [zoneId], references: [id])
   departmentId     String?
   department       Department?     @relation(fields: [departmentId], references: [id])
   /// Responsible external organization, when routing selects one (distinct
@@ -325,6 +346,7 @@ model Report {
   @@index([status])
   @@index([categoryId])
   @@index([subcategoryId])
+  @@index([zoneId])
   @@index([departmentId])
   @@index([institutionId])
   @@index([userId])

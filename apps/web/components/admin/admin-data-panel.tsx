@@ -129,6 +129,7 @@ const RESOURCE_COLUMNS: Record<AdminDataResource, readonly string[]> = {
   departments: ['id', 'name', 'contact', 'slaHours', 'institutionId', 'institutionName'],
   categories: ['id', 'name', 'departmentId', 'departmentName', 'slaHours', 'defaultPriority'],
   subcategories: ['id', 'name', 'categoryId', 'categoryName', 'active', 'createdAt', 'updatedAt'],
+  zones: ['id', 'name', 'active', 'createdAt', 'updatedAt'],
   'routing-rules': [
     'id',
     'name',
@@ -137,6 +138,7 @@ const RESOURCE_COLUMNS: Record<AdminDataResource, readonly string[]> = {
     'subcategoryId',
     'subcategory',
     'severity',
+    'zoneId',
     'zone',
     'isEmergency',
     'departmentId',

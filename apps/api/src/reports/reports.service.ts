@@ -67,6 +67,7 @@ import {
 import { assertValidImageUpload } from '../uploads/image-validation';
 import { RoutingService } from '../routing/routing.service';
 import { resolveActiveSubcategory } from '../common/subcategory-ref';
+import { resolveActiveZone } from '../common/zone-ref';
 import {
   isStaffUser,
   STAFF_ROLES,
@@ -297,6 +298,7 @@ export class ReportsService {
       categoryId: string | null;
       subcategory: string | null;
       subcategoryId: string | null;
+      zoneId: string | null;
       departmentId: string | null;
       institutionId: string | null;
       description: string;
@@ -332,6 +334,7 @@ export class ReportsService {
         r."categoryId",
         r."subcategory",
         r."subcategoryId",
+        r."zoneId",
         r."departmentId",
         r."institutionId",
         r.description,
@@ -1498,6 +1501,9 @@ export class ReportsService {
       select: { id: true },
     });
     if (!category) return null;
+    // LEGACY: AI "critical" severity is mapped to isEmergency for auto-route preview
+    // during create. This is not a municipal rule that CRITICAL priority ≡ emergency,
+    // and approve no longer copies this coupling from report.priority.
     return this.routing.route({
       categoryId: category.id,
       severity: AI_SEVERITY_TO_PRIORITY[classification.severity] as Priority,
@@ -1547,11 +1553,23 @@ export class ReportsService {
       throw new BadRequestException('Subcategory does not belong to the selected category');
     }
 
+    const zoneResolved = dto.zoneId
+      ? await resolveActiveZone(this.prisma, dto.zoneId)
+      : existing.zoneId
+        ? { zoneId: existing.zoneId, zone: '' }
+        : null;
+
+    // Report has no independent emergency field. Do NOT invent isEmergency from
+    // priority/severity (CRITICAL ≠ emergency). null = wildcard for matchers.
+    // Legacy: RoutingService may still treat category.defaultPriority CRITICAL as
+    // emergency when the fact is missing — that heuristic is separate from approve.
     const routed = await this.routing.route({
       categoryId,
       subcategoryId: subcategory?.subcategoryId ?? null,
       subcategory: subcategory?.subcategory || existing.subcategory,
       severity: existing.priority,
+      zoneId: zoneResolved?.zoneId ?? null,
+      isEmergency: null,
     });
 
     if (!routed.departmentId && !routed.institutionId) {
@@ -1574,6 +1592,7 @@ export class ReportsService {
           categoryId: routed.categoryId,
           subcategoryId: subcategory?.subcategoryId ?? null,
           subcategory: subcategory?.subcategory || existing.subcategory,
+          zoneId: zoneResolved?.zoneId ?? existing.zoneId,
           departmentId: routed.departmentId,
           institutionId: routed.institutionId,
           priority: routed.defaultPriority,
@@ -1776,6 +1795,7 @@ export class ReportsService {
       categoryId: report.categoryId,
       subcategoryId: report.subcategoryId,
       subcategory: report.subcategoryRef?.name ?? report.subcategory,
+      zoneId: report.zoneId,
       departmentId: report.departmentId,
       institutionId: report.institutionId,
       description: report.description,
