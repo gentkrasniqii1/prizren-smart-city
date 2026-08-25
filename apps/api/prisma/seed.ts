@@ -116,6 +116,8 @@ const CATEGORIES: {
   departmentName: string;
   slaHours: number;
   defaultPriority: Priority;
+  /** Overrides RoutingRule.institutionId; department stays municipal. */
+  institutionSlug?: string;
 }[] = [
   {
     name: 'Grope / dëmtim rruge',
@@ -134,6 +136,7 @@ const CATEGORIES: {
     departmentName: 'Shërbime Publike',
     slaHours: 72,
     defaultPriority: Priority.MEDIUM,
+    institutionSlug: 'eco-regjioni',
   },
   {
     name: 'Kanalizim / përmbytje urbane',
@@ -146,6 +149,7 @@ const CATEGORIES: {
     departmentName: 'Shërbime Publike',
     slaHours: 24,
     defaultPriority: Priority.HIGH,
+    institutionSlug: 'hidroregjioni-jugor',
   },
   {
     name: 'Parke, pemë, hapësirë e gjelbër',
@@ -227,6 +231,82 @@ const CATEGORIES: {
   },
 ];
 
+/**
+ * DRAFT taxonomy for admin review — not verified municipal policy.
+ * Edit/delete via /admin/routing → Subcategories after seed.
+ */
+const SUBCATEGORIES: Record<string, string[]> = {
+  'Grope / dëmtim rruge': ['Gropë në rrugë', 'Asfalt i dëmtuar', 'Buzë trotuari e thyer'],
+  'Ndriçim publik i prishur': ['Llambë e djegur', 'Shtyllë e dëmtuar', 'Errësirë e zgjatur'],
+  'Grumbullim mbeturinash / konteiner': [
+    'Konteiner i mbushur',
+    'Konteiner i dëmtuar',
+    'Grumbullim i vonuar',
+  ],
+  'Kanalizim / përmbytje urbane': [
+    'Pusetë e bllokuar',
+    'Përmbytje e rrugës',
+    'Rrjedhje kanalizimi',
+  ],
+  'Ujë i pijshëm (ndërprerje / cilësi)': [
+    'Ndërprerje uji',
+    'Ujë i turbullt / cilësi',
+    'Rrjedhje në rrjet',
+  ],
+  'Parke, pemë, hapësirë e gjelbër': [
+    'Pemë e dëmtuar / e rrezikshme',
+    'Park i papastër',
+    'Mobilier parkesh e dëmtuar',
+  ],
+  'Ndërtim pa leje / shkelje urbanistike': [
+    'Ndërtim pa leje',
+    'Shkelje e kufirit të ndërtimit',
+    'Ndryshim fasade pa leje',
+  ],
+  'Pengesë në trotuar / qasje': [
+    'Automjet në trotuar',
+    'Pengesë e përhershme',
+    'Qasje e kufizuar për persona me aftësi të kufizuara',
+  ],
+  'Hedhje e paligjshme / ndotje': [
+    'Hedhje e paligjshme mbeturinash',
+    'Ndotje e hapësirës publike',
+    'Djegie e paligjshme',
+  ],
+  'Zhurmë / shqetësim në lagje': ['Zhurmë nga lokali', 'Zhurmë nga ndërtimi', 'Shqetësim natën'],
+  'Rrezik zjarri / emergjencë': ['Rrezik zjarri', 'Material i rrezikshëm', 'Emergjencë tjetër'],
+  'Sinjalistikë / rrezik në trafik': [
+    'Sinjalistikë e dëmtuar',
+    'Shenjë e munguar',
+    'Rrezik në kryqëzim',
+  ],
+  'Monument / trashëgimi e dëmtuar': [
+    'Monument i dëmtuar',
+    'Vandalizëm në trashëgimi',
+    'Mirëmbajtje monumenti',
+  ],
+  'Infrastrukturë shkollore e rrezikshme': [
+    'Oborr / hyrje e rrezikshme',
+    'Ndërtesë shkollore e dëmtuar',
+    'Pajisje lojërash e dëmtuar',
+  ],
+  'Infrastrukturë e kujdesit shëndetësor komunal': [
+    'Qasje e vështirësuar',
+    'Infrastrukturë e dëmtuar',
+    'Ambjent i papastër / i pasigurt',
+  ],
+  'Tjetër / e paklasifikuar': ['Raport i përgjithshëm', 'Kërkesë e papërcaktuar'],
+  'Kafshë endacake': ['Qen endacak', 'Mace endacake', 'Kafshë e lënduar'],
+  'Okupim i paligjshëm i pronës komunale': [
+    'Okupim i hapësirës publike',
+    'Ndërtim në pronë komunale',
+    'Pengesë në pronë komunale',
+  ],
+};
+
+/** Populate with real Prizren zones/neighborhoods (e.g. lagje names) once confirmed by the user — do not invent. */
+const ZONES: { name: string }[] = [];
+
 const SLA_POLICIES: {
   name: string;
   priority: Priority;
@@ -303,6 +383,29 @@ async function upsertCategory(
   return prisma.category.create({ data });
 }
 
+async function upsertSubcategory(
+  categoryId: string,
+  name: string,
+): Promise<{ id: string; name: string }> {
+  const existing = await prisma.subcategory.findUnique({
+    where: { categoryId_name: { categoryId, name } },
+  });
+  const data = { name, categoryId, active: true };
+  if (existing) {
+    return prisma.subcategory.update({ where: { id: existing.id }, data });
+  }
+  return prisma.subcategory.create({ data });
+}
+
+async function upsertZone(name: string): Promise<{ id: string; name: string }> {
+  const existing = await prisma.zone.findUnique({ where: { name } });
+  const data = { name, active: true };
+  if (existing) {
+    return prisma.zone.update({ where: { id: existing.id }, data });
+  }
+  return prisma.zone.create({ data });
+}
+
 async function upsertSeedInstitution(inst: (typeof INSTITUTIONS)[number]) {
   const existing =
     (await prisma.institution.findUnique({ where: { slug: inst.slug } })) ??
@@ -365,11 +468,36 @@ async function main() {
     catByName.set(cat.name, row);
   }
 
+  let subcategoryCount = 0;
+  for (const [categoryName, names] of Object.entries(SUBCATEGORIES)) {
+    const category = catByName.get(categoryName);
+    if (!category) {
+      throw new Error(`Seed SUBCATEGORIES references unknown category "${categoryName}"`);
+    }
+    for (const name of names) {
+      await upsertSubcategory(category.id, name);
+      subcategoryCount += 1;
+    }
+  }
+
+  // No-op while ZONES is empty — ready once real lagje names are confirmed.
+  let zoneCount = 0;
+  for (const zone of ZONES) {
+    await upsertZone(zone.name);
+    zoneCount += 1;
+  }
+
   const keepRuleNames = new Set<string>();
   for (const cat of CATEGORIES) {
     const dept = deptByName.get(cat.departmentName);
     const category = catByName.get(cat.name);
     if (!dept || !category) continue;
+    const institutionForCategory = cat.institutionSlug ? seeded.get(cat.institutionSlug) : komuna;
+    if (!institutionForCategory) {
+      throw new Error(
+        `Seed missing institution "${cat.institutionSlug}" for category "${cat.name}"`,
+      );
+    }
     const name = `${cat.name} → ${cat.departmentName}`;
     keepRuleNames.add(name);
     const data = {
@@ -379,7 +507,7 @@ async function main() {
       severity: null,
       isEmergency: null,
       departmentId: dept.id,
-      institutionId: komuna.id,
+      institutionId: institutionForCategory.id,
       priority: 100,
       slaHours: cat.slaHours,
       defaultPriority: cat.defaultPriority,
@@ -502,7 +630,7 @@ async function main() {
   ]);
 
   console.log(
-    `Seeded ${KEEP_INSTITUTION_SLUGS.join(', ')}: ${deptCount} municipal departments, ${catCount} categories, ${ruleCount} routing rules, ${slaCount} SLA policies. Institution.contact is email-only; unused mailboxes stay null. No outbound mail to institutions.`,
+    `Seeded ${KEEP_INSTITUTION_SLUGS.join(', ')}: ${deptCount} municipal departments, ${catCount} categories, ${subcategoryCount} draft subcategories, ${zoneCount} zones, ${ruleCount} routing rules, ${slaCount} SLA policies. Waste → Eco-Regjioni, drinking water → Hidroregjioni Jugor; other rules stay Komuna. Institution.contact is email-only; unused mailboxes stay null.`,
   );
 }
 
