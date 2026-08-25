@@ -40,6 +40,10 @@ export interface UpsertInstitutionRequest {
   type: string;
   phone?: string | null;
   contact?: string | null;
+  /** Defaults to MANUAL when omitted on create. */
+  integrationType?: 'EMAIL' | 'REST_API' | 'WEBHOOK' | 'SFTP' | 'MANUAL' | 'MOCK';
+  /** Defaults to NOT_CONFIGURED when omitted on create — never auto-ACTIVE. */
+  integrationStatus?: 'NOT_CONFIGURED' | 'MOCK' | 'TEST' | 'ACTIVE' | 'DISABLED';
   active?: boolean;
 }
 
