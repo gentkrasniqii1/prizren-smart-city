@@ -162,5 +162,9 @@ export const createReportFieldsSchema = z.object({
     .trim()
     .optional()
     .transform((value) => (value ? value : undefined)),
+  subcategoryId: z.preprocess((val) => {
+    if (val === '' || val === null || val === undefined) return undefined;
+    return typeof val === 'string' ? val.trim() : val;
+  }, z.string().uuid().optional()),
   website: honeypotSchema,
 });

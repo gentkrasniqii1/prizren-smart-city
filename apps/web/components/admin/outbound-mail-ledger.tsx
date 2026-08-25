@@ -17,7 +17,7 @@ import { useRealtimeRefresh } from '@/components/realtime-provider';
 import { LIVE_POLL_MS, usePolling } from '@/lib/use-polling';
 import { PageContainer } from '@/components/layout/page-container';
 import { Breadcrumbs } from '@/components/breadcrumbs';
-import { Badge, Button, EmptyState, ErrorBanner, FilterTabs } from '@/components/ui';
+import { Badge, Button, EmptyState, ErrorBanner, FilterTabs, Input, Label } from '@/components/ui';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import {
   Table,
@@ -78,6 +78,8 @@ export function OutboundMailLedger() {
   const errorMessage = useErrorMessage();
 
   const [status, setStatus] = useState<OutboundEmailStatus | 'all'>('all');
+  const [draftQ, setDraftQ] = useState('');
+  const [q, setQ] = useState('');
   const [rows, setRows] = useState<OutboundEmailDto[]>([]);
   const [enabled, setEnabled] = useState(false);
   const [total, setTotal] = useState(0);
@@ -102,6 +104,7 @@ export function OutboundMailLedger() {
       try {
         const params = new URLSearchParams({ limit: '50' });
         if (status !== 'all') params.set('status', status);
+        if (q.trim()) params.set('q', q.trim());
         const res = await apiFetch<PaginatedOutboundEmails>(
           `/outbound-emails?${params.toString()}`,
           {
@@ -119,7 +122,7 @@ export function OutboundMailLedger() {
         if (!opts?.background) setLoading(false);
       }
     },
-    [status, errorMessage, t],
+    [status, q, errorMessage, t],
   );
 
   useEffect(() => {
@@ -214,6 +217,25 @@ export function OutboundMailLedger() {
         >
           {enabled ? t('flagOn') : t('flagOff')}
         </p>
+
+        <form
+          className="mt-4 flex flex-col gap-2 sm:flex-row sm:items-end"
+          onSubmit={(e) => {
+            e.preventDefault();
+            setQ(draftQ);
+          }}
+        >
+          <div className="min-w-0 flex-1">
+            <Label htmlFor="outbound-q">{t('search')}</Label>
+            <Input
+              id="outbound-q"
+              value={draftQ}
+              onChange={(e) => setDraftQ(e.target.value)}
+              placeholder={t('searchPlaceholder')}
+            />
+          </div>
+          <Button type="submit">{t('searchSubmit')}</Button>
+        </form>
 
         <FilterTabs
           className="mt-6"

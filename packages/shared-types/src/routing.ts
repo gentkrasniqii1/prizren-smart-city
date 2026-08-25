@@ -2,6 +2,7 @@ import type { Priority } from './index';
 
 export type RouteInput = {
   categoryId?: string | null;
+  subcategoryId?: string | null;
   subcategory?: string | null;
   severity?: Priority | null;
   zone?: string | null;
@@ -13,6 +14,7 @@ export interface RoutingRuleDto {
   name: string;
   categoryId: string | null;
   categoryName: string | null;
+  subcategoryId: string | null;
   subcategory: string | null;
   severity: Priority | null;
   zone: string | null;
@@ -56,6 +58,11 @@ export interface UpsertCategoryRequest {
 export interface UpsertRoutingRuleRequest {
   name: string;
   categoryId?: string | null;
+  subcategoryId?: string | null;
+  /**
+   * Legacy free-text — rejected on new writes without subcategoryId.
+   * Existing historical rows may still store a string for matcher fallback.
+   */
   subcategory?: string | null;
   severity?: Priority | null;
   zone?: string | null;

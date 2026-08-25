@@ -99,13 +99,14 @@ export class CategoriesService {
     const existing = await this.prisma.category.findUnique({ where: { id } });
     if (!existing) throw new NotFoundException('Category not found');
 
-    const [reports, rules] = await Promise.all([
+    const [reports, rules, subs] = await Promise.all([
       this.prisma.report.count({ where: { categoryId: id } }),
       this.prisma.routingRule.count({ where: { categoryId: id } }),
+      this.prisma.subcategory.count({ where: { categoryId: id } }),
     ]);
-    if (reports + rules > 0) {
+    if (reports + rules + subs > 0) {
       throw new ConflictException(
-        'Category is in use. Reassign reports and routing rules before deleting.',
+        'Category is in use. Reassign reports, routing rules, and subcategories before deleting.',
       );
     }
 

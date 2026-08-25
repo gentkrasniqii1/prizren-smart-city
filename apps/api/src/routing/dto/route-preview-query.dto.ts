@@ -1,4 +1,4 @@
-import { IsBoolean, IsEnum, IsOptional, IsUUID } from 'class-validator';
+import { IsBoolean, IsEnum, IsOptional, IsString, IsUUID, MaxLength } from 'class-validator';
 import { Transform } from 'class-transformer';
 import { Priority } from '@prisma/client';
 
@@ -8,6 +8,11 @@ export class RoutePreviewQueryDto {
 
   @IsOptional()
   @IsUUID()
+  subcategoryId?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(80)
   subcategory?: string;
 
   @IsOptional()

@@ -187,3 +187,135 @@ describe('AdminDataService', () => {
     );
   });
 });
+
+describe('AdminDataService search where clauses', () => {
+  function serviceWith(prisma: Record<string, unknown>) {
+    return new AdminDataService(
+      prisma as unknown as PrismaService,
+      { log: vi.fn() } as unknown as AuditService,
+    );
+  }
+
+  it('searches departments by name, contact, institution, and id', async () => {
+    const count = vi.fn().mockResolvedValue(0);
+    const findMany = vi.fn().mockResolvedValue([]);
+    await serviceWith({ department: { count, findMany } }).list('departments', {
+      page: 1,
+      limit: 20,
+      q: 'Shërbime',
+    });
+    expect(findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: {
+          OR: expect.arrayContaining([
+            { name: { contains: 'Shërbime', mode: 'insensitive' } },
+            { contact: { contains: 'Shërbime', mode: 'insensitive' } },
+            { institution: { name: { contains: 'Shërbime', mode: 'insensitive' } } },
+            { id: { equals: 'Shërbime' } },
+          ]),
+        },
+      }),
+    );
+  });
+
+  it('searches categories by name and related department/institution', async () => {
+    const count = vi.fn().mockResolvedValue(0);
+    const findMany = vi.fn().mockResolvedValue([]);
+    await serviceWith({ category: { count, findMany } }).list('categories', {
+      page: 1,
+      limit: 20,
+      q: 'Grope',
+    });
+    expect(findMany.mock.calls[0]?.[0]?.where?.OR).toEqual(
+      expect.arrayContaining([
+        { name: { contains: 'Grope', mode: 'insensitive' } },
+        { department: { name: { contains: 'Grope', mode: 'insensitive' } } },
+      ]),
+    );
+  });
+
+  it('searches subcategories by name, category name, and ids', async () => {
+    const count = vi.fn().mockResolvedValue(0);
+    const findMany = vi.fn().mockResolvedValue([]);
+    await serviceWith({ subcategory: { count, findMany } }).list('subcategories', {
+      page: 1,
+      limit: 20,
+      q: 'Gropa',
+    });
+    expect(findMany.mock.calls[0]?.[0]?.where?.OR).toEqual(
+      expect.arrayContaining([
+        { name: { contains: 'Gropa', mode: 'insensitive' } },
+        { category: { name: { contains: 'Gropa', mode: 'insensitive' } } },
+        { id: { equals: 'Gropa' } },
+        { categoryId: { equals: 'Gropa' } },
+      ]),
+    );
+  });
+
+  it('searches routing rules including subcategory relation', async () => {
+    const count = vi.fn().mockResolvedValue(0);
+    const findMany = vi.fn().mockResolvedValue([]);
+    await serviceWith({ routingRule: { count, findMany } }).list('routing-rules', {
+      page: 1,
+      limit: 20,
+      q: 'Eco',
+    });
+    expect(findMany.mock.calls[0]?.[0]?.where?.OR).toEqual(
+      expect.arrayContaining([
+        { name: { contains: 'Eco', mode: 'insensitive' } },
+        { subcategory: { contains: 'Eco', mode: 'insensitive' } },
+        { subcategoryRef: { name: { contains: 'Eco', mode: 'insensitive' } } },
+        { institution: { name: { contains: 'Eco', mode: 'insensitive' } } },
+      ]),
+    );
+  });
+
+  it('searches sla policies by name and related scopes', async () => {
+    const count = vi.fn().mockResolvedValue(0);
+    const findMany = vi.fn().mockResolvedValue([]);
+    await serviceWith({ slaPolicy: { count, findMany } }).list('sla-policies', {
+      page: 1,
+      limit: 20,
+      q: 'Kritike',
+    });
+    expect(findMany.mock.calls[0]?.[0]?.where?.OR).toEqual(
+      expect.arrayContaining([
+        { name: { contains: 'Kritike', mode: 'insensitive' } },
+        { department: { name: { contains: 'Kritike', mode: 'insensitive' } } },
+        { category: { name: { contains: 'Kritike', mode: 'insensitive' } } },
+      ]),
+    );
+  });
+
+  it('searches audit logs by action and related user email', async () => {
+    const count = vi.fn().mockResolvedValue(0);
+    const findMany = vi.fn().mockResolvedValue([]);
+    await serviceWith({ auditLog: { count, findMany } }).list('audit-logs', {
+      page: 1,
+      limit: 20,
+      q: 'subcategory.create',
+    });
+    expect(findMany.mock.calls[0]?.[0]?.where?.OR).toEqual(
+      expect.arrayContaining([
+        { action: { contains: 'subcategory.create', mode: 'insensitive' } },
+        { user: { email: { contains: 'subcategory.create', mode: 'insensitive' } } },
+      ]),
+    );
+  });
+
+  it('searches status history by report publicId and note', async () => {
+    const count = vi.fn().mockResolvedValue(0);
+    const findMany = vi.fn().mockResolvedValue([]);
+    await serviceWith({ statusHistory: { count, findMany } }).list('status-history', {
+      page: 1,
+      limit: 20,
+      q: 'PRZ-2026',
+    });
+    expect(findMany.mock.calls[0]?.[0]?.where?.OR).toEqual(
+      expect.arrayContaining([
+        { report: { publicId: { contains: 'PRZ-2026', mode: 'insensitive' } } },
+        { note: { contains: 'PRZ-2026', mode: 'insensitive' } },
+      ]),
+    );
+  });
+});

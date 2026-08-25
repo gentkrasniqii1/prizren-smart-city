@@ -4,6 +4,7 @@ import { firstMatchingRule, ruleMatches } from './rule-match';
 
 const base = {
   categoryId: null as string | null,
+  subcategoryId: null as string | null,
   subcategory: null as string | null,
   severity: null as Priority | null,
   zone: null as string | null,
@@ -27,6 +28,19 @@ describe('ruleMatches', () => {
     const rule = { ...base, isEmergency: true };
     expect(ruleMatches(rule, { isEmergency: true })).toBe(true);
     expect(ruleMatches(rule, { isEmergency: false })).toBe(false);
+    expect(ruleMatches(rule, {})).toBe(false);
+  });
+
+  it('matches subcategoryId when present, with name fallback', () => {
+    const rule = {
+      ...base,
+      subcategoryId: 'sub-1',
+      subcategory: 'Gropa',
+    };
+    expect(ruleMatches(rule, { subcategoryId: 'sub-1' })).toBe(true);
+    expect(ruleMatches(rule, { subcategoryId: 'sub-2' })).toBe(false);
+    expect(ruleMatches(rule, { subcategory: 'Gropa' })).toBe(true);
+    expect(ruleMatches(rule, { subcategory: 'Other' })).toBe(false);
     expect(ruleMatches(rule, {})).toBe(false);
   });
 

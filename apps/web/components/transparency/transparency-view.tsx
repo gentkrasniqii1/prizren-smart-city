@@ -5,7 +5,12 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { useLocale, useTranslations } from 'next-intl';
-import type { PaginatedReports, ReportDto, TransparencyStats } from '@prizren/shared-types';
+import type {
+  PaginatedReports,
+  ReportDto,
+  TransparencyContact,
+  TransparencyStats,
+} from '@prizren/shared-types';
 import { apiFetch } from '@/lib/api';
 import { usePolling } from '@/lib/use-polling';
 import { PageContainer } from '@/components/layout/page-container';
@@ -55,6 +60,43 @@ function DistributionList({
   );
 }
 
+function ContactsSection({ contacts }: { contacts: TransparencyContact[] }) {
+  const t = useTranslations('Transparency');
+  return (
+    <section aria-labelledby="transparency-contacts" className="mt-10">
+      <h2 id="transparency-contacts" className="ds-card-title">
+        {t('contactsHeading')}
+      </h2>
+      <p className="mt-1 text-sm text-stone-600">{t('contactsHint')}</p>
+      {contacts.length === 0 ? (
+        <p className="mt-3 text-sm text-stone-600">{t('contactsEmpty')}</p>
+      ) : (
+        <ul className="mt-4 divide-y divide-stone-200 rounded-xl border border-stone-200 bg-card">
+          {contacts.map((row) => (
+            <li
+              key={`${row.departmentName}-${row.phone}`}
+              className="flex flex-col gap-1 px-4 py-3 sm:flex-row sm:items-baseline sm:justify-between"
+            >
+              <div className="min-w-0">
+                <p className="font-medium text-stone-900">{row.departmentName}</p>
+                {row.institutionName ? (
+                  <p className="text-xs text-stone-600">{row.institutionName}</p>
+                ) : null}
+              </div>
+              <a
+                href={`tel:${row.phone.replace(/\s+/g, '')}`}
+                className="shrink-0 text-sm font-semibold text-mosque-800 underline-offset-2 hover:underline"
+              >
+                {row.phone}
+              </a>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
+  );
+}
+
 export function TransparencyView() {
   const t = useTranslations('Transparency');
   const locale = useLocale() as AppLocale;
@@ -76,7 +118,10 @@ export function TransparencyView() {
           apiFetch<TransparencyStats>('/transparency'),
           apiFetch<PaginatedReports>('/reports?limit=100'),
         ]);
-        setStats(data);
+        setStats({
+          ...data,
+          contacts: data.contacts ?? [],
+        });
         setMapReports(reportsPage.data);
       } catch (err) {
         if (!opts?.background) {
@@ -112,6 +157,8 @@ export function TransparencyView() {
       label: row.category,
       count: row.count,
     })) ?? [];
+
+  const contacts = stats?.contacts ?? [];
 
   return (
     <main className="pb-bottom-nav pt-6 sm:pt-8">
@@ -150,7 +197,7 @@ export function TransparencyView() {
         ) : null}
 
         {!loading && !error && stats && stats.total === 0 ? (
-          <div className="mt-8">
+          <div className="mt-8 space-y-10">
             <EmptyState
               title={t('emptyTitle')}
               description={t('emptyBody')}
@@ -160,6 +207,7 @@ export function TransparencyView() {
                 </Button>
               }
             />
+            {contacts.length > 0 ? <ContactsSection contacts={contacts} /> : null}
           </div>
         ) : null}
 
@@ -199,6 +247,8 @@ export function TransparencyView() {
                 <DistributionList items={categoryItems} emptyLabel={t('noData')} />
               </div>
             </section>
+
+            {contacts.length > 0 ? <ContactsSection contacts={contacts} /> : null}
 
             {mapReports.length > 0 ? (
               <section aria-labelledby="transparency-map" className="mt-10">

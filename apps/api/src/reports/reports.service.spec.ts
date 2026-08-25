@@ -227,7 +227,16 @@ describe('ReportsService.create', () => {
   const citizen = { id: 'citizen-1', email: 'citizen@test.local', role: Role.CITIZEN };
   const currentYear = new Date().getFullYear();
 
-  function buildService(opts: { counterValue: number; routed: unknown }) {
+  function buildService(opts: {
+    counterValue: number;
+    routed: unknown;
+    subcategory?: {
+      id: string;
+      name: string;
+      categoryId: string;
+      active: boolean;
+    } | null;
+  }) {
     const reportCreate = vi.fn().mockImplementation(({ data }: { data: Record<string, unknown> }) =>
       Promise.resolve({
         id: 'report-1',
@@ -235,6 +244,7 @@ describe('ReportsService.create', () => {
         createdAt: new Date('2026-01-01T00:00:00.000Z'),
         updatedAt: new Date('2026-01-01T00:00:00.000Z'),
         category: null,
+        subcategoryRef: data.subcategoryId ? { name: opts.subcategory?.name ?? null } : null,
         department: null,
         institution: null,
         _count: { votes: 0 },
@@ -263,6 +273,9 @@ describe('ReportsService.create', () => {
       ),
       $executeRaw: vi.fn().mockResolvedValue(undefined),
       auditLog: { create: vi.fn() },
+      subcategory: {
+        findUnique: vi.fn().mockResolvedValue(opts.subcategory ?? null),
+      },
       report: {
         findUnique: vi.fn().mockImplementation(async () => {
           const last = reportCreate.mock.results.at(-1)?.value as
@@ -293,7 +306,7 @@ describe('ReportsService.create', () => {
       audit as unknown as AuditService,
     );
 
-    return { service, reportCreate, sequenceCounterUpsert, routing, audit };
+    return { service, reportCreate, sequenceCounterUpsert, routing, audit, prisma };
   }
 
   it('generates a sequential publicId and persists the routed institutionId', async () => {
@@ -315,7 +328,11 @@ describe('ReportsService.create', () => {
       categoryId: 'cat-1',
     });
 
-    expect(routing.route).toHaveBeenCalledWith({ categoryId: 'cat-1' });
+    expect(routing.route).toHaveBeenCalledWith({
+      categoryId: 'cat-1',
+      subcategoryId: undefined,
+      subcategory: undefined,
+    });
 
     const expectedPublicId = `PRZ-${currentYear}-000008`;
     expect(reportCreate).toHaveBeenCalledWith(
@@ -325,11 +342,14 @@ describe('ReportsService.create', () => {
           departmentId: 'dept-1',
           institutionId: 'inst-1',
           priority: Priority.HIGH,
+          subcategoryId: null,
+          subcategory: null,
         }),
       }),
     );
     expect(dto.publicId).toBe(expectedPublicId);
     expect(dto.institutionId).toBe('inst-1');
+    expect(dto.subcategoryId).toBeNull();
     expect(dto.status).toBe(ReportStatus.SUBMITTED);
     expect(audit.log).toHaveBeenCalledWith(expect.objectContaining({ action: 'report.create' }));
     expect(audit.log).toHaveBeenCalledWith(
@@ -357,6 +377,114 @@ describe('ReportsService.create', () => {
         }),
       }),
     );
+  });
+
+  it('persists category + valid subcategory and exposes subcategoryId on the DTO', async () => {
+    const { service, reportCreate, routing } = buildService({
+      counterValue: 2,
+      routed: {
+        categoryId: 'cat-1',
+        departmentId: 'dept-1',
+        institutionId: 'inst-1',
+        slaHours: 24,
+        defaultPriority: Priority.MEDIUM,
+      },
+      subcategory: {
+        id: 'sub-1',
+        name: 'Gropa',
+        categoryId: 'cat-1',
+        active: true,
+      },
+    });
+
+    const dto = await service.create(citizen as never, {
+      description: 'Deep pothole',
+      lat: 42.2,
+      lng: 20.7,
+      categoryId: 'cat-1',
+      subcategoryId: 'sub-1',
+    });
+
+    expect(routing.route).toHaveBeenCalledWith({
+      categoryId: 'cat-1',
+      subcategoryId: 'sub-1',
+      subcategory: 'Gropa',
+    });
+    expect(reportCreate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          categoryId: 'cat-1',
+          subcategoryId: 'sub-1',
+          subcategory: 'Gropa',
+        }),
+      }),
+    );
+    expect(dto.subcategoryId).toBe('sub-1');
+    expect(dto.subcategory).toBe('Gropa');
+  });
+
+  it('rejects subcategory belonging to another category', async () => {
+    const { service } = buildService({
+      counterValue: 1,
+      routed: null,
+      subcategory: {
+        id: 'sub-1',
+        name: 'Gropa',
+        categoryId: 'cat-other',
+        active: true,
+      },
+    });
+
+    await expect(
+      service.create(citizen as never, {
+        description: 'Mismatch',
+        lat: 42.2,
+        lng: 20.7,
+        categoryId: 'cat-1',
+        subcategoryId: 'sub-1',
+      }),
+    ).rejects.toBeInstanceOf(BadRequestException);
+  });
+
+  it('rejects nonexistent subcategory', async () => {
+    const { service } = buildService({
+      counterValue: 1,
+      routed: null,
+      subcategory: null,
+    });
+
+    await expect(
+      service.create(citizen as never, {
+        description: 'Missing sub',
+        lat: 42.2,
+        lng: 20.7,
+        categoryId: 'cat-1',
+        subcategoryId: 'missing',
+      }),
+    ).rejects.toBeInstanceOf(NotFoundException);
+  });
+
+  it('rejects inactive subcategory on create', async () => {
+    const { service } = buildService({
+      counterValue: 1,
+      routed: null,
+      subcategory: {
+        id: 'sub-1',
+        name: 'Gropa',
+        categoryId: 'cat-1',
+        active: false,
+      },
+    });
+
+    await expect(
+      service.create(citizen as never, {
+        description: 'Inactive sub',
+        lat: 42.2,
+        lng: 20.7,
+        categoryId: 'cat-1',
+        subcategoryId: 'sub-1',
+      }),
+    ).rejects.toBeInstanceOf(BadRequestException);
   });
 });
 
@@ -520,6 +648,7 @@ function reportRow(overrides: Record<string, unknown> = {}) {
     publicId: 'PRZ-2026-000001',
     userId: 'owner-1',
     categoryId: null,
+    subcategoryId: null,
     subcategory: null,
     departmentId: null,
     institutionId: null,
@@ -846,7 +975,12 @@ describe('ReportsService.moderate', () => {
 
     const dto = await service.moderate('r1', staff as never, { action: 'approve' });
 
-    expect(route).toHaveBeenCalledWith({ categoryId: 'cat-1', severity: Priority.HIGH });
+    expect(route).toHaveBeenCalledWith({
+      categoryId: 'cat-1',
+      severity: Priority.HIGH,
+      subcategoryId: null,
+      subcategory: null,
+    });
     expect(reportUpdate).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({

@@ -7,6 +7,7 @@ import {
   ParseUUIDPipe,
   Patch,
   Post,
+  Query,
   Req,
   UseGuards,
 } from '@nestjs/common';
@@ -17,25 +18,31 @@ import { Roles } from '../auth/decorators/roles.decorator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { getClientIp } from '../common/client-ip';
-import { DepartmentsService } from './departments.service';
-import { UpsertDepartmentDto } from './dto/upsert-department.dto';
+import { SubcategoriesService } from './subcategories.service';
+import { UpsertSubcategoryDto } from './dto/upsert-subcategory.dto';
 
-@Controller('departments')
-export class DepartmentsController {
-  constructor(private readonly departments: DepartmentsService) {}
+@Controller('subcategories')
+export class SubcategoriesController {
+  constructor(private readonly subcategories: SubcategoriesService) {}
 
   @Get()
-  list() {
-    // Verified municipal switchboard numbers are public (same source as
-    // Komuna "Telefonat me rëndësi"). Institution.contact (mailbox) stays gated.
-    return this.departments.list(true);
+  list(
+    @Query('categoryId') categoryId?: string,
+    @Query('includeInactive') includeInactive?: string,
+    @Query('q') q?: string,
+  ) {
+    return this.subcategories.list({
+      categoryId: categoryId || undefined,
+      includeInactive: includeInactive === 'true',
+      q: q || undefined,
+    });
   }
 
   @Post()
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.DEPARTMENT_ADMIN, Role.SUPER_ADMIN)
-  create(@CurrentUser() user: AuthUser, @Body() dto: UpsertDepartmentDto, @Req() req: Request) {
-    return this.departments.create(user, dto, getClientIp(req));
+  create(@CurrentUser() user: AuthUser, @Body() dto: UpsertSubcategoryDto, @Req() req: Request) {
+    return this.subcategories.create(user, dto, getClientIp(req));
   }
 
   @Patch(':id')
@@ -44,10 +51,10 @@ export class DepartmentsController {
   update(
     @Param('id', ParseUUIDPipe) id: string,
     @CurrentUser() user: AuthUser,
-    @Body() dto: UpsertDepartmentDto,
+    @Body() dto: UpsertSubcategoryDto,
     @Req() req: Request,
   ) {
-    return this.departments.update(id, user, dto, getClientIp(req));
+    return this.subcategories.update(id, user, dto, getClientIp(req));
   }
 
   @Delete(':id')
@@ -58,6 +65,6 @@ export class DepartmentsController {
     @CurrentUser() user: AuthUser,
     @Req() req: Request,
   ) {
-    return this.departments.remove(id, user, getClientIp(req));
+    return this.subcategories.remove(id, user, getClientIp(req));
   }
 }

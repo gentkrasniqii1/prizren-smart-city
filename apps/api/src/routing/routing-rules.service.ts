@@ -1,15 +1,17 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { Priority } from '@prisma/client';
 import type { RoutingRuleDto } from '@prizren/shared-types';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
 import { AuthUser } from '../auth/decorators/current-user.decorator';
+import { resolveActiveSubcategory } from '../common/subcategory-ref';
 import { UpsertRoutingRuleDto } from './dto/upsert-routing-rule.dto';
 
 type RuleRow = {
   id: string;
   name: string;
   categoryId: string | null;
+  subcategoryId: string | null;
   subcategory: string | null;
   severity: Priority | null;
   zone: string | null;
@@ -51,9 +53,9 @@ export class RoutingRulesService {
     dto: UpsertRoutingRuleDto,
     ip?: string | null,
   ): Promise<RoutingRuleDto> {
-    await this.assertRefs(dto);
+    const refs = await this.resolveRefs(dto);
     const created = await this.prisma.routingRule.create({
-      data: this.toData(dto),
+      data: this.toData(dto, refs),
       include: {
         category: { select: { name: true } },
         department: { select: { name: true } },
@@ -78,11 +80,11 @@ export class RoutingRulesService {
   ): Promise<RoutingRuleDto> {
     const existing = await this.prisma.routingRule.findUnique({ where: { id } });
     if (!existing) throw new NotFoundException('Routing rule not found');
-    await this.assertRefs(dto);
+    const refs = await this.resolveRefs(dto);
 
     const updated = await this.prisma.routingRule.update({
       where: { id },
-      data: this.toData(dto),
+      data: this.toData(dto, refs),
       include: {
         category: { select: { name: true } },
         department: { select: { name: true } },
@@ -113,11 +115,15 @@ export class RoutingRulesService {
     return { ok: true };
   }
 
-  private toData(dto: UpsertRoutingRuleDto) {
+  private toData(
+    dto: UpsertRoutingRuleDto,
+    refs: { subcategoryId: string | null; subcategory: string | null; categoryId: string | null },
+  ) {
     return {
       name: dto.name.trim(),
-      categoryId: dto.categoryId || null,
-      subcategory: dto.subcategory?.trim() || null,
+      categoryId: refs.categoryId,
+      subcategoryId: refs.subcategoryId,
+      subcategory: refs.subcategory,
       severity: dto.severity ?? null,
       zone: dto.zone?.trim() || null,
       isEmergency: dto.isEmergency ?? null,
@@ -130,7 +136,13 @@ export class RoutingRulesService {
     };
   }
 
-  private async assertRefs(dto: UpsertRoutingRuleDto) {
+  private async resolveRefs(dto: UpsertRoutingRuleDto): Promise<{
+    subcategoryId: string | null;
+    subcategory: string | null;
+    categoryId: string | null;
+  }> {
+    let categoryId = dto.categoryId || null;
+
     if (dto.categoryId) {
       const found = await this.prisma.category.findUnique({ where: { id: dto.categoryId } });
       if (!found) throw new NotFoundException('Category not found');
@@ -143,6 +155,31 @@ export class RoutingRulesService {
       const found = await this.prisma.institution.findUnique({ where: { id: dto.institutionId } });
       if (!found) throw new NotFoundException('Institution not found');
     }
+
+    const freeText = dto.subcategory?.trim() || null;
+    if (freeText && !dto.subcategoryId) {
+      throw new BadRequestException(
+        'Free-text subcategory is no longer accepted. Create a Subcategory and pass subcategoryId.',
+      );
+    }
+
+    const resolved = await resolveActiveSubcategory(this.prisma, {
+      subcategoryId: dto.subcategoryId,
+      categoryId,
+    });
+    if (resolved) {
+      return {
+        subcategoryId: resolved.subcategoryId,
+        subcategory: resolved.subcategory,
+        categoryId: categoryId ?? resolved.categoryId,
+      };
+    }
+
+    return {
+      subcategoryId: null,
+      subcategory: null,
+      categoryId,
+    };
   }
 
   private toDto(row: RuleRow): RoutingRuleDto {
@@ -151,6 +188,7 @@ export class RoutingRulesService {
       name: row.name,
       categoryId: row.categoryId,
       categoryName: row.category?.name ?? null,
+      subcategoryId: row.subcategoryId,
       subcategory: row.subcategory,
       severity: row.severity,
       zone: row.zone,

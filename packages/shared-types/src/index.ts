@@ -161,6 +161,9 @@ export interface ReportDto {
   publicId: string;
   userId?: string;
   categoryId: string | null;
+  /** Canonical subcategory FK when set; prefer over free-text `subcategory`. */
+  subcategoryId: string | null;
+  /** Denormalized name from Subcategory, or legacy free-text when no FK. */
   subcategory: string | null;
   departmentId: string | null;
   /** Responsible external organization, distinct from the internal department. */
@@ -228,6 +231,22 @@ export interface CategoryDto {
   institutionName?: string | null;
 }
 
+export interface SubcategoryDto {
+  id: string;
+  name: string;
+  categoryId: string;
+  categoryName: string;
+  active: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface UpsertSubcategoryRequest {
+  name: string;
+  categoryId: string;
+  active?: boolean;
+}
+
 export interface StatusHistoryDto {
   id: string;
   reportId?: string;
@@ -254,6 +273,8 @@ export interface ModerateReportRequest {
   duplicateOfId?: string;
   /** Optional category to apply at approve-time before RoutingService.route(). */
   categoryId?: string;
+  /** Optional subcategory FK; must belong to the selected/existing category. */
+  subcategoryId?: string;
 }
 
 export interface UpdateReportPriorityRequest {
@@ -390,6 +411,12 @@ export interface PaginatedNotifications {
   };
 }
 
+export interface TransparencyContact {
+  departmentName: string;
+  phone: string;
+  institutionName: string | null;
+}
+
 export interface TransparencyStats {
   total: number;
   resolved: number;
@@ -399,6 +426,8 @@ export interface TransparencyStats {
   byStatus: AnalyticsByStatusItem[];
   byCategory: AnalyticsByCategoryItem[];
   avgResolutionHours: number | null;
+  /** Verified municipal switchboard numbers only (Department.contact). */
+  contacts: TransparencyContact[];
 }
 
 export type { RealtimeEvent, RealtimeEventType } from './realtime';

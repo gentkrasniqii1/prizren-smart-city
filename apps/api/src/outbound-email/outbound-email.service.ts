@@ -135,9 +135,22 @@ export class OutboundEmailService {
     const page = query.page ?? 1;
     const limit = query.limit ?? 20;
     const scope = await this.staffScope(user);
+    const q = query.q?.trim();
     const where: Prisma.OutboundEmailWhereInput = {
       ...scope,
       ...(query.status ? { status: query.status } : {}),
+      ...(q
+        ? {
+            OR: [
+              { recipient: { contains: q, mode: 'insensitive' } },
+              { subject: { contains: q, mode: 'insensitive' } },
+              { lastError: { contains: q, mode: 'insensitive' } },
+              { skipReason: { contains: q, mode: 'insensitive' } },
+              { report: { publicId: { contains: q, mode: 'insensitive' } } },
+              { institution: { name: { contains: q, mode: 'insensitive' } } },
+            ],
+          }
+        : {}),
     };
 
     const [total, rows] = await Promise.all([
@@ -174,6 +187,19 @@ export class OutboundEmailService {
     }
     if (!RETRYABLE.includes(existing.status)) {
       throw new BadRequestException(`Cannot retry a message that is ${existing.status}`);
+    }
+
+    // NOT_CONFIGURED retries only make sense once the institution mail config is ready.
+    if (existing.status === OutboundEmailStatus.NOT_CONFIGURED) {
+      const report = await this.loadReport(existing.reportId);
+      const decision = this.decide(report.institution);
+      if (!decision.send) {
+        const institutionName = report.institution?.name ?? 'this institution';
+        throw new BadRequestException(
+          `Cannot retry: institutional mail is not configured for ${institutionName}. ` +
+            `Configure the institution's mail integration first (${decision.skipReason}).`,
+        );
+      }
     }
 
     await this.audit.log({
