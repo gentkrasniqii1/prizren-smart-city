@@ -853,6 +853,9 @@
     "search": "Search",
     "searchPlaceholder": "Case, institution, recipient, reason…",
     "searchSubmit": "Search",
+    "pageOf": "Page {page} of {totalPages} · {total} rows",
+    "prev": "Previous",
+    "next": "Next",
     "filterLabel": "Delivery status",
     "filterAll": "All",
     "loadError": "Could not load the mail ledger.",
@@ -958,6 +961,8 @@
     "colCategory": "Category",
     "colPhone": "Phone",
     "colContact": "Email",
+    "colIntegrationType": "Integration type",
+    "colIntegrationStatus": "Integration status",
     "colActions": "Actions",
     "order": "Rule order",
     "hours": "{n} hours",
@@ -1009,7 +1014,24 @@
       "UTILITY": "Utility",
       "EMERGENCY": "Emergency service",
       "OTHER": "Other"
-    }
+    },
+    "integrationTypes": {
+      "EMAIL": "Email",
+      "REST_API": "REST API",
+      "WEBHOOK": "Webhook",
+      "SFTP": "SFTP",
+      "MANUAL": "Manual",
+      "MOCK": "Mock"
+    },
+    "integrationStatuses": {
+      "NOT_CONFIGURED": "Not configured",
+      "MOCK": "Mock",
+      "TEST": "Test",
+      "ACTIVE": "Active",
+      "DISABLED": "Disabled"
+    },
+    "integrationMailHint": "Mail sends only when Type = Email and Status = Test or Active, and a Contact email is set above.",
+    "integrationContactWarning": "Status is Test/Active but Contact is empty — institutional mail will still skip with NO_CONTACT until an email is set."
   },
   "AdminData": {
     "kicker": "Super admin",

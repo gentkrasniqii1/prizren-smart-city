@@ -80,9 +80,11 @@ export function OutboundMailLedger() {
   const [status, setStatus] = useState<OutboundEmailStatus | 'all'>('all');
   const [draftQ, setDraftQ] = useState('');
   const [q, setQ] = useState('');
+  const [page, setPage] = useState(1);
   const [rows, setRows] = useState<OutboundEmailDto[]>([]);
   const [enabled, setEnabled] = useState(false);
   const [total, setTotal] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [retryTarget, setRetryTarget] = useState<OutboundEmailDto | null>(null);
@@ -102,7 +104,10 @@ export function OutboundMailLedger() {
         setError(null);
       }
       try {
-        const params = new URLSearchParams({ limit: '50' });
+        const params = new URLSearchParams({
+          page: String(page),
+          limit: '50',
+        });
         if (status !== 'all') params.set('status', status);
         if (q.trim()) params.set('q', q.trim());
         const res = await apiFetch<PaginatedOutboundEmails>(
@@ -113,6 +118,7 @@ export function OutboundMailLedger() {
         );
         setRows(res.data);
         setTotal(res.meta.total);
+        setTotalPages(res.meta.totalPages);
         setEnabled(res.meta.enabled);
       } catch (err) {
         if (!opts?.background) {
@@ -122,7 +128,7 @@ export function OutboundMailLedger() {
         if (!opts?.background) setLoading(false);
       }
     },
-    [status, q, errorMessage, t],
+    [status, q, page, errorMessage, t],
   );
 
   useEffect(() => {
@@ -222,6 +228,7 @@ export function OutboundMailLedger() {
           className="mt-4 flex flex-col gap-2 sm:flex-row sm:items-end"
           onSubmit={(e) => {
             e.preventDefault();
+            setPage(1);
             setQ(draftQ);
           }}
         >
@@ -240,7 +247,10 @@ export function OutboundMailLedger() {
         <FilterTabs
           className="mt-6"
           value={status}
-          onChange={setStatus}
+          onChange={(next) => {
+            setPage(1);
+            setStatus(next);
+          }}
           label={t('filterLabel')}
           options={filterOptions}
         >
@@ -337,9 +347,31 @@ export function OutboundMailLedger() {
             </Table>
           )}
 
-          <p className="mt-4 text-caption text-muted-foreground">
-            {t('showing', { count: rows.length, total })}
-          </p>
+          <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+            <p className="text-caption text-muted-foreground">
+              {t('pageOf', { page, totalPages, total })}
+            </p>
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                disabled={page <= 1 || loading}
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+              >
+                {t('prev')}
+              </Button>
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                disabled={page >= totalPages || loading}
+                onClick={() => setPage((p) => p + 1)}
+              >
+                {t('next')}
+              </Button>
+            </div>
+          </div>
         </FilterTabs>
       </PageContainer>
 

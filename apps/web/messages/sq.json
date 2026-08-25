@@ -853,6 +853,9 @@
     "search": "Kërko",
     "searchPlaceholder": "Rasti, institucioni, marrësi, arsyeja…",
     "searchSubmit": "Kërko",
+    "pageOf": "Faqja {page} nga {totalPages} · {total} rreshta",
+    "prev": "E mëparshme",
+    "next": "E radhës",
     "filterLabel": "Statusi i dërgesës",
     "filterAll": "Të gjitha",
     "loadError": "Regjistri i postës nuk u ngarkua.",
@@ -958,6 +961,8 @@
     "colCategory": "Kategoria",
     "colPhone": "Telefoni",
     "colContact": "Email",
+    "colIntegrationType": "Lloji i integrimit",
+    "colIntegrationStatus": "Statusi i integrimit",
     "colActions": "Veprimet",
     "order": "Renditja e rregullës",
     "hours": "{n} orë",
@@ -1009,7 +1014,24 @@
       "UTILITY": "Shërbim publik",
       "EMERGENCY": "Shërbim emergjence",
       "OTHER": "Tjetër"
-    }
+    },
+    "integrationTypes": {
+      "EMAIL": "Email",
+      "REST_API": "REST API",
+      "WEBHOOK": "Webhook",
+      "SFTP": "SFTP",
+      "MANUAL": "Manuale",
+      "MOCK": "Mock"
+    },
+    "integrationStatuses": {
+      "NOT_CONFIGURED": "Jo e konfiguruar",
+      "MOCK": "Mock",
+      "TEST": "Test",
+      "ACTIVE": "Aktive",
+      "DISABLED": "Çaktivizuar"
+    },
+    "integrationMailHint": "Email-i dërgohet vetëm kur Lloji = Email dhe Statusi = Test ose Aktive, dhe një Contact email është vendosur sipër.",
+    "integrationContactWarning": "Statusi është Test/Aktive por Contact është bosh — emaili institucional do të anashkalohet me NO_CONTACT derisa të vendoset një email."
   },
   "AdminData": {
     "kicker": "Super admin",

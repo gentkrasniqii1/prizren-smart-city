@@ -63,6 +63,8 @@ type Tab = 'rules' | 'institutions' | 'departments' | 'categories' | 'subcategor
 const STAFF_ROLES = new Set(['DEPARTMENT_STAFF', 'DEPARTMENT_ADMIN', 'SUPER_ADMIN']);
 const EDIT_ROLES = new Set(['DEPARTMENT_ADMIN', 'SUPER_ADMIN']);
 const INST_TYPES = ['MUNICIPALITY', 'UTILITY', 'EMERGENCY', 'OTHER'] as const;
+const INTEGRATION_TYPES = ['EMAIL', 'REST_API', 'WEBHOOK', 'SFTP', 'MANUAL', 'MOCK'] as const;
+const INTEGRATION_STATUSES = ['NOT_CONFIGURED', 'MOCK', 'TEST', 'ACTIVE', 'DISABLED'] as const;
 
 function isStaff(role?: string) {
   return Boolean(role && STAFF_ROLES.has(role));
@@ -556,13 +558,15 @@ export function RoutingConfig() {
 
           <TabsContent value="institutions">
             <div className="-mx-gutter overflow-x-auto border-y border-border bg-card sm:mx-0 sm:rounded-xl sm:border">
-              <Table className="min-w-[52rem]">
+              <Table className="min-w-[64rem]">
                 <TableHeader>
                   <TableRow>
                     <TableHead>{t('colName')}</TableHead>
                     <TableHead>{t('colType')}</TableHead>
                     <TableHead>{t('colPhone')}</TableHead>
                     <TableHead>{t('colContact')}</TableHead>
+                    <TableHead>{t('colIntegrationType')}</TableHead>
+                    <TableHead>{t('colIntegrationStatus')}</TableHead>
                     <TableHead>{t('colStatus')}</TableHead>
                     <TableHead className="text-right">{t('colActions')}</TableHead>
                   </TableRow>
@@ -578,6 +582,12 @@ export function RoutingConfig() {
                       </TableCell>
                       <TableCell className="text-sm">{inst.phone ?? '—'}</TableCell>
                       <TableCell className="text-sm">{inst.contact ?? '—'}</TableCell>
+                      <TableCell className="text-sm">
+                        {t(`integrationTypes.${inst.integrationType}`)}
+                      </TableCell>
+                      <TableCell className="text-sm">
+                        {t(`integrationStatuses.${inst.integrationStatus}`)}
+                      </TableCell>
                       <TableCell>{inst.active ? t('active') : t('inactive')}</TableCell>
                       <TableCell className="text-right">
                         <RowActions
@@ -1168,9 +1178,12 @@ function InstitutionDialog({
   const [type, setType] = useState('MUNICIPALITY');
   const [phone, setPhone] = useState('');
   const [contact, setContact] = useState('');
+  const [integrationType, setIntegrationType] = useState('MANUAL');
+  const [integrationStatus, setIntegrationStatus] = useState('NOT_CONFIGURED');
   const [active, setActive] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [warnContact, setWarnContact] = useState(false);
 
   useEffect(() => {
     if (!open) return;
@@ -1178,19 +1191,28 @@ function InstitutionDialog({
     setType(existing?.type ?? 'MUNICIPALITY');
     setPhone(existing?.phone ?? '');
     setContact(existing?.contact ?? '');
+    // New institutions stay MANUAL / NOT_CONFIGURED — never default to ACTIVE/TEST.
+    setIntegrationType(existing?.integrationType ?? 'MANUAL');
+    setIntegrationStatus(existing?.integrationStatus ?? 'NOT_CONFIGURED');
     setActive(existing?.active ?? true);
     setError(null);
+    setWarnContact(false);
   }, [existing, open]);
 
   async function save() {
     setSaving(true);
     setError(null);
+    const contactTrimmed = contact.trim();
+    const sendableStatus = integrationStatus === 'TEST' || integrationStatus === 'ACTIVE';
+    setWarnContact(sendableStatus && !contactTrimmed);
     try {
       const body = {
         name,
         type,
         phone: emptyToNull(phone),
         contact: emptyToNull(contact),
+        integrationType,
+        integrationStatus,
         active,
       };
       if (existing) {
@@ -1244,9 +1266,49 @@ function InstitutionDialog({
               id="inst-contact"
               type="email"
               value={contact}
-              onChange={(e) => setContact(e.target.value)}
+              onChange={(e) => {
+                setContact(e.target.value);
+                setWarnContact(false);
+              }}
             />
           </div>
+          <div>
+            <Label htmlFor="inst-integration-type">{t('colIntegrationType')}</Label>
+            <Select
+              id="inst-integration-type"
+              value={integrationType}
+              onChange={(e) => setIntegrationType(e.target.value)}
+            >
+              {INTEGRATION_TYPES.map((item) => (
+                <option key={item} value={item}>
+                  {t(`integrationTypes.${item}`)}
+                </option>
+              ))}
+            </Select>
+          </div>
+          <div>
+            <Label htmlFor="inst-integration-status">{t('colIntegrationStatus')}</Label>
+            <Select
+              id="inst-integration-status"
+              value={integrationStatus}
+              onChange={(e) => {
+                setIntegrationStatus(e.target.value);
+                setWarnContact(false);
+              }}
+            >
+              {INTEGRATION_STATUSES.map((item) => (
+                <option key={item} value={item}>
+                  {t(`integrationStatuses.${item}`)}
+                </option>
+              ))}
+            </Select>
+          </div>
+          <p className="text-caption text-muted-foreground">{t('integrationMailHint')}</p>
+          {warnContact ? (
+            <p className="text-caption text-amber-700 dark:text-amber-400" role="status">
+              {t('integrationContactWarning')}
+            </p>
+          ) : null}
           <Checkbox id="inst-active" checked={active} onChange={setActive}>
             {t('active')}
           </Checkbox>
