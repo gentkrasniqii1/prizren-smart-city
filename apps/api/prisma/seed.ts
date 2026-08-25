@@ -14,13 +14,17 @@ const INSTITUTIONS: {
   type: string;
   phone: string | null;
   contact: string | null;
+  socialContact?: string | null;
 }[] = [
   {
     name: 'Komuna e Prizrenit',
     slug: 'komuna-prizren',
     type: 'MUNICIPALITY',
     phone: '0800 11 002',
+    // Confirmed: no public email exists (prizren.rks-gov.net/kontakt/, and Facebook Contact Info lists only phone/Messenger).
     contact: null,
+    // Official Facebook page, confirmed via Contact Info: phone + Messenger only, no email.
+    socialContact: 'https://www.facebook.com/kkprizren',
   },
   {
     name: 'KEDS',
@@ -45,9 +49,10 @@ const INSTITUTIONS: {
     slug: 'eco-regjioni',
     type: 'UTILITY',
     phone: '029 241 167',
-    // ekoregjioni.com/zyret-kontaktuese lists info@ekoregjioni.com next to a personal
-    // mailbox — left null until the user confirms which address is the public inbox.
-    contact: null,
+    // Confirmed via Eco-Regjioni's official Facebook page (facebook.com/profile.php?id=61578207656755),
+    // "KRM Eko Regjioni SH.A - Njësia Operative Prizren", Contact Info section — listed in plaintext,
+    // independent of the Cloudflare-obfuscated address on ekoregjioni.com/zyret-kontaktuese/.
+    contact: 'info@ekoregjioni.com',
   },
 ];
 
@@ -310,6 +315,7 @@ async function upsertSeedInstitution(inst: (typeof INSTITUTIONS)[number]) {
     type: inst.type,
     phone: inst.phone,
     contact: inst.contact,
+    socialContact: inst.socialContact ?? null,
     active: true,
     integrationType: IntegrationType.MANUAL,
     integrationStatus: IntegrationStatus.NOT_CONFIGURED,
