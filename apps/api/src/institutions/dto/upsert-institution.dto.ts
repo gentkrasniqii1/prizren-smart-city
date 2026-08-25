@@ -1,4 +1,5 @@
-import { IsBoolean, IsOptional, IsString, MaxLength, ValidateIf } from 'class-validator';
+import { IntegrationStatus, IntegrationType } from '@prisma/client';
+import { IsBoolean, IsEnum, IsOptional, IsString, MaxLength, ValidateIf } from 'class-validator';
 
 export class UpsertInstitutionDto {
   @IsString()
@@ -25,6 +26,14 @@ export class UpsertInstitutionDto {
   @IsString()
   @MaxLength(200)
   contact?: string | null;
+
+  @IsOptional()
+  @IsEnum(IntegrationType)
+  integrationType?: IntegrationType;
+
+  @IsOptional()
+  @IsEnum(IntegrationStatus)
+  integrationStatus?: IntegrationStatus;
 
   @IsOptional()
   @IsBoolean()
