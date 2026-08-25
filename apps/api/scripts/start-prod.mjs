@@ -6,10 +6,10 @@
  * Seed is run via run-seed.mjs (not `prisma db seed`) so a temp Prisma cwd
  * cannot lose the relative seed command.
  *
- * Migrate + seed use the Neon unpooled host (DIRECT_URL, or DATABASE_URL with
- * `-pooler` stripped). The Nest process keeps the original DATABASE_URL so
- * request traffic stays on the pooler. Do not set spawn timeout — that kills
- * Prisma; it does not extend the 10s advisory-lock wait.
+ * Migrate uses schema `directUrl` / DIRECT_URL (unpooled). Seed (Prisma Client)
+ * uses an unpooled DATABASE_URL in its child process only. Nest keeps the
+ * original pooled DATABASE_URL. Do not set spawn timeout — that kills Prisma;
+ * it does not extend the 10s advisory-lock wait.
  */
 import { spawn, spawnSync } from 'node:child_process';
 import { dirname, join } from 'node:path';

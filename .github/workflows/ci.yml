@@ -10,10 +10,13 @@ concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
-jobs:
-  lint-and-build:
-    runs-on: ubuntu-latest
+env:
+  DUMMY_DATABASE_URL: postgresql://prizren:prizren@localhost:5432/prizren_smart_city?schema=public
 
+jobs:
+  backend:
+    name: Backend (lint+test)
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -34,31 +37,18 @@ jobs:
         working-directory: apps/api
         run: npx prisma generate
         env:
-          DATABASE_URL: postgresql://prizren:prizren@localhost:5432/prizren_smart_city?schema=public
+          DATABASE_URL: ${{ env.DUMMY_DATABASE_URL }}
+          DIRECT_URL: ${{ env.DUMMY_DATABASE_URL }}
 
-      - name: Lint
-        run: npm run lint
+      - name: Lint API
+        run: npm run lint -w @prizren/api
 
-      - name: Unit tests
-        run: npm run test
+      - name: Test API
+        run: npm test -w @prizren/api
 
-      - name: Build API
-        run: npm run build -w @prizren/api
-
-      - name: Build web
-        run: npm run build -w @prizren/web
-        env:
-          NEXT_PUBLIC_API_URL: http://localhost:3001
-
-      - name: Docker build API image
-        run: docker build -f apps/api/Dockerfile -t prizren-api:ci .
-
-  deploy-web:
-    name: Deploy web (Vercel)
-    needs: lint-and-build
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && vars.ENABLE_VERCEL_DEPLOY == 'true'
+  frontend:
+    name: Frontend (lint+test+build)
     runs-on: ubuntu-latest
-    environment: production
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -72,48 +62,13 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Pull Vercel project settings
-        working-directory: apps/web
-        run: npx vercel pull --yes --environment=production --token=${{ secrets.VERCEL_TOKEN }}
+      - name: Build shared types
+        run: npm run build -w @prizren/shared-types
+
+      - name: Lint web
+        run: npm run lint -w @prizren/web
+
+      - name: Build web
+        run: npm run build -w @prizren/web
         env:
-          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
-          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
-
-      - name: Build web for Vercel
-        working-directory: apps/web
-        run: npx vercel build --prod --token=${{ secrets.VERCEL_TOKEN }}
-        env:
-          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
-          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
-
-      - name: Deploy web to Vercel
-        working-directory: apps/web
-        run: npx vercel deploy --prebuilt --prod --token=${{ secrets.VERCEL_TOKEN }}
-        env:
-          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
-          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
-
-  deploy-api:
-    name: Deploy API (Railway)
-    needs: lint-and-build
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && vars.ENABLE_RAILWAY_DEPLOY == 'true'
-    runs-on: ubuntu-latest
-    environment: production
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: npm
-
-      - name: Install Railway CLI
-        run: npm install -g @railway/cli
-
-      - name: Deploy API to Railway
-        run: railway up --ci --service "${{ secrets.RAILWAY_SERVICE_ID }}"
-        env:
-          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
-          RAILWAY_PROJECT_ID: ${{ secrets.RAILWAY_PROJECT_ID }}
+          NEXT_PUBLIC_API_URL: http://localhost:3001

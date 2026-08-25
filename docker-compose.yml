@@ -39,6 +39,7 @@ services:
       NODE_ENV: production
       # Use Compose service hostname "postgres" (NOT localhost / host.docker.internal).
       DATABASE_URL: postgresql://${POSTGRES_USER:-prizren}:${POSTGRES_PASSWORD:-prizren}@postgres:5432/${POSTGRES_DB:-prizren_smart_city}?schema=public
+      DIRECT_URL: postgresql://${POSTGRES_USER:-prizren}:${POSTGRES_PASSWORD:-prizren}@postgres:5432/${POSTGRES_DB:-prizren_smart_city}?schema=public
       CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:3000}
       JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:-dev-access-secret-change-me}
       SENTRY_DSN: ${SENTRY_DSN:-}

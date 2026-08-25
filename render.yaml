@@ -3,9 +3,9 @@
 #   Build: (Dockerfile — no extra buildCommand)
 #   Docker start: node scripts/start-prod.mjs
 #
-# Neon: leave DATABASE_URL on the pooled (`-pooler`) host for the Nest process.
-# start-prod / prisma-prod strip `-pooler` (or use DIRECT_URL) for migrate + seed
-# so Prisma's session advisory lock is not taken through PgBouncer (P1002).
+# Neon: do not change DATABASE_URL (pooled, `-pooler`) — Nest uses it at runtime.
+# Add DIRECT_URL = Neon "Direct connection" (hostname WITHOUT `-pooler`).
+# Prisma schema `directUrl` makes migrate deploy use DIRECT_URL (avoids P1002).
 #
 # Native Node (no Docker) dashboard commands:
 #   Build Command:
