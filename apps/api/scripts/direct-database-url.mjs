@@ -3,8 +3,10 @@
  * takes a session-level `pg_advisory_lock` that the pooler cannot hold, so
  * `migrate deploy` fails after ~10s (P1002).
  *
- * The Nest process should keep DATABASE_URL (pooled). Schema ops (migrate,
- * seed-on-boot) should use DIRECT_URL or the same URL with `-pooler` removed.
+ * schema.prisma: `url` = DATABASE_URL (pooled, Nest + Prisma Client).
+ *                `directUrl` = DIRECT_URL (unpooled, Prisma CLI migrate).
+ * Seed is Prisma Client, so it must use DATABASE_URL pointed at the unpooled
+ * host for that child process only. Nest keeps the original pooled URL.
  */
 export function toDirectDatabaseUrl(databaseUrl) {
   if (!databaseUrl) return databaseUrl;
@@ -30,15 +32,33 @@ export function describeDatabaseHost(url) {
   }
 }
 
-/** Env for Prisma CLI / seed: never mutates the parent process.env. */
-export function schemaOpsEnv(env = process.env) {
+export function isPooledHost(url) {
+  return /-pooler(?=\.|$)/i.test(describeDatabaseHost(url));
+}
+
+function resolvedDirectUrl(env = process.env) {
   const databaseUrl = env.DATABASE_URL ?? '';
   const explicit = typeof env.DIRECT_URL === 'string' ? env.DIRECT_URL.trim() : '';
-  const direct = explicit || toDirectDatabaseUrl(databaseUrl);
+  return toDirectDatabaseUrl(explicit || databaseUrl) || databaseUrl;
+}
+
+/** Prisma CLI migrate: keep pooled DATABASE_URL; set DIRECT_URL for `directUrl`. */
+export function migrateEnv(env = process.env) {
+  const databaseUrl = env.DATABASE_URL ?? '';
   return {
     ...env,
-    DATABASE_URL: direct || databaseUrl,
-    DIRECT_URL: direct || databaseUrl,
+    DATABASE_URL: databaseUrl,
+    DIRECT_URL: resolvedDirectUrl(env),
+  };
+}
+
+/** Seed process (Prisma Client): Client only reads `url` / DATABASE_URL. */
+export function seedClientEnv(env = process.env) {
+  const direct = resolvedDirectUrl(env);
+  return {
+    ...env,
+    DATABASE_URL: direct,
+    DIRECT_URL: direct,
   };
 }
 

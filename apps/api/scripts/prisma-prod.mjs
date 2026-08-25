@@ -5,10 +5,11 @@
  * file is present, Prisma CLI can use it instead of the dashboard env var.
  *
  * This wrapper:
- *   - reads only process.env.DATABASE_URL (no hardcoded fallback)
- *   - fills from apps/api/.env only when DATABASE_URL is unset AND not production
+ *   - reads process.env.DATABASE_URL (no hardcoded fallback)
+ *   - fills from apps/api/.env only when not production (unset keys only)
  *   - runs Prisma from a temp cwd so the CLI cannot load apps/api/.env
- *   - points migrate at the Neon unpooled host (session advisory locks)
+ *   - leaves DATABASE_URL pooled; sets DIRECT_URL for schema `directUrl`
+ *     (Prisma migrate deploy uses directUrl automatically)
  */
 import { spawnSync } from 'node:child_process';
 import { createRequire } from 'node:module';
@@ -16,7 +17,7 @@ import { existsSync, mkdtempSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { describeDatabaseHost, schemaOpsEnv, sleepMs } from './direct-database-url.mjs';
+import { describeDatabaseHost, isPooledHost, migrateEnv, sleepMs } from './direct-database-url.mjs';
 
 const apiRoot = join(dirname(fileURLToPath(import.meta.url)), '..');
 const isProd = process.env.NODE_ENV === 'production';
@@ -26,7 +27,6 @@ const MIGRATE_RETRY_MS = 5_000;
 
 function fillFromLocalDotenvIfNeeded() {
   if (isProd) return;
-  if (process.env.DATABASE_URL) return;
   const envPath = join(apiRoot, '.env');
   if (!existsSync(envPath)) return;
   for (const line of readFileSync(envPath, 'utf8').split(/\r?\n/)) {
@@ -70,13 +70,27 @@ if (prismaArgs.length === 0) {
   process.exit(1);
 }
 
-const opsEnv = schemaOpsEnv(process.env);
-const opsHost = describeDatabaseHost(opsEnv.DATABASE_URL);
-if (opsHost !== runtimeHost) {
-  console.log(`Prisma runtime DATABASE_URL host: ${runtimeHost}`);
-  console.log(`Prisma migrate/seed host (unpooled): ${opsHost}`);
-} else {
-  console.log(`Prisma DATABASE_URL host: ${runtimeHost}`);
+const opsEnv = migrateEnv(process.env);
+const directHost = describeDatabaseHost(opsEnv.DIRECT_URL);
+const derivedDirect = !process.env.DIRECT_URL?.trim();
+
+if (derivedDirect) {
+  console.warn(
+    'DIRECT_URL is unset. Derived unpooled host from DATABASE_URL. ' +
+      'Set DIRECT_URL on Render (Neon → Connection Details → Direct connection).',
+  );
+}
+
+console.log(`Prisma url (DATABASE_URL / pooler) host: ${runtimeHost}`);
+console.log(`Prisma directUrl (DIRECT_URL / migrate) host: ${directHost}`);
+
+if (isPooledHost(opsEnv.DIRECT_URL)) {
+  console.error(
+    'DIRECT_URL still points at a Neon pooler host (`-pooler`). ' +
+      'Prisma migrate cannot take pg_advisory_lock through PgBouncer (P1002). ' +
+      'Set DIRECT_URL to the Direct connection string (hostname without `-pooler`).',
+  );
+  process.exit(1);
 }
 
 const isMigrate = prismaArgs[0] === 'migrate';

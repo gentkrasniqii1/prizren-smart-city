@@ -28,6 +28,7 @@ COPY packages/shared-types ./packages/shared-types
 COPY apps/api ./apps/api
 RUN npm run build -w @prizren/shared-types
 ENV DATABASE_URL=postgresql://build:build@127.0.0.1:5432/build?schema=public
+ENV DIRECT_URL=postgresql://build:build@127.0.0.1:5432/build?schema=public
 RUN npx prisma generate --schema=apps/api/prisma/schema.prisma
 WORKDIR /app/apps/api
 RUN npx --yes @nestjs/cli build
@@ -37,6 +38,8 @@ RUN npx tsc prisma/seed.ts --outDir dist/prisma --rootDir prisma --esModuleInter
 FROM base AS prod-deps
 ENV NODE_ENV=production
 ENV HUSKY=0
+ENV DATABASE_URL=postgresql://build:build@127.0.0.1:5432/build?schema=public
+ENV DIRECT_URL=postgresql://build:build@127.0.0.1:5432/build?schema=public
 COPY package.json package-lock.json ./
 COPY apps/api/package.json ./apps/api/
 COPY apps/web/package.json ./apps/web/
