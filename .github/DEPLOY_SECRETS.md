@@ -1,19 +1,10 @@
-# Required GitHub configuration for production deploys (Phase 11)
+# Production env (dashboards — not GitHub Actions)
 #
-# Repository variables (Settings → Variables):
-#   ENABLE_VERCEL_DEPLOY=true     # unlocks deploy-web job on push to main
-#   ENABLE_RAILWAY_DEPLOY=true    # unlocks deploy-api job on push to main
+# Render API:
+#   Keep DATABASE_URL as the Neon pooled connection (`-pooler`). Do not replace it.
+#   Add DIRECT_URL = Neon Console → Connection Details → Direct connection
+#   (hostname without `-pooler`). Prisma migrate uses schema `directUrl`.
 #
-# Repository secrets (Settings → Secrets):
-#   VERCEL_TOKEN
-#   VERCEL_ORG_ID
-#   VERCEL_PROJECT_ID
-#   RAILWAY_TOKEN
-#   RAILWAY_PROJECT_ID
-#   RAILWAY_SERVICE_ID
-#
-# Optional app env (Vercel / Railway dashboards):
+# Vercel web:
 #   NEXT_PUBLIC_API_URL, NEXT_PUBLIC_MAPBOX_TOKEN, NEXT_PUBLIC_SENTRY_DSN
-#   DATABASE_URL, JWT_*, CLOUDINARY_*, ANTHROPIC_*, CORS_ORIGIN, SENTRY_DSN
-#   Optional DIRECT_URL = Neon unpooled host (DATABASE_URL without `-pooler`).
-#   If omitted, API boot derives it from DATABASE_URL for migrate/seed only.
+#   Deploy is the Vercel GitHub integration, not this repo's CI workflow.
