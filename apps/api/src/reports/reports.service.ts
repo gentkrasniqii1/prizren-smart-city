@@ -54,7 +54,8 @@ import {
   EscalateReportDto,
   UpdateReportPriorityDto,
 } from './dto/update-report-priority.dto';
-import { computeDueAt, computeDueAtFromHours } from './sla';
+import { computeDueAt } from './sla';
+import { SlaResolutionService } from './sla-resolution.service';
 import { nextReportPublicId, reportWhereByRef } from './public-id';
 import { WorkflowActionDto } from './dto/workflow-action.dto';
 import { ModerateReportDto } from './dto/moderate-report.dto';
@@ -141,6 +142,7 @@ export class ReportsService {
     private readonly mail: MailService,
     private readonly config: ConfigService,
     private readonly audit: AuditService,
+    private readonly slaResolution: SlaResolutionService,
   ) {}
 
   async create(
@@ -318,6 +320,9 @@ export class ReportsService {
       anonymous: boolean;
       language: string;
       dueAt: Date | null;
+      slaPolicyId: string | null;
+      responseDueAt: Date | null;
+      resolutionDueAt: Date | null;
       createdAt: Date;
       updatedAt: Date;
       categoryName: string | null;
@@ -354,6 +359,9 @@ export class ReportsService {
         r.anonymous,
         r.language,
         r."dueAt",
+        r."slaPolicyId",
+        r."responseDueAt",
+        r."resolutionDueAt",
         r."createdAt",
         r."updatedAt",
         c.name AS "categoryName",
@@ -931,9 +939,13 @@ export class ReportsService {
       throw new NotFoundException('Report not found');
     }
 
-    const dueAt = OPEN_STATUSES.includes(existing.status)
-      ? computeDueAt(dto.priority)
-      : existing.dueAt;
+    // Preserve historical SLA snapshot once assigned at approve.
+    const dueAt =
+      existing.slaPolicyId || existing.resolutionDueAt
+        ? existing.dueAt
+        : OPEN_STATUSES.includes(existing.status)
+          ? computeDueAt(dto.priority)
+          : existing.dueAt;
 
     const updated = await this.prisma.$transaction(async (tx) => {
       const report = await tx.report.update({
@@ -1578,7 +1590,50 @@ export class ReportsService {
       );
     }
 
-    const dueAt = existing.dueAt ?? computeDueAtFromHours(routed.slaHours);
+    /**
+     * SLA assigned at: approve → ASSIGNED (official queue entry).
+     * Reason: department/category/subcategory/priority are known after routing;
+     * citizen submit is still pre-official. Snapshot is immutable once set.
+     */
+    const assignedPriority = routed.defaultPriority ?? existing.priority;
+    let slaSnapshot: {
+      slaPolicyId: string | null;
+      responseDueAt: Date | null;
+      resolutionDueAt: Date | null;
+      dueAt: Date | null;
+    } = {
+      slaPolicyId: existing.slaPolicyId,
+      responseDueAt: existing.responseDueAt,
+      resolutionDueAt: existing.resolutionDueAt,
+      dueAt: existing.dueAt,
+    };
+
+    if (!existing.slaPolicyId && !existing.responseDueAt && !existing.resolutionDueAt) {
+      const resolved = await this.slaResolution.resolveForFacts({
+        departmentId: routed.departmentId,
+        categoryId: routed.categoryId,
+        subcategoryId: subcategory?.subcategoryId ?? existing.subcategoryId,
+        priority: assignedPriority,
+      });
+      if (resolved.policy) {
+        slaSnapshot = {
+          slaPolicyId: resolved.policy.id,
+          responseDueAt: resolved.responseDueAt,
+          resolutionDueAt: resolved.resolutionDueAt,
+          // dueAt mirrors resolution deadline for existing queue/UI consumers
+          dueAt: resolved.resolutionDueAt,
+        };
+      } else {
+        // Controlled unresolved — do not invent times from routing.slaHours
+        slaSnapshot = {
+          slaPolicyId: null,
+          responseDueAt: null,
+          resolutionDueAt: null,
+          dueAt: existing.dueAt,
+        };
+      }
+    }
+
     const note =
       dto.note?.trim() ||
       (routed.institutionId
@@ -1595,9 +1650,12 @@ export class ReportsService {
           zoneId: zoneResolved?.zoneId ?? existing.zoneId,
           departmentId: routed.departmentId,
           institutionId: routed.institutionId,
-          priority: routed.defaultPriority,
+          priority: assignedPriority,
           status: ReportStatus.ASSIGNED,
-          dueAt,
+          dueAt: slaSnapshot.dueAt,
+          slaPolicyId: slaSnapshot.slaPolicyId,
+          responseDueAt: slaSnapshot.responseDueAt,
+          resolutionDueAt: slaSnapshot.resolutionDueAt,
         },
         include: REPORT_DETAIL_INCLUDE,
       });
@@ -1628,6 +1686,9 @@ export class ReportsService {
             source: routed.source,
             slaHours: routed.slaHours,
             defaultPriority: routed.defaultPriority,
+            slaPolicyId: slaSnapshot.slaPolicyId,
+            responseDueAt: slaSnapshot.responseDueAt?.toISOString() ?? null,
+            resolutionDueAt: slaSnapshot.resolutionDueAt?.toISOString() ?? null,
           },
         },
         tx,
@@ -1647,6 +1708,7 @@ export class ReportsService {
             institutionId: routed.institutionId,
             matchedRuleId: routed.matchedRuleId,
             slaHours: routed.slaHours,
+            slaPolicyId: slaSnapshot.slaPolicyId,
           },
         },
         tx,
@@ -1830,6 +1892,9 @@ export class ReportsService {
       anonymous: report.anonymous,
       language: report.language,
       dueAt: report.dueAt?.toISOString() ?? null,
+      slaPolicyId: report.slaPolicyId ?? null,
+      responseDueAt: report.responseDueAt?.toISOString() ?? null,
+      resolutionDueAt: report.resolutionDueAt?.toISOString() ?? null,
       createdAt: report.createdAt.toISOString(),
       updatedAt: report.updatedAt.toISOString(),
       categoryName: report.category?.name ?? null,

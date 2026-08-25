@@ -1,6 +1,10 @@
 import { Priority, ReportStatus } from '@prisma/client';
 
-/** SLA windows from assignment time (Phase 7). */
+/**
+ * LEGACY hardcoded resolution windows (hours-as-ms) used when no SlaPolicy snapshot
+ * exists yet — e.g. priority updates on open reports before Phase 4 approve wiring.
+ * Prefer SlaResolutionService + sla-resolve.ts for new assignment paths.
+ */
 const SLA_MS: Record<Priority, number> = {
   CRITICAL: 4 * 60 * 60 * 1000,
   HIGH: 24 * 60 * 60 * 1000,

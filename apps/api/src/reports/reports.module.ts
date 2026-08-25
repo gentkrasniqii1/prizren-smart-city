@@ -9,6 +9,7 @@ import { AuditModule } from '../audit/audit.module';
 import { ReportsController } from './reports.controller';
 import { ReportsService } from './reports.service';
 import { ReportPdfService } from './report-pdf.service';
+import { SlaResolutionService } from './sla-resolution.service';
 
 @Module({
   imports: [
@@ -21,7 +22,7 @@ import { ReportPdfService } from './report-pdf.service';
     AuditModule,
   ],
   controllers: [ReportsController],
-  providers: [ReportsService, ReportPdfService],
-  exports: [ReportsService],
+  providers: [ReportsService, ReportPdfService, SlaResolutionService],
+  exports: [ReportsService, SlaResolutionService],
 })
 export class ReportsModule {}

@@ -192,6 +192,7 @@ model Subcategory {
   updatedAt    DateTime      @updatedAt
   reports      Report[]
   routingRules RoutingRule[]
+  slaPolicies  SlaPolicy[]
 
   @@unique([categoryId, name])
   @@index([categoryId])
@@ -254,12 +255,12 @@ model RoutingRule {
   @@index([institutionId])
 }
 
-/// SLA policy — configurable response/resolution windows per priority level,
-/// optionally scoped to a department and/or category. Introduced as a domain
-/// model in Phase 1; wiring into due-date computation happens in Phase 5 —
-/// see reports/sla.ts (`computeDueAt` remains the fallback when no policy matches).
+/// SLA policy — response/resolution windows per priority, optionally scoped to
+/// department / category / subcategory. Null scope fields = broader fallback.
+/// Precedence (most specific wins): subcategory → category → department → global.
+/// Wired into approve-time deadline snapshots — see reports/sla-resolve.ts.
 model SlaPolicy {
-  id             String      @id @default(uuid())
+  id             String       @id @default(uuid())
   name           String
   priority       Priority
   /// Minutes until first response is due.
@@ -267,16 +268,20 @@ model SlaPolicy {
   /// Minutes until resolution is due.
   resolutionTime Int
   departmentId   String?
-  department     Department? @relation(fields: [departmentId], references: [id])
+  department     Department?  @relation(fields: [departmentId], references: [id])
   categoryId     String?
-  category       Category?   @relation(fields: [categoryId], references: [id])
-  active         Boolean     @default(true)
-  createdAt      DateTime    @default(now())
-  updatedAt      DateTime    @updatedAt
+  category       Category?    @relation(fields: [categoryId], references: [id])
+  subcategoryId  String?
+  subcategory    Subcategory? @relation(fields: [subcategoryId], references: [id])
+  active         Boolean      @default(true)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  reports        Report[]
 
   @@index([active, priority])
   @@index([departmentId])
   @@index([categoryId])
+  @@index([subcategoryId])
 }
 
 /// Generic atomic counter table — used today for per-year public incident IDs
@@ -334,6 +339,13 @@ model Report {
   /// BCP-47-ish language tag of the citizen-entered text, e.g. "sq", "en".
   language         String          @default("sq")
   dueAt            DateTime?
+  /// Policy used when deadlines were snapshotted (approve/queue entry). Null = no SLA applied yet.
+  slaPolicyId      String?
+  slaPolicy        SlaPolicy?      @relation(fields: [slaPolicyId], references: [id])
+  /// First-response deadline at snapshot time (UTC). Immutable once set.
+  responseDueAt    DateTime?
+  /// Resolution deadline at snapshot time (UTC). Immutable once set; mirrored to dueAt for queue UX.
+  resolutionDueAt  DateTime?
   createdAt        DateTime        @default(now())
   updatedAt        DateTime        @updatedAt
   statusHistory    StatusHistory[]
@@ -352,6 +364,9 @@ model Report {
   @@index([userId])
   @@index([createdAt])
   @@index([dueAt])
+  @@index([slaPolicyId])
+  @@index([responseDueAt])
+  @@index([resolutionDueAt])
 }
 
 enum ReportStatus {

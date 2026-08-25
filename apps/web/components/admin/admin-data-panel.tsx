@@ -11,6 +11,7 @@ import type {
   CategoryDto,
   DepartmentDto,
   SlaPolicyDto,
+  SubcategoryDto,
   UpsertSlaPolicyRequest,
 } from '@prizren/shared-types';
 import { ADMIN_DATA_RESOURCES } from '@prizren/shared-types';
@@ -111,6 +112,11 @@ const RESOURCE_COLUMNS: Record<AdminDataResource, readonly string[]> = {
     'anonymous',
     'language',
     'dueAt',
+    'slaPolicyId',
+    'slaPolicyName',
+    'slaPriority',
+    'responseDueAt',
+    'resolutionDueAt',
     'createdAt',
     'updatedAt',
   ],
@@ -158,10 +164,10 @@ const RESOURCE_COLUMNS: Record<AdminDataResource, readonly string[]> = {
     'priority',
     'responseTime',
     'resolutionTime',
-    'departmentId',
+    'scope',
     'departmentName',
-    'categoryId',
     'categoryName',
+    'subcategoryName',
     'active',
     'createdAt',
     'updatedAt',
@@ -205,6 +211,17 @@ const COLUMN_OVERRIDES: Record<string, string> = {
   ipAddress: 'IP Address',
   userAgent: 'User Agent',
   totpEnabled: 'TOTP Enabled',
+  slaPolicyId: 'SLA Policy ID',
+  slaPolicyName: 'SLA Policy',
+  slaPriority: 'SLA Priority',
+  responseDueAt: 'Response Due At',
+  resolutionDueAt: 'Resolution Due At',
+  responseTime: 'Response Time',
+  resolutionTime: 'Resolution Time',
+  departmentName: 'Department',
+  categoryName: 'Category',
+  subcategoryName: 'Subcategory',
+  institutionName: 'Institution',
 };
 
 function humanizeColumn(col: string): string {
@@ -240,6 +257,9 @@ export function AdminDataPanel() {
   const [draftQ, setDraftQ] = useState('');
   const [q, setQ] = useState('');
   const [status, setStatus] = useState('');
+  const [slaPriority, setSlaPriority] = useState('');
+  const [slaScope, setSlaScope] = useState('');
+  const [slaActive, setSlaActive] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [payload, setPayload] = useState<AdminDataPage | null>(null);
@@ -269,6 +289,11 @@ export function AdminDataPanel() {
         });
         if (q.trim()) params.set('q', q.trim());
         if (resource === 'reports' && status) params.set('status', status);
+        if (resource === 'sla-policies') {
+          if (slaPriority) params.set('priority', slaPriority);
+          if (slaScope) params.set('scope', slaScope);
+          if (slaActive === 'true' || slaActive === 'false') params.set('active', slaActive);
+        }
         const res = await apiFetch<AdminDataPage>(`/admin/data/${resource}?${params.toString()}`, {
           auth: true,
         });
@@ -282,7 +307,7 @@ export function AdminDataPanel() {
         if (!opts?.background) setLoading(false);
       }
     },
-    [errorMessage, page, q, resource, status, t],
+    [errorMessage, page, q, resource, slaActive, slaPriority, slaScope, status, t],
   );
 
   useEffect(() => {
@@ -308,6 +333,9 @@ export function AdminDataPanel() {
     setDraftQ('');
     setQ('');
     setStatus('');
+    setSlaPriority('');
+    setSlaScope('');
+    setSlaActive('');
     setPayload(null);
   }
 
@@ -455,6 +483,60 @@ export function AdminDataPanel() {
                 </Select>
               </div>
             ) : null}
+            {resource === 'sla-policies' ? (
+              <>
+                <div className="w-full sm:w-40">
+                  <Label htmlFor="sla-filter-priority">{t('slaPriority')}</Label>
+                  <Select
+                    id="sla-filter-priority"
+                    value={slaPriority}
+                    onChange={(e) => {
+                      setPage(1);
+                      setSlaPriority(e.target.value);
+                    }}
+                  >
+                    <option value="">{t('filterAll')}</option>
+                    {REPORT_PRIORITIES.map((p) => (
+                      <option key={p} value={p}>
+                        {p}
+                      </option>
+                    ))}
+                  </Select>
+                </div>
+                <div className="w-full sm:w-44">
+                  <Label htmlFor="sla-filter-scope">{t('slaScope')}</Label>
+                  <Select
+                    id="sla-filter-scope"
+                    value={slaScope}
+                    onChange={(e) => {
+                      setPage(1);
+                      setSlaScope(e.target.value);
+                    }}
+                  >
+                    <option value="">{t('filterAll')}</option>
+                    <option value="global">{t('scopeGlobal')}</option>
+                    <option value="department">{t('scopeDepartment')}</option>
+                    <option value="category">{t('scopeCategory')}</option>
+                    <option value="subcategory">{t('scopeSubcategory')}</option>
+                  </Select>
+                </div>
+                <div className="w-full sm:w-40">
+                  <Label htmlFor="sla-filter-active">{t('slaActive')}</Label>
+                  <Select
+                    id="sla-filter-active"
+                    value={slaActive}
+                    onChange={(e) => {
+                      setPage(1);
+                      setSlaActive(e.target.value);
+                    }}
+                  >
+                    <option value="">{t('filterAll')}</option>
+                    <option value="true">{t('filterActive')}</option>
+                    <option value="false">{t('filterInactive')}</option>
+                  </Select>
+                </div>
+              </>
+            ) : null}
             <Button type="submit">{t('searchSubmit')}</Button>
           </form>
 
@@ -505,7 +587,7 @@ export function AdminDataPanel() {
                               ))}
                             </Select>
                           ) : (
-                            <CellValue column={col} row={row} />
+                            <CellValue column={col} row={row} resource={resource} />
                           )}
                         </TableCell>
                       ))}
@@ -592,7 +674,16 @@ export function AdminDataPanel() {
   );
 }
 
-function CellValue({ column, row }: { column: string; row: AdminDataRow }) {
+function CellValue({
+  column,
+  row,
+  resource,
+}: {
+  column: string;
+  row: AdminDataRow;
+  resource: AdminDataResource;
+}) {
+  const t = useTranslations('AdminData');
   const value = row[column];
   if (column === 'publicId' && row.id) {
     return (
@@ -600,6 +691,28 @@ function CellValue({ column, row }: { column: string; row: AdminDataRow }) {
         {String(value ?? '—')}
       </Link>
     );
+  }
+  if (resource === 'sla-policies') {
+    if (column === 'scope' && typeof value === 'string') {
+      const scopeKey =
+        value === 'global'
+          ? 'scopeGlobal'
+          : value === 'department'
+            ? 'scopeDepartment'
+            : value === 'category'
+              ? 'scopeCategory'
+              : value === 'subcategory'
+                ? 'scopeSubcategory'
+                : null;
+      const label = scopeKey ? t(scopeKey) : String(value);
+      return <span className="block max-w-[16rem] truncate text-sm">{label}</span>;
+    }
+    if (
+      (column === 'departmentName' || column === 'categoryName' || column === 'subcategoryName') &&
+      (value == null || value === '')
+    ) {
+      return <span className="block max-w-[16rem] truncate text-sm">{t('slaAny')}</span>;
+    }
   }
   const { text, title } = stringifyCell(value);
   return (
@@ -628,11 +741,13 @@ function SlaPolicyDialog({
   const [resolutionTime, setResolutionTime] = useState('1440');
   const [departmentId, setDepartmentId] = useState('');
   const [categoryId, setCategoryId] = useState('');
+  const [subcategoryId, setSubcategoryId] = useState('');
   const [active, setActive] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [departments, setDepartments] = useState<DepartmentDto[]>([]);
   const [categories, setCategories] = useState<CategoryDto[]>([]);
+  const [subcategories, setSubcategories] = useState<SubcategoryDto[]>([]);
 
   useEffect(() => {
     if (!open) return;
@@ -642,6 +757,7 @@ function SlaPolicyDialog({
     setResolutionTime(String(existing?.resolutionTime ?? 1440));
     setDepartmentId(existing?.departmentId ?? '');
     setCategoryId(existing?.categoryId ?? '');
+    setSubcategoryId(existing?.subcategoryId ?? '');
     setActive(existing?.active ?? true);
     setError(null);
   }, [existing, open]);
@@ -651,22 +767,50 @@ function SlaPolicyDialog({
     void Promise.all([
       apiFetch<DepartmentDto[]>('/departments'),
       apiFetch<CategoryDto[]>('/categories'),
+      apiFetch<SubcategoryDto[]>('/subcategories?includeInactive=true', { auth: true }),
     ])
-      .then(([depts, cats]) => {
+      .then(([depts, cats, subs]) => {
         setDepartments(depts);
         setCategories(cats);
+        setSubcategories(subs);
       })
       .catch(() => {
         setDepartments([]);
         setCategories([]);
+        setSubcategories([]);
       });
   }, [open]);
+
+  const filteredCategories = useMemo(
+    () => categories.filter((c) => !departmentId || c.departmentId === departmentId),
+    [categories, departmentId],
+  );
+
+  const filteredSubs = useMemo(
+    () =>
+      subcategories.filter(
+        (s) => (!categoryId || s.categoryId === categoryId) && (s.active || s.id === subcategoryId),
+      ),
+    [subcategories, categoryId, subcategoryId],
+  );
 
   async function save() {
     const response = Number(responseTime);
     const resolution = Number(resolutionTime);
     if (!name.trim() || !Number.isFinite(response) || !Number.isFinite(resolution)) {
       setError(t('slaInvalid'));
+      return;
+    }
+    if (response < 1 || resolution < 1 || response > resolution) {
+      setError(t('slaInvalid'));
+      return;
+    }
+    if (subcategoryId && !categoryId) {
+      setError(t('slaCategoryRequired'));
+      return;
+    }
+    if (categoryId && !departmentId) {
+      setError(t('slaDepartmentRequired'));
       return;
     }
     setSaving(true);
@@ -678,6 +822,7 @@ function SlaPolicyDialog({
       resolutionTime: Math.round(resolution),
       departmentId: departmentId || null,
       categoryId: categoryId || null,
+      subcategoryId: subcategoryId || null,
       active,
     };
     try {
@@ -753,7 +898,11 @@ function SlaPolicyDialog({
             <Select
               id="sla-dept"
               value={departmentId}
-              onChange={(e) => setDepartmentId(e.target.value)}
+              onChange={(e) => {
+                setDepartmentId(e.target.value);
+                setCategoryId('');
+                setSubcategoryId('');
+              }}
             >
               <option value="">{t('slaAny')}</option>
               {departments.map((d) => (
@@ -765,11 +914,34 @@ function SlaPolicyDialog({
           </div>
           <div>
             <Label htmlFor="sla-cat">{t('slaCategory')}</Label>
-            <Select id="sla-cat" value={categoryId} onChange={(e) => setCategoryId(e.target.value)}>
+            <Select
+              id="sla-cat"
+              value={categoryId}
+              onChange={(e) => {
+                setCategoryId(e.target.value);
+                setSubcategoryId('');
+              }}
+            >
               <option value="">{t('slaAny')}</option>
-              {categories.map((c) => (
+              {filteredCategories.map((c) => (
                 <option key={c.id} value={c.id}>
                   {c.name}
+                </option>
+              ))}
+            </Select>
+          </div>
+          <div>
+            <Label htmlFor="sla-sub">{t('slaSubcategory')}</Label>
+            <Select
+              id="sla-sub"
+              value={subcategoryId}
+              onChange={(e) => setSubcategoryId(e.target.value)}
+            >
+              <option value="">{t('slaAny')}</option>
+              {filteredSubs.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.name}
+                  {s.active ? '' : ` (${t('filterInactive')})`}
                 </option>
               ))}
             </Select>

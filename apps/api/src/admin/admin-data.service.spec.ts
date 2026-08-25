@@ -1,5 +1,5 @@
 import 'reflect-metadata';
-import { ForbiddenException, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, NotFoundException } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { Role } from '@prisma/client';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -79,7 +79,7 @@ describe('AdminDataService', () => {
       user: { count: vi.fn(), findMany: vi.fn() },
       slaPolicy: {
         count: vi.fn(),
-        findMany: vi.fn(),
+        findMany: vi.fn().mockResolvedValue([]),
         findUnique: vi.fn(),
         create: vi.fn(),
         update: vi.fn(),
@@ -87,6 +87,7 @@ describe('AdminDataService', () => {
       },
       department: { findUnique: vi.fn() },
       category: { findUnique: vi.fn() },
+      subcategory: { findUnique: vi.fn() },
     };
     audit = { log: vi.fn().mockResolvedValue({ id: 'log-1' }) };
     service = new AdminDataService(
@@ -157,11 +158,13 @@ describe('AdminDataService', () => {
       resolutionTime: 1440,
       departmentId: null,
       categoryId: null,
+      subcategoryId: null,
       active: true,
       createdAt: new Date('2026-01-01T00:00:00.000Z'),
       updatedAt: new Date('2026-01-01T00:00:00.000Z'),
       department: null,
       category: null,
+      subcategory: null,
     });
 
     const row = await service.createSlaPolicy(
@@ -185,6 +188,95 @@ describe('AdminDataService', () => {
         entityId: 'sla-1',
       }),
     );
+  });
+
+  it('rejects an active SLA that conflicts with an existing active scope+priority', async () => {
+    prisma.slaPolicy.findMany.mockResolvedValue([
+      {
+        id: 'existing',
+        active: true,
+        priority: 'HIGH',
+        departmentId: null,
+        categoryId: null,
+        subcategoryId: null,
+      },
+    ]);
+
+    await expect(
+      service.createSlaPolicy(
+        admin,
+        {
+          name: 'Duplicate global HIGH',
+          priority: 'HIGH',
+          responseTime: 30,
+          resolutionTime: 600,
+        },
+        '127.0.0.1',
+      ),
+    ).rejects.toMatchObject({
+      message:
+        'An active SLA policy already exists for this department/category/subcategory and priority.',
+    });
+    expect(prisma.slaPolicy.create).not.toHaveBeenCalled();
+  });
+
+  it('allows hierarchical fallback (global + department) and inactive duplicates', async () => {
+    prisma.slaPolicy.findMany.mockResolvedValue([
+      {
+        id: 'global-high',
+        active: true,
+        priority: 'HIGH',
+        departmentId: null,
+        categoryId: null,
+        subcategoryId: null,
+      },
+    ]);
+    prisma.department.findUnique.mockResolvedValue({ id: 'dept-1', name: 'Public' });
+    prisma.slaPolicy.create.mockResolvedValue({
+      id: 'dept-sla',
+      name: 'Dept HIGH',
+      priority: 'HIGH',
+      responseTime: 120,
+      resolutionTime: 1000,
+      departmentId: 'dept-1',
+      categoryId: null,
+      subcategoryId: null,
+      active: true,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      department: { name: 'Public' },
+      category: null,
+      subcategory: null,
+    });
+
+    const row = await service.createSlaPolicy(
+      admin,
+      {
+        name: 'Dept HIGH',
+        priority: 'HIGH',
+        responseTime: 120,
+        resolutionTime: 1000,
+        departmentId: 'dept-1',
+      },
+      '127.0.0.1',
+    );
+    expect(row.scope).toBe('department');
+    expect(row.departmentId).toBe('dept-1');
+  });
+
+  it('rejects responseTime greater than resolutionTime', async () => {
+    await expect(
+      service.createSlaPolicy(
+        admin,
+        {
+          name: 'Bad times',
+          priority: 'LOW',
+          responseTime: 2000,
+          resolutionTime: 1000,
+        },
+        '127.0.0.1',
+      ),
+    ).rejects.toBeInstanceOf(BadRequestException);
   });
 });
 
@@ -283,7 +375,33 @@ describe('AdminDataService search where clauses', () => {
         { name: { contains: 'Kritike', mode: 'insensitive' } },
         { department: { name: { contains: 'Kritike', mode: 'insensitive' } } },
         { category: { name: { contains: 'Kritike', mode: 'insensitive' } } },
+        { subcategory: { name: { contains: 'Kritike', mode: 'insensitive' } } },
+        { department: { institution: { name: { contains: 'Kritike', mode: 'insensitive' } } } },
+        { id: { equals: 'Kritike' } },
       ]),
+    );
+  });
+
+  it('filters sla policies by priority, scope, and active', async () => {
+    const count = vi.fn().mockResolvedValue(0);
+    const findMany = vi.fn().mockResolvedValue([]);
+    await serviceWith({ slaPolicy: { count, findMany } }).list('sla-policies', {
+      page: 1,
+      limit: 20,
+      priority: 'HIGH',
+      scope: 'department',
+      active: true,
+    });
+    expect(findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          priority: 'HIGH',
+          active: true,
+          departmentId: { not: null },
+          categoryId: null,
+          subcategoryId: null,
+        }),
+      }),
     );
   });
 

@@ -1,4 +1,9 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { Prisma, Priority, ReportStatus } from '@prisma/client';
 import {
   ADMIN_DATA_BLOCKED_RESOURCES,
@@ -13,6 +18,8 @@ import { PrismaService } from '../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
 import { AuthUser } from '../auth/decorators/current-user.decorator';
 import { UpsertSlaPolicyDto } from './dto/upsert-sla-policy.dto';
+import { resolveActiveSubcategory } from '../common/subcategory-ref';
+import { slaPoliciesConflict, slaScopeOf } from '../reports/sla-resolve';
 
 const BLOCKED = new Set<string>(ADMIN_DATA_BLOCKED_RESOURCES);
 const ALLOWED = new Set<string>(ADMIN_DATA_RESOURCES);
@@ -45,7 +52,15 @@ export class AdminDataService {
 
   async list(
     resource: AdminDataResource,
-    opts: { page?: number; limit?: number; q?: string; status?: string },
+    opts: {
+      page?: number;
+      limit?: number;
+      q?: string;
+      status?: string;
+      priority?: string;
+      scope?: string;
+      active?: boolean;
+    },
   ) {
     const page = opts.page && opts.page > 0 ? opts.page : 1;
     const limit = opts.limit && opts.limit > 0 ? Math.min(opts.limit, 100) : 20;
@@ -59,9 +74,24 @@ export class AdminDataService {
         throw new BadRequestException(`Unknown report status: ${status}`);
       }
     }
+    if (opts.priority || opts.scope || opts.active !== undefined) {
+      if (resource !== 'sla-policies') {
+        throw new BadRequestException(
+          'priority/scope/active filters are only supported for sla-policies',
+        );
+      }
+    }
     const skip = (page - 1) * limit;
 
-    const { total, rows } = await this.fetch(resource, { skip, take: limit, q, status });
+    const { total, rows } = await this.fetch(resource, {
+      skip,
+      take: limit,
+      q,
+      status,
+      priority: opts.priority,
+      scope: opts.scope,
+      active: opts.active,
+    });
     const data: AdminDataRow[] = rows;
     const payload: AdminDataPage = {
       resource,
@@ -77,20 +107,32 @@ export class AdminDataService {
   }
 
   async createSlaPolicy(user: AuthUser, dto: UpsertSlaPolicyDto, ip?: string | null) {
-    await this.assertSlaRefs(dto.departmentId, dto.categoryId);
+    if (dto.responseTime > dto.resolutionTime) {
+      throw new BadRequestException('responseTime must be less than or equal to resolutionTime');
+    }
+    const refs = await this.resolveSlaScope(dto);
+    await this.assertNoSlaConflict(null, {
+      priority: dto.priority,
+      departmentId: refs.departmentId,
+      categoryId: refs.categoryId,
+      subcategoryId: refs.subcategoryId,
+      active: dto.active ?? true,
+    });
     const created = await this.prisma.slaPolicy.create({
       data: {
         name: dto.name.trim(),
         priority: dto.priority,
         responseTime: dto.responseTime,
         resolutionTime: dto.resolutionTime,
-        departmentId: emptyToNull(dto.departmentId),
-        categoryId: emptyToNull(dto.categoryId),
+        departmentId: refs.departmentId,
+        categoryId: refs.categoryId,
+        subcategoryId: refs.subcategoryId,
         active: dto.active ?? true,
       },
       include: {
         department: { select: { name: true } },
         category: { select: { name: true } },
+        subcategory: { select: { name: true } },
       },
     });
     const row = this.toSlaDto(created);
@@ -108,7 +150,18 @@ export class AdminDataService {
   async updateSlaPolicy(id: string, user: AuthUser, dto: UpsertSlaPolicyDto, ip?: string | null) {
     const existing = await this.prisma.slaPolicy.findUnique({ where: { id } });
     if (!existing) throw new NotFoundException('SLA policy not found');
-    await this.assertSlaRefs(dto.departmentId, dto.categoryId);
+    if (dto.responseTime > dto.resolutionTime) {
+      throw new BadRequestException('responseTime must be less than or equal to resolutionTime');
+    }
+    const refs = await this.resolveSlaScope(dto);
+    const active = dto.active ?? existing.active;
+    await this.assertNoSlaConflict(id, {
+      priority: dto.priority,
+      departmentId: refs.departmentId,
+      categoryId: refs.categoryId,
+      subcategoryId: refs.subcategoryId,
+      active,
+    });
     const updated = await this.prisma.slaPolicy.update({
       where: { id },
       data: {
@@ -116,15 +169,15 @@ export class AdminDataService {
         priority: dto.priority,
         responseTime: dto.responseTime,
         resolutionTime: dto.resolutionTime,
-        departmentId:
-          dto.departmentId === undefined ? existing.departmentId : emptyToNull(dto.departmentId),
-        categoryId:
-          dto.categoryId === undefined ? existing.categoryId : emptyToNull(dto.categoryId),
-        active: dto.active ?? existing.active,
+        departmentId: refs.departmentId,
+        categoryId: refs.categoryId,
+        subcategoryId: refs.subcategoryId,
+        active,
       },
       include: {
         department: { select: { name: true } },
         category: { select: { name: true } },
+        subcategory: { select: { name: true } },
       },
     });
     const row = this.toSlaDto(updated);
@@ -161,7 +214,15 @@ export class AdminDataService {
 
   private async fetch(
     resource: AdminDataResource,
-    opts: { skip: number; take: number; q?: string; status?: string },
+    opts: {
+      skip: number;
+      take: number;
+      q?: string;
+      status?: string;
+      priority?: string;
+      scope?: string;
+      active?: boolean;
+    },
   ): Promise<{ total: number; rows: AdminDataRow[] }> {
     switch (resource) {
       case 'users':
@@ -302,11 +363,15 @@ export class AdminDataService {
           anonymous: true,
           language: true,
           dueAt: true,
+          slaPolicyId: true,
+          responseDueAt: true,
+          resolutionDueAt: true,
           createdAt: true,
           updatedAt: true,
           category: { select: { name: true } },
           department: { select: { name: true } },
           institution: { select: { name: true } },
+          slaPolicy: { select: { name: true, priority: true } },
           user: { select: { email: true } },
         },
       }),
@@ -360,6 +425,11 @@ export class AdminDataService {
         anonymous: row.anonymous,
         language: row.language,
         dueAt: iso(row.dueAt),
+        slaPolicyId: row.slaPolicyId,
+        slaPolicyName: row.slaPolicy?.name ?? null,
+        slaPriority: row.slaPolicy?.priority ?? null,
+        responseDueAt: iso(row.responseDueAt),
+        resolutionDueAt: iso(row.resolutionDueAt),
         createdAt: iso(row.createdAt),
         updatedAt: iso(row.updatedAt),
       })),
@@ -601,20 +671,43 @@ export class AdminDataService {
     };
   }
 
-  private async listSlaPolicies(opts: { skip: number; take: number; q?: string }) {
-    const where: Prisma.SlaPolicyWhereInput = opts.q
-      ? {
-          OR: [
-            { name: { contains: opts.q, mode: 'insensitive' } },
-            { priority: { equals: opts.q.toUpperCase() as never } },
-            { department: { name: { contains: opts.q, mode: 'insensitive' } } },
-            { category: { name: { contains: opts.q, mode: 'insensitive' } } },
-            { id: { equals: opts.q } },
-            { departmentId: { equals: opts.q } },
-            { categoryId: { equals: opts.q } },
-          ],
-        }
-      : {};
+  private async listSlaPolicies(opts: {
+    skip: number;
+    take: number;
+    q?: string;
+    priority?: string;
+    scope?: string;
+    active?: boolean;
+  }) {
+    const where: Prisma.SlaPolicyWhereInput = {
+      ...(opts.priority ? { priority: opts.priority as Priority } : {}),
+      ...(opts.active === undefined ? {} : { active: opts.active }),
+      ...(opts.scope === 'global'
+        ? { departmentId: null, categoryId: null, subcategoryId: null }
+        : opts.scope === 'department'
+          ? { departmentId: { not: null }, categoryId: null, subcategoryId: null }
+          : opts.scope === 'category'
+            ? { categoryId: { not: null }, subcategoryId: null }
+            : opts.scope === 'subcategory'
+              ? { subcategoryId: { not: null } }
+              : {}),
+      ...(opts.q
+        ? {
+            OR: [
+              { name: { contains: opts.q, mode: 'insensitive' } },
+              { priority: { equals: opts.q.toUpperCase() as never } },
+              { department: { name: { contains: opts.q, mode: 'insensitive' } } },
+              { category: { name: { contains: opts.q, mode: 'insensitive' } } },
+              { subcategory: { name: { contains: opts.q, mode: 'insensitive' } } },
+              { department: { institution: { name: { contains: opts.q, mode: 'insensitive' } } } },
+              { id: { equals: opts.q } },
+              { departmentId: { equals: opts.q } },
+              { categoryId: { equals: opts.q } },
+              { subcategoryId: { equals: opts.q } },
+            ],
+          }
+        : {}),
+    };
     const [total, rows] = await Promise.all([
       this.prisma.slaPolicy.count({ where }),
       this.prisma.slaPolicy.findMany({
@@ -625,6 +718,7 @@ export class AdminDataService {
         include: {
           department: { select: { name: true } },
           category: { select: { name: true } },
+          subcategory: { select: { name: true } },
         },
       }),
     ]);
@@ -719,11 +813,13 @@ export class AdminDataService {
     resolutionTime: number;
     departmentId: string | null;
     categoryId: string | null;
+    subcategoryId: string | null;
     active: boolean;
     createdAt: Date;
     updatedAt: Date;
     department?: { name: string } | null;
     category?: { name: string } | null;
+    subcategory?: { name: string } | null;
   }): SlaPolicyDto {
     return {
       id: row.id,
@@ -735,22 +831,92 @@ export class AdminDataService {
       departmentName: row.department?.name ?? null,
       categoryId: row.categoryId,
       categoryName: row.category?.name ?? null,
+      subcategoryId: row.subcategoryId,
+      subcategoryName: row.subcategory?.name ?? null,
+      scope: slaScopeOf(row),
       active: row.active,
       createdAt: row.createdAt.toISOString(),
       updatedAt: row.updatedAt.toISOString(),
     };
   }
 
-  private async assertSlaRefs(departmentId?: string | null, categoryId?: string | null) {
-    const dept = emptyToNull(departmentId);
-    const cat = emptyToNull(categoryId);
-    if (dept) {
-      const found = await this.prisma.department.findUnique({ where: { id: dept } });
+  private async resolveSlaScope(dto: UpsertSlaPolicyDto): Promise<{
+    departmentId: string | null;
+    categoryId: string | null;
+    subcategoryId: string | null;
+  }> {
+    let departmentId = emptyToNull(dto.departmentId);
+    let categoryId = emptyToNull(dto.categoryId);
+    const subcategoryId = emptyToNull(dto.subcategoryId);
+
+    if (subcategoryId && !categoryId) {
+      throw new BadRequestException('categoryId is required when subcategoryId is set');
+    }
+    if (categoryId && !departmentId) {
+      throw new BadRequestException('departmentId is required when categoryId is set');
+    }
+
+    if (departmentId) {
+      const found = await this.prisma.department.findUnique({ where: { id: departmentId } });
       if (!found) throw new NotFoundException('Department not found');
     }
-    if (cat) {
-      const found = await this.prisma.category.findUnique({ where: { id: cat } });
+
+    if (categoryId) {
+      const found = await this.prisma.category.findUnique({ where: { id: categoryId } });
       if (!found) throw new NotFoundException('Category not found');
+      if (departmentId && found.departmentId !== departmentId) {
+        throw new BadRequestException('Category does not belong to the selected department');
+      }
+      departmentId = departmentId ?? found.departmentId;
+    }
+
+    if (subcategoryId) {
+      const resolved = await resolveActiveSubcategory(this.prisma, {
+        subcategoryId,
+        categoryId,
+      });
+      if (!resolved) throw new NotFoundException('Subcategory not found');
+      categoryId = resolved.categoryId;
+      if (departmentId) {
+        const cat = await this.prisma.category.findUnique({ where: { id: categoryId } });
+        if (cat && cat.departmentId !== departmentId) {
+          throw new BadRequestException('Subcategory does not belong to the selected department');
+        }
+      }
+    }
+
+    return { departmentId, categoryId, subcategoryId };
+  }
+
+  private async assertNoSlaConflict(
+    excludeId: string | null,
+    candidate: {
+      priority: Priority;
+      departmentId: string | null;
+      categoryId: string | null;
+      subcategoryId: string | null;
+      active: boolean;
+    },
+  ) {
+    if (!candidate.active) return;
+    const peers = await this.prisma.slaPolicy.findMany({
+      where: { active: true, priority: candidate.priority },
+      select: {
+        id: true,
+        active: true,
+        priority: true,
+        departmentId: true,
+        categoryId: true,
+        subcategoryId: true,
+      },
+    });
+    const clash = peers.find((peer) =>
+      slaPoliciesConflict({ id: excludeId ?? '__new__', ...candidate }, peer),
+    );
+    if (clash) {
+      throw new ConflictException(
+        'An active SLA policy already exists for this department/category/subcategory and priority.',
+      );
     }
   }
 }

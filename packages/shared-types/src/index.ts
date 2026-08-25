@@ -192,6 +192,10 @@ export interface ReportDto {
   anonymous?: boolean;
   language?: string;
   dueAt: string | null;
+  /** SLA policy snapshotted at official assignment; null if unresolved / legacy. */
+  slaPolicyId?: string | null;
+  responseDueAt?: string | null;
+  resolutionDueAt?: string | null;
   createdAt: string;
   updatedAt: string;
   categoryName?: string | null;
