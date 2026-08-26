@@ -949,10 +949,20 @@ export class AuthService {
       metadata: previousIp ? { previousIp } : undefined,
     });
     if (previousIp && ip && previousIp !== ip) {
+      // Same PASSWORD_RESET token path as forgotPassword (1h, single-use).
+      await this.prisma.authToken.updateMany({
+        where: { userId: user.id, type: AuthTokenType.PASSWORD_RESET, usedAt: null },
+        data: { usedAt: new Date() },
+      });
+      const raw = await this.createAuthToken(user.id, AuthTokenType.PASSWORD_RESET, {
+        hours: RESET_HOURS,
+      });
+      const resetUrl = `${this.config.webOrigin}/reset-password?token=${encodeURIComponent(raw)}`;
       await this.safeSendMail('suspicious-login', () =>
         this.mail.sendSuspiciousLoginEmail(user.email, {
           ip,
           userAgent: ctx.userAgent ?? null,
+          resetUrl,
         }),
       );
     }
