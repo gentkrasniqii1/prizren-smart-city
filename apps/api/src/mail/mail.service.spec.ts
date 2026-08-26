@@ -7,6 +7,7 @@ function makeConfig(): ConfigService {
     resendApiKey: '',
     smtpHost: '',
     mailFrom: 'Prizren Smart City <onboarding@resend.dev>',
+    webOrigin: 'http://localhost:3000',
   } as unknown as ConfigService;
 }
 
@@ -114,6 +115,32 @@ describe('MailService — status-changed outcome templates', () => {
     expect(payload.text).not.toContain('qytetar@');
     expect(payload.text).toContain('/institution/reports/');
     expect(payload.text).not.toMatch(/\/reports\/[0-9a-f-]{36}/i);
+  });
+  it('includes branding chrome and home link in shared layout', async () => {
+    await mail.sendReportReceivedEmail('citizen@test.local', {
+      reportId: 'r1',
+      description: 'Broken lamp',
+      reportUrl: 'https://app.local/reports/1',
+    });
+    const payload = lastPayload();
+    expect(payload.html).toContain('PRIZREN');
+    expect(payload.html).toContain('Smart City');
+    expect(payload.html).toContain('viewport');
+    expect(payload.html).toContain('http://localhost:3000');
+    expect(payload.html).toContain('/icons/icon-192.png');
+    expect(payload.html).toContain('mesazh i automatizuar');
+  });
+
+  it('adds a password-reset CTA on suspicious-login emails', async () => {
+    await mail.sendSuspiciousLoginEmail('citizen@test.local', {
+      ip: '8.8.8.8',
+      userAgent: 'vitest',
+      resetUrl: 'http://localhost:3000/reset-password?token=abc',
+    });
+    const payload = lastPayload();
+    expect(payload.html).toContain('Ndrysho fjalëkalimin');
+    expect(payload.html).toContain('/reset-password?token=abc');
+    expect(payload.text).toContain('/reset-password?token=abc');
   });
 });
 
