@@ -263,7 +263,14 @@ describe('AuthService', () => {
     expect(mail.sendSuspiciousLoginEmail).toHaveBeenCalledWith('citizen@test.local', {
       ip: '8.8.8.8',
       userAgent: 'vitest',
+      resetUrl: expect.stringContaining('/reset-password?token='),
     });
+    expect(prisma.authToken.create).toHaveBeenCalled();
+    expect(prisma.authToken.updateMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({ type: 'PASSWORD_RESET' }),
+      }),
+    );
   });
 
   describe('loginWithOAuth', () => {
