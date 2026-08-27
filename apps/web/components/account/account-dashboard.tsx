@@ -47,6 +47,7 @@ import { cn } from '@/lib/utils';
 import { TwoFactorSettings } from '@/components/account/two-factor-settings';
 import { ProfileSettings } from '@/components/account/profile-settings';
 import { ChangePasswordForm } from '@/components/account/change-password-form';
+import { PrizrenPhotoPanel } from '@/components/home/prizren-photo-panel';
 import type { AppLocale } from '@/i18n/request';
 
 const OPEN_STATUSES = new Set([
@@ -480,6 +481,7 @@ export function AccountDashboard() {
             </section>
             <ChangePasswordForm user={user} />
             <TwoFactorSettings enabled={Boolean(user.totpEnabled)} />
+            <PrizrenPhotoPanel variant="sidebar" className="hidden lg:block" />
           </aside>
         </div>
       </PageContainer>

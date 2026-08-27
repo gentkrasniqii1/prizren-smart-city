@@ -43,6 +43,27 @@ export function ChangePasswordForm({ user }: { user: PublicUser }) {
   });
 
   const newPassword = watch('newPassword');
+  const [resetSending, setResetSending] = useState(false);
+  const [resetSent, setResetSent] = useState(false);
+  const [resetError, setResetError] = useState<string | null>(null);
+  const canSetPassword = Boolean(user.email) && !user.needsEmail;
+
+  async function sendSetPasswordEmail() {
+    if (resetSending || resetSent || !canSetPassword) return;
+    setResetError(null);
+    setResetSending(true);
+    try {
+      await apiFetch('/auth/forgot-password', {
+        method: 'POST',
+        body: { email: user.email.trim(), website: '' },
+      });
+      setResetSent(true);
+    } catch (err) {
+      setResetError(errorMessage(err, t('setPasswordFailed')));
+    } finally {
+      setResetSending(false);
+    }
+  }
 
   async function onValid(values: ChangePasswordFormValues) {
     if (submitting) return;
@@ -67,10 +88,37 @@ export function ChangePasswordForm({ user }: { user: PublicUser }) {
   return (
     <section className="rounded-lg border border-border bg-card p-5">
       <h2 className="text-h3 text-foreground">{t('passwordHeading')}</h2>
-      <p className="mt-1 text-sm text-muted-foreground">{t('passwordBody')}</p>
+      <p className="mt-1 text-sm text-muted-foreground">
+        {user.hasPassword ? t('passwordBody') : t('setPasswordHint')}
+      </p>
 
       {!user.hasPassword ? (
-        <p className="mt-4 text-sm text-muted-foreground">{t('noPasswordSet')}</p>
+        <div className="mt-4 space-y-3">
+          {resetSent ? (
+            <div className="rounded-md border border-border bg-muted/40 p-3">
+              <p className="text-sm font-medium text-foreground">{t('setPasswordSentTitle')}</p>
+              <p className="mt-1 text-sm text-muted-foreground">
+                {t('setPasswordSentBody', { email: user.email })}
+              </p>
+            </div>
+          ) : (
+            <>
+              {!canSetPassword ? (
+                <p className="text-sm text-muted-foreground">{t('setPasswordNeedEmail')}</p>
+              ) : null}
+              <FormError message={resetError} />
+              <Button
+                type="button"
+                size="sm"
+                disabled={!canSetPassword}
+                status={resetSending ? 'loading' : resetError ? 'error' : 'idle'}
+                onClick={() => void sendSetPasswordEmail()}
+              >
+                {t('setPasswordCta')}
+              </Button>
+            </>
+          )}
+        </div>
       ) : (
         <form onSubmit={handleSubmit(onValid)} className="mt-4 space-y-4" noValidate>
           <div>

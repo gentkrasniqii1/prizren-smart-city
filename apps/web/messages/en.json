@@ -624,6 +624,12 @@
     "changePasswordSuccess": "Password changed. Please sign in again.",
     "changePasswordFailed": "Could not change your password.",
     "noPasswordSet": "This account signs in with Google or Facebook and has no password to change.",
+    "setPasswordCta": "Set a password",
+    "setPasswordHint": "Add a password so you can also sign in without Google or Facebook, or recover your account if you lose access to them.",
+    "setPasswordSentTitle": "Check your email.",
+    "setPasswordSentBody": "We sent a one-time link to {email}. It expires in one hour.",
+    "setPasswordFailed": "Could not send the email. Try again.",
+    "setPasswordNeedEmail": "Save an email on this account first, then you can set a password.",
     "logout": "Sign out"
   },
   "Transparency": {
