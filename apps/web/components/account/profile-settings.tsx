@@ -10,6 +10,7 @@ import { issueMessage, zodResolver } from '@/lib/form-validation';
 import { useAuth } from '@/components/auth-provider';
 import { useToast } from '@/components/toast-provider';
 import { OAuthButtons } from '@/components/auth/oauth-buttons';
+import { AvatarCropDialog } from '@/components/account/avatar-crop-dialog';
 import { UserAvatar } from '@/components/user-avatar';
 import { Button } from '@/components/ui/button';
 import { Input, Label } from '@/components/ui/field';
@@ -44,6 +45,7 @@ export function ProfileSettings({
   const [submitting, setSubmitting] = useState(false);
   const [verifying, setVerifying] = useState(false);
   const [avatarBusy, setAvatarBusy] = useState(false);
+  const [cropSrc, setCropSrc] = useState<string | null>(null);
   const avatarInputRef = useRef<HTMLInputElement>(null);
 
   const {
@@ -114,11 +116,30 @@ export function ProfileSettings({
     }
   }
 
-  async function onAvatarFile(file: File) {
+  function discardCrop() {
+    setCropSrc((prev) => {
+      if (prev) URL.revokeObjectURL(prev);
+      return null;
+    });
+    if (avatarInputRef.current) avatarInputRef.current.value = '';
+  }
+
+  function onAvatarPicked(file: File) {
     if (file.type !== 'image/jpeg' && file.type !== 'image/png') {
       toast.push(t('avatarInvalidType'), 'error');
       return;
     }
+    if (file.size > MAX_AVATAR_BYTES) {
+      toast.push(t('avatarTooLarge'), 'error');
+      return;
+    }
+    setCropSrc((prev) => {
+      if (prev) URL.revokeObjectURL(prev);
+      return URL.createObjectURL(file);
+    });
+  }
+
+  async function uploadAvatar(file: File) {
     if (file.size > MAX_AVATAR_BYTES) {
       toast.push(t('avatarTooLarge'), 'error');
       return;
@@ -134,11 +155,11 @@ export function ProfileSettings({
       });
       updateUser(updated);
       toast.push(t('avatarUploadSuccess'), 'success');
+      discardCrop();
     } catch (err) {
       toast.push(errorMessage(err, t('avatarUploadFailed')), 'error');
     } finally {
       setAvatarBusy(false);
-      if (avatarInputRef.current) avatarInputRef.current.value = '';
     }
   }
 
@@ -159,45 +180,55 @@ export function ProfileSettings({
   }
 
   const avatarBlock = (
-    <div className="mb-5 flex items-center gap-4">
-      <UserAvatar name={user.name} avatarUrl={user.avatarUrl} size={64} />
-      <div className="min-w-0">
-        <p className="text-sm font-medium text-foreground">{t('avatarHeading')}</p>
-        <p className="mt-0.5 text-xs text-muted-foreground">{t('avatarHint')}</p>
-        <div className="mt-2 flex flex-wrap gap-2">
-          <input
-            ref={avatarInputRef}
-            type="file"
-            accept="image/png,image/jpeg"
-            className="sr-only"
-            onChange={(e) => {
-              const file = e.target.files?.[0];
-              if (file) void onAvatarFile(file);
-            }}
-          />
-          <Button
-            type="button"
-            variant="secondary"
-            size="sm"
-            loading={avatarBusy}
-            onClick={() => avatarInputRef.current?.click()}
-          >
-            {user.avatarUrl ? t('avatarChangeCta') : t('avatarUploadCta')}
-          </Button>
-          {user.avatarUrl ? (
+    <>
+      <AvatarCropDialog
+        imageSrc={cropSrc}
+        busy={avatarBusy}
+        onCancel={discardCrop}
+        onConfirm={(file) => void uploadAvatar(file)}
+        onCropError={() => toast.push(t('avatarCropFailed'), 'error')}
+      />
+      <div className="mb-5 flex items-center gap-4">
+        <UserAvatar name={user.name} avatarUrl={user.avatarUrl} size={64} />
+        <div className="min-w-0">
+          <p className="text-sm font-medium text-foreground">{t('avatarHeading')}</p>
+          <p className="mt-0.5 text-xs text-muted-foreground">{t('avatarHint')}</p>
+          <div className="mt-2 flex flex-wrap gap-2">
+            <input
+              ref={avatarInputRef}
+              type="file"
+              accept="image/png,image/jpeg"
+              className="sr-only"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                e.target.value = '';
+                if (file) onAvatarPicked(file);
+              }}
+            />
             <Button
               type="button"
-              variant="ghost"
+              variant="secondary"
               size="sm"
-              disabled={avatarBusy}
-              onClick={() => void removeAvatar()}
+              loading={avatarBusy}
+              onClick={() => avatarInputRef.current?.click()}
             >
-              {t('avatarRemoveCta')}
+              {user.avatarUrl ? t('avatarChangeCta') : t('avatarUploadCta')}
             </Button>
-          ) : null}
+            {user.avatarUrl ? (
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                disabled={avatarBusy}
+                onClick={() => void removeAvatar()}
+              >
+                {t('avatarRemoveCta')}
+              </Button>
+            ) : null}
+          </div>
         </div>
       </div>
-    </div>
+    </>
   );
 
   if (editing) {
