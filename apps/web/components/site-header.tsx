@@ -25,6 +25,7 @@ import {
   skipLinkClassName,
 } from '@/components/ui/navbar';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import { PrizrenPhotoPanel } from '@/components/home/prizren-photo-panel';
 
 export function SiteHeader() {
   const t = useTranslations('Nav');
@@ -143,10 +144,7 @@ export function SiteHeader() {
             <SheetTitle>{t('mainNav')}</SheetTitle>
           </SheetHeader>
 
-          <nav
-            className="flex min-h-0 flex-1 flex-col overflow-y-auto py-3"
-            aria-label={t('mainNav')}
-          >
+          <nav className="shrink-0 py-3" aria-label={t('mainNav')}>
             {primaryLinks.map((link) => (
               <NavbarDrawerLink
                 key={link.href}
@@ -196,7 +194,15 @@ export function SiteHeader() {
             </div>
           </nav>
 
-          <div className="mt-auto flex items-center justify-between gap-2 border-t border-border px-inset py-gutter pb-[max(1rem,env(safe-area-inset-bottom))]">
+          <div className="flex min-h-0 flex-1 flex-col px-gutter py-3">
+            <PrizrenPhotoPanel
+              variant="fill"
+              className="h-full"
+              onNavigate={() => setOpen(false)}
+            />
+          </div>
+
+          <div className="flex items-center justify-between gap-2 border-t border-border px-inset py-gutter pb-[max(1rem,env(safe-area-inset-bottom))]">
             <ThemeToggle />
             <LanguageSwitcher variant="compact" />
           </div>
