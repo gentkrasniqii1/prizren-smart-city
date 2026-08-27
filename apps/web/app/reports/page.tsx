@@ -337,7 +337,7 @@ function ReportsPageContent() {
         <div
           className={cn(
             'relative overflow-hidden border-y border-border bg-muted transition-[height] duration-slow ease-product',
-            mobileSheet === 'list' ? 'h-[28svh]' : 'h-[42svh]',
+            mobileSheet === 'list' ? 'h-[28svh]' : 'h-[36svh]',
           )}
         >
           <ReportsMap
@@ -351,7 +351,7 @@ function ReportsPageContent() {
         <div
           className={cn(
             'relative z-10 -mt-3 flex flex-col overflow-hidden rounded-t-2xl border border-border bg-card shadow-lift',
-            mobileSheet === 'list' ? 'h-[50svh]' : 'h-[40svh]',
+            mobileSheet === 'list' ? 'h-[50svh]' : 'h-[46svh]',
           )}
         >
           <div className="flex justify-center py-2" aria-hidden>
