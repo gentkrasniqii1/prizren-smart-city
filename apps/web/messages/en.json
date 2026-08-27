@@ -98,6 +98,7 @@
       "title": "Latest issues",
       "description": "A quick look at official public cases — no personal data.",
       "viewMap": "View on map",
+      "viewAll": "View all reports",
       "emptyTitle": "No public reports yet",
       "emptyBody": "Be the first to report an urban issue in Prizren.",
       "noPhoto": "No photo",
@@ -272,7 +273,11 @@
     "showFilters": "Filters",
     "hideFilters": "Hide filters",
     "clearFilters": "Clear",
-    "filtersHeading": "Filters"
+    "filtersHeading": "Filters",
+    "mineTitle": "My reports",
+    "mineSubtitle": "Issues you submitted — filter them and view them on the map.",
+    "mineEmptyTitle": "No reports yet",
+    "mineEmptyBody": "When you report a problem, you can track it here until it is resolved."
   },
   "Common": {
     "loading": "Loading…",
@@ -569,6 +574,7 @@
     "emptyFilteredTitle": "No reports in this filter",
     "emptyFilteredBody": "Try another filter or report a new problem.",
     "showingOf": "Showing {shown} of {total}",
+    "reportsViewAll": "View all reports",
     "notifHeading": "Recent notifications",
     "notifUnread": "{count} unread",
     "notifEmpty": "No notifications yet.",
