@@ -1,10 +1,32 @@
-export function UserAvatar({ name, size = 32 }: { name: string; size?: number }) {
+import Image from 'next/image';
+
+export function UserAvatar({
+  name,
+  avatarUrl,
+  size = 32,
+}: {
+  name: string;
+  avatarUrl?: string | null;
+  size?: number;
+}) {
   const initials = name
     .split(/\s+/)
     .filter(Boolean)
     .slice(0, 2)
     .map((p) => p[0]?.toUpperCase() ?? '')
     .join('');
+
+  if (avatarUrl) {
+    return (
+      <span
+        className="relative inline-flex shrink-0 overflow-hidden rounded-full bg-muted"
+        style={{ width: size, height: size }}
+        aria-hidden
+      >
+        <Image src={avatarUrl} alt="" fill sizes={`${size}px`} className="object-cover" />
+      </span>
+    );
+  }
 
   return (
     <span

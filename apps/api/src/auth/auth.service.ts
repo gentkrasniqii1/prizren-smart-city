@@ -599,6 +599,7 @@ export class AuthService {
       googleLinked: Boolean(user.googleId),
       facebookLinked: Boolean(user.facebookId),
       needsEmail,
+      avatarUrl: user.avatarUrl ?? null,
       createdAt: user.createdAt.toISOString(),
     };
   }

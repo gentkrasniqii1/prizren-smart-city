@@ -6,6 +6,7 @@ import { AuthProvider } from '@/components/auth-provider';
 import { RealtimeProvider } from '@/components/realtime-provider';
 import { NotificationInboxProvider } from '@/components/notifications/notification-inbox';
 import { SiteShell } from '@/components/layout/site-shell';
+import { AvatarRealtimeSync } from '@/components/avatar-realtime-sync';
 import { SentryInit } from '@/components/sentry-init';
 import { ServiceWorkerRegister } from '@/components/service-worker-register';
 import { ThemeProvider } from '@/components/theme-provider';
@@ -86,6 +87,7 @@ export default async function RootLayout({
           <NextIntlClientProvider locale={locale} messages={messages}>
             <AuthProvider>
               <RealtimeProvider>
+                <AvatarRealtimeSync />
                 <NotificationInboxProvider>
                   <ToastProvider>
                     <SentryInit />

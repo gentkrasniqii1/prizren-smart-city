@@ -223,7 +223,7 @@ export function AccountDashboard() {
         {/* Header */}
         <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div className="flex items-start gap-4">
-            <UserAvatar name={user.name} size={56} />
+            <UserAvatar name={user.name} avatarUrl={user.avatarUrl} size={56} />
             <div>
               <p className="text-sm text-stone-600">{t('greeting')}</p>
               <h1 className="ds-page-title">{t('welcome', { name: firstName })}</h1>

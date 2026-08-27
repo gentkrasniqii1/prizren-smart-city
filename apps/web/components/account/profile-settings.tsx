@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useTranslations } from 'next-intl';
 import type { PublicUser, UpdateProfileRequest } from '@prizren/shared-types';
@@ -10,10 +10,13 @@ import { issueMessage, zodResolver } from '@/lib/form-validation';
 import { useAuth } from '@/components/auth-provider';
 import { useToast } from '@/components/toast-provider';
 import { OAuthButtons } from '@/components/auth/oauth-buttons';
+import { UserAvatar } from '@/components/user-avatar';
 import { Button } from '@/components/ui/button';
 import { Input, Label } from '@/components/ui/field';
 import { Badge, FieldError, FormError } from '@/components/ui';
 import { useErrorMessage } from '@/lib/use-error-message';
+
+const MAX_AVATAR_BYTES = 5 * 1024 * 1024;
 
 type ProfileFormValues = {
   firstName: string;
@@ -40,6 +43,8 @@ export function ProfileSettings({
   const [formError, setFormError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [verifying, setVerifying] = useState(false);
+  const [avatarBusy, setAvatarBusy] = useState(false);
+  const avatarInputRef = useRef<HTMLInputElement>(null);
 
   const {
     register,
@@ -109,66 +114,156 @@ export function ProfileSettings({
     }
   }
 
-  if (editing) {
-    return (
-      <form onSubmit={handleSubmit(onValid)} className="mt-4 space-y-4" noValidate>
-        <div className="grid gap-3 sm:grid-cols-2">
-          <div>
-            <Label htmlFor="profile-first-name">{tAuth('firstName')}</Label>
-            <Input
-              id="profile-first-name"
-              autoComplete="given-name"
-              invalid={Boolean(errors.firstName)}
-              aria-describedby={errors.firstName ? 'profile-first-name-error' : undefined}
-              {...register('firstName')}
-            />
-            <FieldError
-              id="profile-first-name-error"
-              message={issueMessage(errors.firstName, tAuth)}
-            />
-          </div>
-          <div>
-            <Label htmlFor="profile-last-name">{tAuth('lastName')}</Label>
-            <Input
-              id="profile-last-name"
-              autoComplete="family-name"
-              invalid={Boolean(errors.lastName)}
-              aria-describedby={errors.lastName ? 'profile-last-name-error' : undefined}
-              {...register('lastName')}
-            />
-            <FieldError
-              id="profile-last-name-error"
-              message={issueMessage(errors.lastName, tAuth)}
-            />
-          </div>
-        </div>
-        <div>
-          <Label htmlFor="profile-phone">{tAuth('phoneOptional')}</Label>
-          <Input id="profile-phone" type="tel" autoComplete="tel" {...register('phone')} />
-        </div>
+  async function onAvatarFile(file: File) {
+    if (file.type !== 'image/jpeg' && file.type !== 'image/png') {
+      toast.push(t('avatarInvalidType'), 'error');
+      return;
+    }
+    if (file.size > MAX_AVATAR_BYTES) {
+      toast.push(t('avatarTooLarge'), 'error');
+      return;
+    }
+    setAvatarBusy(true);
+    try {
+      const body = new FormData();
+      body.append('avatar', file);
+      const updated = await apiFetch<PublicUser>('/users/me/avatar', {
+        method: 'PATCH',
+        auth: true,
+        body,
+      });
+      updateUser(updated);
+      toast.push(t('avatarUploadSuccess'), 'success');
+    } catch (err) {
+      toast.push(errorMessage(err, t('avatarUploadFailed')), 'error');
+    } finally {
+      setAvatarBusy(false);
+      if (avatarInputRef.current) avatarInputRef.current.value = '';
+    }
+  }
 
-        <FormError message={formError} />
+  async function removeAvatar() {
+    setAvatarBusy(true);
+    try {
+      const updated = await apiFetch<PublicUser>('/users/me/avatar', {
+        method: 'DELETE',
+        auth: true,
+      });
+      updateUser(updated);
+      toast.push(t('avatarRemoveSuccess'), 'success');
+    } catch (err) {
+      toast.push(errorMessage(err, t('avatarRemoveFailed')), 'error');
+    } finally {
+      setAvatarBusy(false);
+    }
+  }
 
-        <div className="flex gap-2">
-          <Button type="submit" size="sm" loading={submitting}>
-            {t('profileSaveCta')}
-          </Button>
+  const avatarBlock = (
+    <div className="mb-5 flex items-center gap-4">
+      <UserAvatar name={user.name} avatarUrl={user.avatarUrl} size={64} />
+      <div className="min-w-0">
+        <p className="text-sm font-medium text-foreground">{t('avatarHeading')}</p>
+        <p className="mt-0.5 text-xs text-muted-foreground">{t('avatarHint')}</p>
+        <div className="mt-2 flex flex-wrap gap-2">
+          <input
+            ref={avatarInputRef}
+            type="file"
+            accept="image/png,image/jpeg"
+            className="sr-only"
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (file) void onAvatarFile(file);
+            }}
+          />
           <Button
             type="button"
             variant="secondary"
             size="sm"
-            onClick={cancel}
-            disabled={submitting}
+            loading={avatarBusy}
+            onClick={() => avatarInputRef.current?.click()}
           >
-            {t('profileCancelCta')}
+            {user.avatarUrl ? t('avatarChangeCta') : t('avatarUploadCta')}
           </Button>
+          {user.avatarUrl ? (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              disabled={avatarBusy}
+              onClick={() => void removeAvatar()}
+            >
+              {t('avatarRemoveCta')}
+            </Button>
+          ) : null}
         </div>
-      </form>
+      </div>
+    </div>
+  );
+
+  if (editing) {
+    return (
+      <div className="mt-4">
+        {avatarBlock}
+        <form onSubmit={handleSubmit(onValid)} className="space-y-4" noValidate>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div>
+              <Label htmlFor="profile-first-name">{tAuth('firstName')}</Label>
+              <Input
+                id="profile-first-name"
+                autoComplete="given-name"
+                invalid={Boolean(errors.firstName)}
+                aria-describedby={errors.firstName ? 'profile-first-name-error' : undefined}
+                {...register('firstName')}
+              />
+              <FieldError
+                id="profile-first-name-error"
+                message={issueMessage(errors.firstName, tAuth)}
+              />
+            </div>
+            <div>
+              <Label htmlFor="profile-last-name">{tAuth('lastName')}</Label>
+              <Input
+                id="profile-last-name"
+                autoComplete="family-name"
+                invalid={Boolean(errors.lastName)}
+                aria-describedby={errors.lastName ? 'profile-last-name-error' : undefined}
+                {...register('lastName')}
+              />
+              <FieldError
+                id="profile-last-name-error"
+                message={issueMessage(errors.lastName, tAuth)}
+              />
+            </div>
+          </div>
+          <div>
+            <Label htmlFor="profile-phone">{tAuth('phoneOptional')}</Label>
+            <Input id="profile-phone" type="tel" autoComplete="tel" {...register('phone')} />
+          </div>
+
+          <FormError message={formError} />
+
+          <div className="flex gap-2">
+            <Button type="submit" size="sm" loading={submitting}>
+              {t('profileSaveCta')}
+            </Button>
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              onClick={cancel}
+              disabled={submitting}
+            >
+              {t('profileCancelCta')}
+            </Button>
+          </div>
+        </form>
+      </div>
     );
   }
 
   return (
     <div className="mt-4">
+      {avatarBlock}
       <dl className="space-y-3 text-sm">
         <div>
           <dt className="text-stone-600">{t('profileName')}</dt>

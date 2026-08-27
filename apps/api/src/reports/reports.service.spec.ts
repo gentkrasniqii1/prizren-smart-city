@@ -887,7 +887,7 @@ describe('ReportsService public visibility', () => {
       reportId: 'r1',
       text: 'hello',
       createdAt: new Date('2026-08-22T12:00:00.000Z'),
-      user: { name: 'Citizen' },
+      user: { id: stranger.id, name: 'Citizen', avatarUrl: null },
     });
     const prisma = {
       report: {

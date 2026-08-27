@@ -27,6 +27,7 @@ model User {
   lockedUntil      DateTime?
   lastLoginAt      DateTime?
   lastLoginIp      String?
+  avatarUrl        String?
   createdAt        DateTime       @default(now())
   reports          Report[]
   votes            Vote[]

@@ -42,6 +42,8 @@ export interface PublicUser {
   facebookLinked: boolean;
   /** true when a leftover Facebook placeholder account still has no real email. */
   needsEmail?: boolean;
+  /** Cloudinary URL when the user uploaded a profile photo; otherwise omitted/null. */
+  avatarUrl?: string | null;
   createdAt: string;
 }
 
@@ -383,6 +385,8 @@ export interface CommentDto {
   reportId: string;
   text: string;
   authorName: string;
+  authorUserId?: string;
+  authorAvatarUrl?: string | null;
   createdAt: string;
 }
 

@@ -1,14 +1,21 @@
 import {
+  BadRequestException,
   Body,
   Controller,
+  Delete,
   Get,
   NotFoundException,
   Param,
   ParseUUIDPipe,
   Patch,
   Req,
+  UploadedFile,
   UseGuards,
+  UseInterceptors,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { Throttle } from '@nestjs/throttler';
+import { memoryStorage } from 'multer';
 import { Role } from '@prisma/client';
 import { Request } from 'express';
 import { PrismaService } from '../prisma/prisma.service';
@@ -23,6 +30,8 @@ import { updateProfileRequestSchema, setAccountEmailRequestSchema } from '@prizr
 import { zodBody } from '../common/zod-validation.pipe';
 import { UpdateUserRoleDto } from './dto/update-user-role.dto';
 import { UpdateProfileDto } from './dto/update-profile.dto';
+import { MAX_IMAGE_BYTES } from '../reports/dto/create-report.dto';
+import { UsersService } from './users.service';
 
 @Controller('users')
 @UseGuards(JwtAuthGuard)
@@ -31,6 +40,7 @@ export class UsersController {
     private readonly prisma: PrismaService,
     private readonly authService: AuthService,
     private readonly audit: AuditService,
+    private readonly usersService: UsersService,
   ) {}
 
   @Get('me')
@@ -92,6 +102,52 @@ export class UsersController {
     await this.audit.log({
       userId: authUser.id,
       action: 'user.email_set',
+      entityType: 'User',
+      entityId: authUser.id,
+      ipAddress: getClientIp(req),
+    });
+    return updated;
+  }
+
+  @Patch('me/avatar')
+  @Throttle({ default: { limit: 10, ttl: 3_600_000 } })
+  @UseInterceptors(
+    FileInterceptor('avatar', {
+      storage: memoryStorage(),
+      limits: { fileSize: MAX_IMAGE_BYTES },
+    }),
+  )
+  async updateAvatar(
+    @CurrentUser() authUser: AuthUser,
+    @UploadedFile() file: Express.Multer.File | undefined,
+    @Req() req: Request,
+  ) {
+    if (!authUser) {
+      throw new NotFoundException('User not found');
+    }
+    if (!file) {
+      throw new BadRequestException('avatar is required');
+    }
+    const updated = await this.usersService.updateAvatar(authUser.id, file);
+    await this.audit.log({
+      userId: authUser.id,
+      action: 'user.avatar_update',
+      entityType: 'User',
+      entityId: authUser.id,
+      ipAddress: getClientIp(req),
+    });
+    return updated;
+  }
+
+  @Delete('me/avatar')
+  async removeAvatar(@CurrentUser() authUser: AuthUser, @Req() req: Request) {
+    if (!authUser) {
+      throw new NotFoundException('User not found');
+    }
+    const updated = await this.usersService.removeAvatar(authUser.id);
+    await this.audit.log({
+      userId: authUser.id,
+      action: 'user.avatar_remove',
       entityType: 'User',
       entityId: authUser.id,
       ipAddress: getClientIp(req),

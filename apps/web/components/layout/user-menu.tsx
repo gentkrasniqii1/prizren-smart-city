@@ -11,7 +11,7 @@ export function UserMenu() {
 
   return (
     <NavbarUser href="/account" name={user.name}>
-      <UserAvatar name={user.name} size={28} />
+      <UserAvatar name={user.name} avatarUrl={user.avatarUrl} size={28} />
     </NavbarUser>
   );
 }
