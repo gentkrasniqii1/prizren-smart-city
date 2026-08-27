@@ -23,7 +23,7 @@ type FieldState = {
   fieldSize?: 'sm' | 'md';
 };
 
-function fieldClass(invalid?: boolean, fieldSize: 'sm' | 'md' = 'md') {
+export function fieldClass(invalid?: boolean, fieldSize: 'sm' | 'md' = 'md') {
   return cn(fieldSize === 'sm' ? fieldSm : fieldMd, invalid ? fieldErr : fieldOk);
 }
 
