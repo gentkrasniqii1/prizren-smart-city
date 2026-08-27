@@ -1,3 +1,4 @@
+import Image from 'next/image';
 import { Bot, Building2, ClipboardPen, Route } from 'lucide-react';
 import { getTranslations } from 'next-intl/server';
 import { PageContainer } from '@/components/layout/page-container';
@@ -16,32 +17,49 @@ export async function HomeHowItWorks() {
   ];
 
   return (
-    <Section id="how-it-works" className="scroll-mt-20 bg-stone-50">
-      <PageContainer>
-        <SectionHeading
-          eyebrow={t('how.eyebrow')}
-          title={t('how.title')}
-          description={t('how.description')}
+    <Section id="how-it-works" className="relative scroll-mt-20 overflow-hidden py-0">
+      <div className="relative">
+        <Image
+          src="/images/prizren/overview.jpg"
+          alt=""
+          fill
+          sizes="100vw"
+          quality={75}
+          className="object-cover"
         />
+        <div
+          className="absolute inset-0 bg-gradient-to-t from-overlay-surface/90 via-overlay-surface/65 to-overlay-surface/35"
+          aria-hidden
+        />
+        <PageContainer className="relative py-14 sm:py-20">
+          <SectionHeading
+            eyebrow={t('how.eyebrow')}
+            title={t('how.title')}
+            description={t('how.description')}
+            tone="dark"
+          />
 
-        <ol className="mt-10 grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
-          {steps.map((step, index) => {
-            const Icon = STEP_ICONS[index]!;
-            return (
-              <li key={step.title} className="relative">
-                <div className="flex items-center gap-3">
-                  <span className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-primary text-sm font-semibold text-primary-foreground">
-                    {index + 1}
-                  </span>
-                  <Icon className="h-5 w-5 text-mosque-700" aria-hidden />
-                </div>
-                <h3 className="mt-4 text-lg font-semibold text-stone-950">{step.title}</h3>
-                <p className="mt-2 text-sm leading-relaxed text-stone-600">{step.body}</p>
-              </li>
-            );
-          })}
-        </ol>
-      </PageContainer>
+          <ol className="mt-10 grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
+            {steps.map((step, index) => {
+              const Icon = STEP_ICONS[index]!;
+              return (
+                <li key={step.title} className="relative">
+                  <div className="flex items-center gap-3">
+                    <span className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-primary text-sm font-semibold text-primary-foreground">
+                      {index + 1}
+                    </span>
+                    <Icon className="h-5 w-5 text-gilt" aria-hidden />
+                  </div>
+                  <h3 className="mt-4 text-lg font-semibold text-overlay-foreground">
+                    {step.title}
+                  </h3>
+                  <p className="mt-2 text-sm leading-relaxed text-overlay-muted">{step.body}</p>
+                </li>
+              );
+            })}
+          </ol>
+        </PageContainer>
+      </div>
     </Section>
   );
 }
