@@ -37,7 +37,7 @@ export async function HomeHero() {
             asChild
             size="lg"
             variant="secondary"
-            className="w-full border-white/35 bg-white/95 text-chip-foreground sm:w-auto"
+            className="w-full border-white/35 bg-white/95 text-chip-foreground hover:bg-white hover:text-chip-foreground active:bg-white active:text-chip-foreground sm:w-auto"
           >
             <Link href="/reports">{t('ctaBrowse')}</Link>
           </Button>

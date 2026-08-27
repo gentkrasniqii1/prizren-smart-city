@@ -24,7 +24,7 @@ export async function HomeTransparency({ stats }: { stats: TransparencyStats | n
               <Button
                 size="lg"
                 variant="secondary"
-                className="border-white/20 bg-white text-chip-foreground"
+                className="border-white/20 bg-white text-chip-foreground hover:bg-white hover:text-chip-foreground active:bg-white active:text-chip-foreground"
               >
                 {t('transparency.cta')}
               </Button>
