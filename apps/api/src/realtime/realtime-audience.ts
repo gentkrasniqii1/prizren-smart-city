@@ -14,6 +14,9 @@ export type RealtimeAudience = {
  * admins see every report event; notification events stay recipient-only.
  */
 export function realtimeEventVisibleTo(audience: RealtimeAudience, event: RealtimeEvent): boolean {
+  if (event.type === 'user.avatar.updated') {
+    return true;
+  }
   if (event.type === 'notification.created') {
     return event.notificationUserId === audience.userId;
   }

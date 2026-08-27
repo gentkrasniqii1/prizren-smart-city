@@ -30,7 +30,8 @@ import { apiDownload, apiFetch } from '@/lib/api';
 import { reportPublicPath } from '@/lib/report-path';
 import { issueMessage, zodResolver } from '@/lib/form-validation';
 import { useAuth } from '@/components/auth-provider';
-import { useRealtimeRefresh } from '@/components/realtime-provider';
+import { useRealtime, useRealtimeRefresh } from '@/components/realtime-provider';
+import { UserAvatar } from '@/components/user-avatar';
 import { Breadcrumbs } from '@/components/breadcrumbs';
 import { PageContainer } from '@/components/layout/page-container';
 import { RemoteImage } from '@/components/remote-image';
@@ -112,6 +113,15 @@ export function ReportDetailView() {
     Boolean(user && params.id),
     (event) => event.reportId === params.id,
   );
+
+  useRealtime((event) => {
+    if (event.type !== 'user.avatar.updated' || !event.userId) return;
+    setComments((prev) =>
+      prev.map((c) =>
+        c.authorUserId === event.userId ? { ...c, authorAvatarUrl: event.avatarUrl ?? null } : c,
+      ),
+    );
+  });
 
   const pendingReview = Boolean(report && PRE_APPROVAL_STATUSES.includes(report.status));
 
@@ -570,12 +580,20 @@ export function ReportDetailView() {
                   <li className="text-sm text-muted-foreground">{t('noComments')}</li>
                 ) : (
                   comments.map((c) => (
-                    <li key={c.id} className="border-b border-border pb-4 last:border-0 last:pb-0">
-                      <p className="text-sm font-semibold text-foreground">{c.authorName}</p>
-                      <p className="mt-1 whitespace-pre-wrap text-sm text-foreground">{c.text}</p>
-                      <p className="mt-1.5 text-xs text-muted-foreground">
-                        {new Date(c.createdAt).toLocaleString(locale === 'en' ? 'en-GB' : 'sq-AL')}
-                      </p>
+                    <li
+                      key={c.id}
+                      className="flex gap-3 border-b border-border pb-4 last:border-0 last:pb-0"
+                    >
+                      <UserAvatar name={c.authorName} avatarUrl={c.authorAvatarUrl} size={32} />
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-semibold text-foreground">{c.authorName}</p>
+                        <p className="mt-1 whitespace-pre-wrap text-sm text-foreground">{c.text}</p>
+                        <p className="mt-1.5 text-xs text-muted-foreground">
+                          {new Date(c.createdAt).toLocaleString(
+                            locale === 'en' ? 'en-GB' : 'sq-AL',
+                          )}
+                        </p>
+                      </div>
                     </li>
                   ))
                 )}

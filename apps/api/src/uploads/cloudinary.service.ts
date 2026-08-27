@@ -32,7 +32,11 @@ export class CloudinaryService {
     }
   }
 
-  async uploadImage(buffer: Buffer, filename: string): Promise<string> {
+  async uploadImage(
+    buffer: Buffer,
+    filename: string,
+    options?: { folder?: string; overwrite?: boolean },
+  ): Promise<string> {
     if (!this.configured) {
       throw new ServiceUnavailableException(
         'Cloudinary is not configured. Add credentials to apps/api/.env',
@@ -46,10 +50,10 @@ export class CloudinaryService {
       // switching to private/signed delivery would break public evidence.
       const upload = cloudinary.uploader.upload_stream(
         {
-          folder: process.env.CLOUDINARY_FOLDER ?? 'prizren-reports',
+          folder: options?.folder ?? process.env.CLOUDINARY_FOLDER ?? 'prizren-reports',
           resource_type: 'image',
           public_id: filename.replace(/\.[^.]+$/, ''),
-          overwrite: false,
+          overwrite: options?.overwrite ?? false,
         },
         (error, result: UploadApiResponse | undefined) => {
           if (error || !result?.secure_url) {

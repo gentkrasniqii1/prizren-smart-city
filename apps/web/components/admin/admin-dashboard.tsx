@@ -25,7 +25,7 @@ import type {
 import { apiFetch } from '@/lib/api';
 import { usePolling, LIVE_POLL_MS } from '@/lib/use-polling';
 import { useAuth } from '@/components/auth-provider';
-import { useRealtimeRefresh } from '@/components/realtime-provider';
+import { useRealtime, useRealtimeRefresh } from '@/components/realtime-provider';
 import { useToast } from '@/components/toast-provider';
 import { Breadcrumbs } from '@/components/breadcrumbs';
 import { PageContainer } from '@/components/layout/page-container';
@@ -225,6 +225,16 @@ export function AdminDashboard() {
   useRealtimeRefresh(
     () => {
       if (!rowBusy) void loadDashboard({ background: true });
+    },
+    !authLoading && isStaff(user?.role),
+  );
+
+  useRealtime(
+    (event) => {
+      if (event.type !== 'user.avatar.updated' || !event.userId) return;
+      setStaff((prev) =>
+        prev.map((s) => (s.id === event.userId ? { ...s, avatarUrl: event.avatarUrl ?? null } : s)),
+      );
     },
     !authLoading && isStaff(user?.role),
   );

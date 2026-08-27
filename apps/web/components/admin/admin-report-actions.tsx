@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { MoreHorizontal } from 'lucide-react';
+import { ChevronDown, MoreHorizontal } from 'lucide-react';
 import { useLocale, useTranslations } from 'next-intl';
 import {
   canTransitionStatus,
@@ -36,7 +36,9 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Label, Select, Textarea } from '@/components/ui/field';
+import { Label, Select, Textarea, fieldClass } from '@/components/ui/field';
+import { UserAvatar } from '@/components/user-avatar';
+import { cn } from '@/lib/utils';
 import { getPriorityLabel, getStatusLabel, REPORT_PRIORITIES, REPORT_STATUSES } from '@/lib/labels';
 import type { AppLocale } from '@/i18n/request';
 
@@ -291,18 +293,51 @@ export function AdminReportActions({
             </div>
             <div>
               <Label htmlFor={`assign-staff-${report.id}`}>{t('colStaff')}</Label>
-              <Select
-                id={`assign-staff-${report.id}`}
-                value={staffId}
-                onChange={(e) => setStaffId(e.target.value)}
-              >
-                <option value="">{t('noStaff')}</option>
-                {staff.map((item) => (
-                  <option key={item.id} value={item.id}>
-                    {item.name}
-                  </option>
-                ))}
-              </Select>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button
+                    type="button"
+                    id={`assign-staff-${report.id}`}
+                    className={cn(
+                      fieldClass(),
+                      'flex items-center justify-between gap-2 text-left',
+                    )}
+                  >
+                    <span className="flex min-w-0 items-center gap-2">
+                      {staffId ? (
+                        <>
+                          <UserAvatar
+                            name={staff.find((s) => s.id === staffId)?.name ?? ''}
+                            avatarUrl={staff.find((s) => s.id === staffId)?.avatarUrl}
+                            size={24}
+                          />
+                          <span className="min-w-0 truncate">
+                            {staff.find((s) => s.id === staffId)?.name}
+                          </span>
+                        </>
+                      ) : (
+                        <span className="text-muted-foreground">{t('noStaff')}</span>
+                      )}
+                    </span>
+                    <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent
+                  align="start"
+                  side="bottom"
+                  className="z-50 min-w-[var(--radix-dropdown-menu-trigger-width)]"
+                >
+                  <DropdownMenuItem onSelect={() => setStaffId('')}>
+                    {t('noStaff')}
+                  </DropdownMenuItem>
+                  {staff.map((item) => (
+                    <DropdownMenuItem key={item.id} onSelect={() => setStaffId(item.id)}>
+                      <UserAvatar name={item.name} avatarUrl={item.avatarUrl} size={24} />
+                      <span className="min-w-0 truncate">{item.name}</span>
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           </div>
           <DialogFooter>

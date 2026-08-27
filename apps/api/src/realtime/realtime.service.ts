@@ -12,6 +12,8 @@ import {
   REPORT_STATUS_CHANGED_EVENT,
   ReportCreatedEvent,
   StatusChangedEvent,
+  USER_AVATAR_UPDATED_EVENT,
+  UserAvatarUpdatedEvent,
 } from '../events/status-changed.event';
 import { realtimeEventVisibleTo, type RealtimeAudience } from './realtime-audience';
 
@@ -79,6 +81,16 @@ export class RealtimeService {
       at: new Date().toISOString(),
       reportId: event.reportId ?? undefined,
       notificationUserId: event.userId,
+    });
+  }
+
+  @OnEvent(USER_AVATAR_UPDATED_EVENT)
+  handleAvatarUpdated(event: UserAvatarUpdatedEvent) {
+    this.publish({
+      type: 'user.avatar.updated',
+      at: new Date().toISOString(),
+      userId: event.userId,
+      avatarUrl: event.avatarUrl,
     });
   }
 

@@ -1211,7 +1211,7 @@ export class ReportsService {
       this.prisma.comment.count({ where: { reportId: report.id } }),
       this.prisma.comment.findMany({
         where: { reportId: report.id },
-        include: { user: { select: { name: true } } },
+        include: { user: { select: { id: true, name: true, avatarUrl: true } } },
         orderBy: { createdAt: 'asc' },
         skip: (safePage - 1) * safeLimit,
         take: safeLimit,
@@ -1249,7 +1249,7 @@ export class ReportsService {
         userId: user.id,
         text: trimmed,
       },
-      include: { user: { select: { name: true } } },
+      include: { user: { select: { id: true, name: true, avatarUrl: true } } },
     });
 
     return this.toCommentDto(created);
@@ -1934,13 +1934,15 @@ export class ReportsService {
     reportId: string;
     text: string;
     createdAt: Date;
-    user: { name: string };
+    user: { id: string; name: string; avatarUrl: string | null };
   }): CommentDto {
     return {
       id: row.id,
       reportId: row.reportId,
       text: row.text,
       authorName: row.user.name,
+      authorUserId: row.user.id,
+      authorAvatarUrl: row.user.avatarUrl,
       createdAt: row.createdAt.toISOString(),
     };
   }

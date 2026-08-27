@@ -77,4 +77,16 @@ describe('realtimeEventVisibleTo', () => {
     expect(realtimeEventVisibleTo(admin, notif)).toBe(false);
     expect(realtimeEventVisibleTo(citizen, notif)).toBe(false);
   });
+
+  it('broadcasts avatar updates to every connected user', () => {
+    const avatar: RealtimeEvent = {
+      type: 'user.avatar.updated',
+      at: '2026-08-19T00:00:00.000Z',
+      userId: 'c1',
+      avatarUrl: 'https://res.cloudinary.com/demo/a.jpg',
+    };
+    expect(realtimeEventVisibleTo(citizen, avatar)).toBe(true);
+    expect(realtimeEventVisibleTo(staff, avatar)).toBe(true);
+    expect(realtimeEventVisibleTo(admin, avatar)).toBe(true);
+  });
 });

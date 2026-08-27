@@ -3,6 +3,7 @@ import { ReportStatus } from '@prisma/client';
 export const REPORT_STATUS_CHANGED_EVENT = 'report.status_changed';
 export const REPORT_CREATED_EVENT = 'report.created';
 export const NOTIFICATION_CREATED_EVENT = 'notification.created';
+export const USER_AVATAR_UPDATED_EVENT = 'user.avatar.updated';
 
 export class StatusChangedEvent {
   constructor(
@@ -26,5 +27,12 @@ export class NotificationCreatedEvent {
   constructor(
     public readonly userId: string,
     public readonly reportId: string | null,
+  ) {}
+}
+
+export class UserAvatarUpdatedEvent {
+  constructor(
+    public readonly userId: string,
+    public readonly avatarUrl: string | null,
   ) {}
 }
