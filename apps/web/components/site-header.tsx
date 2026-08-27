@@ -25,10 +25,12 @@ import {
   skipLinkClassName,
 } from '@/components/ui/navbar';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
-import { PrizrenPhotoPanel } from '@/components/home/prizren-photo-panel';
+import { PrizrenSlideshow } from '@/components/media/prizren-slideshow';
+import { HOME_HERO_INTERVAL_MS, HOME_HERO_SLIDES } from '@/lib/prizren-photos';
 
 export function SiteHeader() {
   const t = useTranslations('Nav');
+  const tHome = useTranslations('Home');
   const { user, loading, logout } = useAuth();
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
@@ -140,11 +142,14 @@ export function SiteHeader() {
 
       <Sheet open={open} onOpenChange={setOpen}>
         <SheetContent side="right" className="flex w-full max-w-sm flex-col gap-0 p-0 lg:hidden">
-          <SheetHeader className="border-b border-border px-inset py-gutter pr-14 text-left">
+          <SheetHeader className="shrink-0 border-b border-border px-inset py-gutter pr-14 text-left">
             <SheetTitle>{t('mainNav')}</SheetTitle>
           </SheetHeader>
 
-          <nav className="shrink-0 py-3" aria-label={t('mainNav')}>
+          <nav
+            className="min-h-0 shrink overflow-y-auto overscroll-contain py-3"
+            aria-label={t('mainNav')}
+          >
             {primaryLinks.map((link) => (
               <NavbarDrawerLink
                 key={link.href}
@@ -194,15 +199,20 @@ export function SiteHeader() {
             </div>
           </nav>
 
-          <div className="flex min-h-0 flex-1 flex-col px-gutter py-3">
-            <PrizrenPhotoPanel
-              variant="fill"
-              className="h-full"
-              onNavigate={() => setOpen(false)}
+          <Link
+            href="/#heritage"
+            onClick={() => setOpen(false)}
+            className="relative mx-gutter min-h-[12rem] flex-1 overflow-hidden rounded-lg border border-border bg-muted"
+          >
+            <PrizrenSlideshow
+              slides={HOME_HERO_SLIDES}
+              alt={tHome('heroAlt')}
+              sizes="24rem"
+              intervalMs={HOME_HERO_INTERVAL_MS}
             />
-          </div>
+          </Link>
 
-          <div className="flex items-center justify-between gap-2 border-t border-border px-inset py-gutter pb-[max(1rem,env(safe-area-inset-bottom))]">
+          <div className="flex shrink-0 items-center justify-between gap-2 border-t border-border px-inset py-gutter pb-[max(1rem,env(safe-area-inset-bottom))]">
             <ThemeToggle />
             <LanguageSwitcher variant="compact" />
           </div>

@@ -47,7 +47,8 @@ import { cn } from '@/lib/utils';
 import { TwoFactorSettings } from '@/components/account/two-factor-settings';
 import { ProfileSettings } from '@/components/account/profile-settings';
 import { ChangePasswordForm } from '@/components/account/change-password-form';
-import { PrizrenPhotoPanel } from '@/components/home/prizren-photo-panel';
+import { PrizrenSlideshow } from '@/components/media/prizren-slideshow';
+import { HOME_HERO_INTERVAL_MS, HOME_HERO_SLIDES } from '@/lib/prizren-photos';
 import type { AppLocale } from '@/i18n/request';
 
 const OPEN_STATUSES = new Set([
@@ -69,6 +70,7 @@ function isStaffRole(role?: string) {
 
 export function AccountDashboard() {
   const t = useTranslations('Account');
+  const tHome = useTranslations('Home');
   const locale = useLocale() as AppLocale;
   const router = useRouter();
   const { user, loading: authLoading, logout } = useAuth();
@@ -399,6 +401,15 @@ export function AccountDashboard() {
                 </Button>
               </div>
             ) : null}
+
+            <div className="relative mt-6 hidden h-[28rem] overflow-hidden rounded-xl border border-border bg-muted lg:block">
+              <PrizrenSlideshow
+                slides={HOME_HERO_SLIDES}
+                alt={tHome('heroAlt')}
+                sizes="(min-width: 1024px) 55vw, 0px"
+                intervalMs={HOME_HERO_INTERVAL_MS}
+              />
+            </div>
           </section>
 
           {/* Sidebar: notifications + profile */}
@@ -481,7 +492,6 @@ export function AccountDashboard() {
             </section>
             <ChangePasswordForm user={user} />
             <TwoFactorSettings enabled={Boolean(user.totpEnabled)} />
-            <PrizrenPhotoPanel variant="sidebar" className="hidden lg:block" />
           </aside>
         </div>
       </PageContainer>
