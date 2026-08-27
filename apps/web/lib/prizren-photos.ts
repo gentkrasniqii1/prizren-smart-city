@@ -19,7 +19,14 @@ export const HOME_HERO_INTERVAL_MS = 4500;
 export type HeritagePlace = {
   src: string;
   nameKey:
-    'kalaja' | 'league' | 'stoneBridge' | 'sinanPasha' | 'shadervan' | 'tabakhane' | 'marash';
+    | 'kalaja'
+    | 'league'
+    | 'stoneBridge'
+    | 'sinanPasha'
+    | 'shadervan'
+    | 'tabakhane'
+    | 'marash'
+    | 'bistrica';
 };
 
 /**
@@ -34,4 +41,5 @@ export const HERITAGE_GALLERY: HeritagePlace[] = [
   { src: '/images/prizren/shadervan.jpg', nameKey: 'shadervan' },
   { src: '/images/prizren/tabakhane.jpg', nameKey: 'tabakhane' },
   { src: '/images/prizren/marash.jpg', nameKey: 'marash' },
+  { src: '/images/prizren/bistrica.jpg', nameKey: 'bistrica' },
 ];

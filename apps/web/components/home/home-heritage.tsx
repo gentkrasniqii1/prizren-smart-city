@@ -15,6 +15,7 @@ export async function HomeHeritage() {
     shadervan: t('heritage.places.shadervan'),
     tabakhane: t('heritage.places.tabakhane'),
     marash: t('heritage.places.marash'),
+    bistrica: t('heritage.places.bistrica'),
   };
 
   return (
