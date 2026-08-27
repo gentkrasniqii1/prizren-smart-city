@@ -267,7 +267,7 @@ export function ReportsPageSkeleton({ label }: { label?: string }) {
       </PageContainer>
       <div className="pb-bottom-nav lg:hidden">
         <MapSkeleton className="h-[42svh] rounded-none" />
-        <div className="-mt-3 overflow-hidden rounded-t-2xl border border-border bg-card">
+        <div className="-mt-3 h-[40svh] overflow-hidden rounded-t-2xl border border-border bg-card">
           <div className="flex justify-center py-2">
             <Skeleton className="h-1 w-10 rounded-full" />
           </div>

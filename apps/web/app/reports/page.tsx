@@ -2,7 +2,8 @@
 
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { useTranslations, useLocale } from 'next-intl';
 import type { PaginatedReports, ReportDto } from '@prizren/shared-types';
 import { apiFetch } from '@/lib/api';
@@ -13,7 +14,11 @@ import { ReportFilters, type ReportsFilterState } from '@/components/reports/rep
 import { useAuth } from '@/components/auth-provider';
 import { useRealtimeRefresh } from '@/components/realtime-provider';
 import { Button, EmptyState, ErrorBanner, Skeleton } from '@/components/ui';
-import { MapSkeleton, ReportCardListSkeleton } from '@/components/ui/skeletons';
+import {
+  MapSkeleton,
+  ReportCardListSkeleton,
+  ReportsPageSkeleton,
+} from '@/components/ui/skeletons';
 import { useErrorMessage } from '@/lib/use-error-message';
 import { LIVE_POLL_MS, usePolling } from '@/lib/use-polling';
 import {
@@ -43,10 +48,13 @@ const initialFilters: ReportsFilterState = {
   nearbyKm: '',
 };
 
-export default function ReportsPage() {
+function ReportsPageContent() {
   const t = useTranslations('Reports');
   const locale = useLocale() as AppLocale;
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
+  const searchParams = useSearchParams();
+  const mineRequested = searchParams.get('mine') === '1' || searchParams.get('mine') === 'true';
+  const mineOnly = mineRequested && Boolean(user);
   const errorMessage = useErrorMessage();
   const [reports, setReports] = useState<ReportDto[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -57,6 +65,8 @@ export default function ReportsPage() {
   const [nearbyBusy, setNearbyBusy] = useState(false);
   const [nearbyMode, setNearbyMode] = useState(false);
   const [mobileSheet, setMobileSheet] = useState<'peek' | 'list'>('peek');
+  const listRef = useRef<HTMLUListElement>(null);
+  const [listFade, setListFade] = useState(false);
 
   const loadReports = useCallback(
     async (opts?: { background?: boolean }) => {
@@ -65,16 +75,21 @@ export default function ReportsPage() {
         setError(null);
       }
       try {
-        const params = new URLSearchParams();
-        params.set('limit', '100');
-        if (filters.status) params.set('status', filters.status);
-        if (filters.categoryId) params.set('categoryId', filters.categoryId);
-        if (filters.from) params.set('from', new Date(filters.from).toISOString());
-        if (filters.to) {
-          params.set('to', new Date(`${filters.to}T23:59:59.999`).toISOString());
+        if (mineOnly) {
+          const res = await apiFetch<PaginatedReports>('/reports/mine?limit=100', { auth: true });
+          setReports(res.data);
+        } else {
+          const params = new URLSearchParams();
+          params.set('limit', '100');
+          if (filters.status) params.set('status', filters.status);
+          if (filters.categoryId) params.set('categoryId', filters.categoryId);
+          if (filters.from) params.set('from', new Date(filters.from).toISOString());
+          if (filters.to) {
+            params.set('to', new Date(`${filters.to}T23:59:59.999`).toISOString());
+          }
+          const res = await apiFetch<PaginatedReports>(`/reports?${params.toString()}`);
+          setReports(res.data);
         }
-        const res = await apiFetch<PaginatedReports>(`/reports?${params.toString()}`);
-        setReports(res.data);
         setNearbyMode(false);
       } catch (err) {
         if (!opts?.background) {
@@ -84,7 +99,7 @@ export default function ReportsPage() {
         if (!opts?.background) setLoading(false);
       }
     },
-    [filters.status, filters.categoryId, filters.from, filters.to, errorMessage, t],
+    [filters.status, filters.categoryId, filters.from, filters.to, mineOnly, errorMessage, t],
   );
 
   useEffect(() => {
@@ -94,8 +109,9 @@ export default function ReportsPage() {
   }, []);
 
   useEffect(() => {
+    if (mineRequested && authLoading) return;
     void loadReports();
-  }, [loadReports]);
+  }, [loadReports, mineRequested, authLoading]);
 
   usePolling(() => {
     if (!nearbyBusy && !nearbyMode) void loadReports({ background: true });
@@ -107,8 +123,16 @@ export default function ReportsPage() {
 
   const visible = useMemo(() => {
     const q = filters.query.trim().toLowerCase();
+    const fromMs = filters.from ? new Date(filters.from).getTime() : null;
+    const toMs = filters.to ? new Date(`${filters.to}T23:59:59.999`).getTime() : null;
     return reports.filter((r) => {
       if (filters.priority && r.priority !== filters.priority) return false;
+      if (mineOnly || nearbyMode) {
+        if (filters.status && r.status !== filters.status) return false;
+        if (filters.categoryId && r.categoryId !== filters.categoryId) return false;
+        if (fromMs != null && new Date(r.createdAt).getTime() < fromMs) return false;
+        if (toMs != null && new Date(r.createdAt).getTime() > toMs) return false;
+      }
       if (!q) return true;
       return (
         r.publicId.toLowerCase().includes(q) ||
@@ -117,7 +141,17 @@ export default function ReportsPage() {
         (r.categoryName?.toLowerCase().includes(q) ?? false)
       );
     });
-  }, [reports, filters.query, filters.priority]);
+  }, [
+    reports,
+    filters.query,
+    filters.priority,
+    filters.status,
+    filters.categoryId,
+    filters.from,
+    filters.to,
+    mineOnly,
+    nearbyMode,
+  ]);
 
   const selected = useMemo(
     () => visible.find((r) => r.id === selectedId) ?? null,
@@ -170,6 +204,19 @@ export default function ReportsPage() {
     setMobileSheet('peek');
   }
 
+  const updateListFade = useCallback(() => {
+    const el = listRef.current;
+    if (!el || mobileSheet !== 'peek') {
+      setListFade(false);
+      return;
+    }
+    setListFade(el.scrollHeight - el.scrollTop - el.clientHeight > 8);
+  }, [mobileSheet]);
+
+  useEffect(() => {
+    updateListFade();
+  }, [updateListFade, visible.length, loading]);
+
   const listPanel = (
     <div className="flex h-full min-h-0 flex-col bg-card">
       <div className="flex items-center justify-between gap-2 border-b border-border px-3 py-2.5 text-sm text-muted-foreground">
@@ -197,8 +244,8 @@ export default function ReportsPage() {
       ) : visible.length === 0 ? (
         <div className="p-3">
           <EmptyState
-            title={t('emptyTitle')}
-            description={t('emptyBody')}
+            title={mineOnly ? t('mineEmptyTitle') : t('emptyTitle')}
+            description={mineOnly ? t('mineEmptyBody') : t('emptyBody')}
             action={
               <Link href="/report">
                 <Button size="sm">{t('reportFirst')}</Button>
@@ -207,7 +254,11 @@ export default function ReportsPage() {
           />
         </div>
       ) : (
-        <ul className="flex-1 overflow-y-auto">
+        <ul
+          ref={listRef}
+          onScroll={updateListFade}
+          className="min-h-0 flex-1 overflow-y-auto overscroll-contain touch-pan-y [-webkit-overflow-scrolling:touch]"
+        >
           {visible.map((r) => (
             <li key={r.id}>
               <ReportCard
@@ -228,8 +279,10 @@ export default function ReportsPage() {
       <PageContainer className="py-5 sm:py-6">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
           <div className="min-w-0">
-            <h1 className="ds-page-title">{t('title')}</h1>
-            <p className="mt-1.5 text-sm text-muted-foreground sm:text-base">{t('subtitle')}</p>
+            <h1 className="ds-page-title">{mineOnly ? t('mineTitle') : t('title')}</h1>
+            <p className="mt-1.5 text-sm text-muted-foreground sm:text-base">
+              {mineOnly ? t('mineSubtitle') : t('subtitle')}
+            </p>
           </div>
           <Link href="/report" className="hidden sm:block sm:w-auto">
             <Button size="sm" className="w-full sm:w-auto">
@@ -297,15 +350,21 @@ export default function ReportsPage() {
 
         <div
           className={cn(
-            'relative z-10 -mt-3 overflow-hidden rounded-t-2xl border border-border bg-card shadow-lift',
-            mobileSheet === 'list' ? 'min-h-[50svh]' : 'max-h-[40svh]',
+            'relative z-10 -mt-3 flex flex-col overflow-hidden rounded-t-2xl border border-border bg-card shadow-lift',
+            mobileSheet === 'list' ? 'h-[50svh]' : 'h-[40svh]',
           )}
         >
           <div className="flex justify-center py-2" aria-hidden>
             <span className="h-1 w-10 rounded-full bg-muted-foreground/30" />
           </div>
-          <div className={cn('min-h-0', mobileSheet === 'list' ? 'h-[50svh]' : 'max-h-[36svh]')}>
+          <div className="relative min-h-0 flex-1">
             {listPanel}
+            {listFade ? (
+              <div
+                className="pointer-events-none absolute inset-x-0 bottom-0 h-10 bg-gradient-to-t from-card to-transparent"
+                aria-hidden
+              />
+            ) : null}
           </div>
         </div>
 
@@ -336,5 +395,13 @@ export default function ReportsPage() {
         </Sheet>
       </div>
     </main>
+  );
+}
+
+export default function ReportsPage() {
+  return (
+    <Suspense fallback={<ReportsPageSkeleton />}>
+      <ReportsPageContent />
+    </Suspense>
   );
 }
