@@ -606,6 +606,23 @@ describe('AuthService', () => {
       user,
     };
 
+    it('sets a first password for an OAuth-only account that had none', async () => {
+      const oauthUser = { ...user, passwordHash: null };
+      prisma.authToken.findUnique.mockResolvedValue({ ...tokenRow, user: oauthUser });
+      prisma.user.update.mockResolvedValue({ ...oauthUser, passwordHash: 'hashed-password' });
+
+      const result = await service.resetPassword(rawToken, 'NewPassw0rd!');
+
+      expect(result).toEqual({ ok: true });
+      expect(prisma.user.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: 'user-1' },
+          data: expect.objectContaining({ passwordHash: 'hashed-password' }),
+        }),
+      );
+      expect(mail.sendPasswordChangedEmail).toHaveBeenCalledWith('citizen@test.local');
+    });
+
     it('resets the password, marks the token used, and revokes active sessions', async () => {
       prisma.authToken.findUnique.mockResolvedValue(tokenRow);
       prisma.user.update.mockResolvedValue(user);

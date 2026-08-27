@@ -624,6 +624,12 @@
     "changePasswordSuccess": "Fjalëkalimi u ndryshua. Ju lutem hyni përsëri.",
     "changePasswordFailed": "Fjalëkalimi nuk u ndryshua.",
     "noPasswordSet": "Kjo llogari hyn me Google ose Facebook dhe nuk ka fjalëkalim për të ndryshuar.",
+    "setPasswordCta": "Vendos një fjalëkalim",
+    "setPasswordHint": "Shto një fjalëkalim që të hysh edhe pa Google ose Facebook, ose të rikuperosh llogarinë nëse humb qasjen te ato.",
+    "setPasswordSentTitle": "Kontrollo email-in.",
+    "setPasswordSentBody": "Dërguam një lidhje njëpërdorimëshe te {email}. Skadon për një orë.",
+    "setPasswordFailed": "Emaili nuk u dërgua. Provo sërish.",
+    "setPasswordNeedEmail": "Ruaj së pari një email në këtë llogari, pastaj mund të vendosësh fjalëkalimin.",
     "logout": "Dil"
   },
   "Transparency": {
