@@ -292,9 +292,13 @@ export function AccountDashboard() {
           )}
         </section>
 
-        <div className="mt-10 grid gap-10 lg:grid-cols-[minmax(0,1.4fr)_minmax(260px,0.75fr)] lg:items-start">
+        <div className="mt-10 grid gap-10 lg:grid-cols-[minmax(0,1.4fr)_minmax(260px,0.75fr)] lg:items-stretch">
           {/* My reports */}
-          <section id="reports" aria-labelledby="account-reports-heading" className="scroll-mt-24">
+          <section
+            id="reports"
+            aria-labelledby="account-reports-heading"
+            className="scroll-mt-24 flex flex-col"
+          >
             <div className="flex flex-wrap items-end justify-between gap-3">
               <div>
                 <h2 id="account-reports-heading" className="ds-section-title">
@@ -402,11 +406,11 @@ export function AccountDashboard() {
               </div>
             ) : null}
 
-            <div className="relative mt-6 hidden h-[28rem] overflow-hidden rounded-xl border border-border bg-muted lg:block">
+            <div className="relative mt-6 hidden min-h-[240px] flex-1 overflow-hidden rounded-xl border border-stone-200 bg-muted lg:block">
               <PrizrenSlideshow
                 slides={HOME_HERO_SLIDES}
                 alt={tHome('heroAlt')}
-                sizes="(min-width: 1024px) 55vw, 0px"
+                sizes="(max-width: 1024px) 100vw, 60vw"
                 intervalMs={HOME_HERO_INTERVAL_MS}
               />
             </div>
