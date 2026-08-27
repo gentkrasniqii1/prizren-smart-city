@@ -163,7 +163,17 @@ export function NotificationBell() {
       </div>
 
       <div className="hidden lg:block">
-        <DropdownMenu open={isLg && open} onOpenChange={(next) => void handleOpenChange(next)}>
+        {/*
+          `modal={false}`: default modal mode sets `data-scroll-locked` /
+          `overflow: hidden` on <body>, which breaks the sticky header's
+          containing block — the bar jumps/flickers and the click that opened
+          the menu can miss the bell. Same opt-out as ThemeToggle / LanguageSwitcher.
+        */}
+        <DropdownMenu
+          modal={false}
+          open={isLg && open}
+          onOpenChange={(next) => void handleOpenChange(next)}
+        >
           <DropdownMenuTrigger asChild>{trigger}</DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-[min(24rem,calc(100vw-1.5rem))] p-0">
             <div className="flex items-center justify-between gap-2 px-3 py-2.5">
