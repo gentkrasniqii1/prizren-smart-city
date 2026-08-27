@@ -4,7 +4,8 @@ import { useId, useMemo, useState } from 'react';
 import { ChevronDown, Search, SlidersHorizontal } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/button';
-import { Input, Label, Select } from '@/components/ui/field';
+import { Input, Label } from '@/components/ui/field';
+import { SelectSheet } from '@/components/ui/select-sheet';
 import { PUBLIC_REPORT_STATUSES } from '@prizren/shared-types';
 import { getPriorityLabel, getStatusLabel, REPORT_PRIORITIES } from '@/lib/labels';
 import { cn } from '@/lib/utils';
@@ -134,8 +135,9 @@ export function ReportFilters({
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-6 lg:gap-2">
           <div>
             <Label htmlFor="reports-status">{t('status')}</Label>
-            <Select
+            <SelectSheet
               id="reports-status"
+              title={t('status')}
               value={value.status}
               onChange={(e) => patch({ status: e.target.value })}
             >
@@ -145,13 +147,14 @@ export function ReportFilters({
                   {getStatusLabel(s, locale)}
                 </option>
               ))}
-            </Select>
+            </SelectSheet>
           </div>
 
           <div>
             <Label htmlFor="reports-category">{t('category')}</Label>
-            <Select
+            <SelectSheet
               id="reports-category"
+              title={t('category')}
               value={value.categoryId}
               onChange={(e) => patch({ categoryId: e.target.value })}
             >
@@ -161,13 +164,14 @@ export function ReportFilters({
                   {c.name}
                 </option>
               ))}
-            </Select>
+            </SelectSheet>
           </div>
 
           <div>
             <Label htmlFor="reports-priority">{t('priority')}</Label>
-            <Select
+            <SelectSheet
               id="reports-priority"
+              title={t('priority')}
               value={value.priority}
               onChange={(e) => patch({ priority: e.target.value })}
             >
@@ -177,7 +181,7 @@ export function ReportFilters({
                   {getPriorityLabel(p, locale)}
                 </option>
               ))}
-            </Select>
+            </SelectSheet>
           </div>
 
           <div>

@@ -20,7 +20,7 @@ export async function generateMetadata() {
 export default async function Home() {
   const [stats, reportsPage] = await Promise.all([
     fetchPublicJson<TransparencyStats>('/transparency'),
-    fetchPublicJson<PaginatedReports>('/reports?limit=6'),
+    fetchPublicJson<PaginatedReports>('/reports?limit=3'),
   ]);
 
   const reports = reportsPage?.data ?? [];

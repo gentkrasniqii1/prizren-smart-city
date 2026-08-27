@@ -50,58 +50,65 @@ export async function HomeLiveIssues({ reports }: { reports: ReportDto[] }) {
             />
           </div>
         ) : (
-          <ul className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {reports.map((report) => (
-              <li key={report.id}>
-                <Link
-                  href={reportPublicPath(report)}
-                  className="surface-card-interactive group flex h-full flex-col overflow-hidden rounded-lg border border-border bg-muted/50"
-                >
-                  <div className="relative aspect-[16/10] overflow-hidden bg-stone-200">
-                    {report.photoUrl ? (
-                      <RemoteImage
-                        src={report.photoUrl}
-                        alt=""
-                        className="h-full w-full object-cover"
-                        sizes="(max-width: 640px) 100vw, 33vw"
-                      />
-                    ) : (
-                      <div className="flex h-full items-center justify-center text-sm text-stone-600">
-                        {t('live.noPhoto')}
-                      </div>
-                    )}
-                  </div>
-                  <div className="flex flex-1 flex-col gap-2 p-4">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <StatusBadge status={report.status} />
-                      {report.categoryName ? (
-                        <span className="text-xs text-stone-600">{report.categoryName}</span>
-                      ) : null}
-                    </div>
-                    <p className="font-mono text-xs text-mosque-800">{report.publicId}</p>
-                    <p className="text-sm font-medium leading-snug text-stone-900">
-                      {excerpt(report.description)}
-                    </p>
-                    <p className="mt-auto pt-2 text-xs text-stone-600">
-                      {report.address
-                        ? report.address
-                        : t('live.coords', {
-                            lat: report.lat.toFixed(3),
-                            lng: report.lng.toFixed(3),
-                          })}
-                      <span className="mx-1.5 text-stone-600" aria-hidden>
-                        ·
-                      </span>
-                      {new Date(report.createdAt).toLocaleDateString(
-                        locale === 'en' ? 'en-GB' : 'sq-AL',
+          <>
+            <ul className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {reports.slice(0, 3).map((report) => (
+                <li key={report.id}>
+                  <Link
+                    href={reportPublicPath(report)}
+                    className="surface-card-interactive group flex h-full flex-col overflow-hidden rounded-lg border border-border bg-muted/50"
+                  >
+                    <div className="relative aspect-[16/10] overflow-hidden bg-stone-200">
+                      {report.photoUrl ? (
+                        <RemoteImage
+                          src={report.photoUrl}
+                          alt=""
+                          className="h-full w-full object-cover"
+                          sizes="(max-width: 640px) 100vw, 33vw"
+                        />
+                      ) : (
+                        <div className="flex h-full items-center justify-center text-sm text-stone-600">
+                          {t('live.noPhoto')}
+                        </div>
                       )}
-                      <span className="sr-only">{getStatusLabel(report.status, locale)}</span>
-                    </p>
-                  </div>
-                </Link>
-              </li>
-            ))}
-          </ul>
+                    </div>
+                    <div className="flex flex-1 flex-col gap-2 p-4">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <StatusBadge status={report.status} />
+                        {report.categoryName ? (
+                          <span className="text-xs text-stone-600">{report.categoryName}</span>
+                        ) : null}
+                      </div>
+                      <p className="font-mono text-xs text-mosque-800">{report.publicId}</p>
+                      <p className="text-sm font-medium leading-snug text-stone-900">
+                        {excerpt(report.description)}
+                      </p>
+                      <p className="mt-auto pt-2 text-xs text-stone-600">
+                        {report.address
+                          ? report.address
+                          : t('live.coords', {
+                              lat: report.lat.toFixed(3),
+                              lng: report.lng.toFixed(3),
+                            })}
+                        <span className="mx-1.5 text-stone-600" aria-hidden>
+                          ·
+                        </span>
+                        {new Date(report.createdAt).toLocaleDateString(
+                          locale === 'en' ? 'en-GB' : 'sq-AL',
+                        )}
+                        <span className="sr-only">{getStatusLabel(report.status, locale)}</span>
+                      </p>
+                    </div>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+            <div className="mt-6">
+              <Link href="/reports" className="text-sm font-medium text-mosque-800 hover:underline">
+                {t('live.viewAll')}
+              </Link>
+            </div>
+          </>
         )}
       </PageContainer>
     </Section>

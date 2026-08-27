@@ -98,6 +98,7 @@
       "title": "Çështjet e fundit",
       "description": "Një pamje e shpejtë e rasteve zyrtare publike — pa të dhëna personale.",
       "viewMap": "Shiko në hartë",
+      "viewAll": "Shiko të gjitha raportet",
       "emptyTitle": "Ende s’ka raporte publike",
       "emptyBody": "Bëhu i pari që raporton një problem urban në Prizren.",
       "noPhoto": "Pa foto",
@@ -272,7 +273,11 @@
     "showFilters": "Filtra",
     "hideFilters": "Fshih filtrat",
     "clearFilters": "Pastro",
-    "filtersHeading": "Filtra"
+    "filtersHeading": "Filtra",
+    "mineTitle": "Raportet e mia",
+    "mineSubtitle": "Çështjet që ke dërguar — filtroji dhe shikoji në hartë.",
+    "mineEmptyTitle": "Ende s’ke raporte",
+    "mineEmptyBody": "Kur raporton një problem, e ndjek këtu derisa të zgjidhet."
   },
   "Common": {
     "loading": "Duke ngarkuar…",
@@ -569,6 +574,7 @@
     "emptyFilteredTitle": "Asnjë raport në këtë filtër",
     "emptyFilteredBody": "Provo një filtër tjetër ose raporto një problem të ri.",
     "showingOf": "Duke shfaqur {shown} nga {total}",
+    "reportsViewAll": "Shiko të gjitha raportet",
     "notifHeading": "Njoftime të fundit",
     "notifUnread": "{count} të palexuara",
     "notifEmpty": "Nuk ka njoftime ende.",
