@@ -60,6 +60,8 @@ const OPEN_STATUSES = new Set([
 
 type ReportFilter = 'all' | 'open' | 'resolved';
 
+const REPORTS_PREVIEW_LIMIT = 5;
+
 function isStaffRole(role?: string) {
   return role === 'DEPARTMENT_STAFF' || role === 'DEPARTMENT_ADMIN' || role === 'SUPER_ADMIN';
 }
@@ -347,20 +349,35 @@ export function AccountDashboard() {
                 }
               />
             ) : (
-              <ul className="mt-4 overflow-hidden rounded-xl border border-stone-200 bg-card">
-                {visibleReports.map((report) => (
-                  <li key={report.id}>
-                    <ReportCard report={report} compact />
-                  </li>
-                ))}
-              </ul>
+              <>
+                <ul className="mt-4 overflow-hidden rounded-xl border border-stone-200 bg-card">
+                  {visibleReports.slice(0, REPORTS_PREVIEW_LIMIT).map((report) => (
+                    <li key={report.id}>
+                      <ReportCard report={report} compact />
+                    </li>
+                  ))}
+                </ul>
+                <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
+                  {visibleReports.length > REPORTS_PREVIEW_LIMIT ||
+                  (filter === 'all' && totalReports > reports.length) ? (
+                    <p className="text-xs text-stone-600">
+                      {t('showingOf', {
+                        shown: Math.min(visibleReports.length, REPORTS_PREVIEW_LIMIT),
+                        total: filter === 'all' ? totalReports : visibleReports.length,
+                      })}
+                    </p>
+                  ) : (
+                    <span />
+                  )}
+                  <Link
+                    href="/reports?mine=1"
+                    className="text-sm font-medium text-mosque-800 hover:underline"
+                  >
+                    {t('reportsViewAll')}
+                  </Link>
+                </div>
+              </>
             )}
-
-            {!reportsLoading && totalReports > reports.length ? (
-              <p className="mt-3 text-xs text-stone-600">
-                {t('showingOf', { shown: reports.length, total: totalReports })}
-              </p>
-            ) : null}
 
             {!reportsLoading ? (
               <div className="mt-6 flex flex-col items-start gap-4 rounded-xl border border-dashed border-mosque-300 bg-mosque-50 p-6 sm:flex-row sm:items-center sm:justify-between">
